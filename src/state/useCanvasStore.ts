@@ -1,273 +1,213 @@
 import { create } from "zustand";
-import { devtools, persist } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 
-export type CanvasComponent = {
+export interface CanvasComponent {
   id: string;
   type: string;
-  props?: Record<string, any>;
-};
+  props: Record<string, any>;
+  children: string[];
+}
 
-export type Project = {
+export interface Project {
   id: string;
   name: string;
-  createdAt: string;
-  components: CanvasComponent[];
-};
+  components: Record<string, CanvasComponent>;
+  rootComponent: string | null;
+  createdAt?: string; // add
+  updatedAt?: string; // add
+}
 
 interface CanvasState {
-  // Projects
-  projects: Project[];
+  projects: Record<string, Project>;
   currentProjectId: string | null;
+  currentProject: Project | null;
+  history: Project[];
+  future: Project[];
 
-  // Canvas
-  componentTree: CanvasComponent[];
-  selectedComponentId: string | null;
-  history: CanvasComponent[][];
-  future: CanvasComponent[][];
-
-  // Project Methods
-  createProject: (name: string, components?: CanvasComponent[]) => void;
+  createProject: (name: string) => void;
   deleteProject: (id: string) => void;
-  loadProject: (id: string) => void;
-  getProjectById: (id: string) => Project | undefined;
-
-  // Component Methods
-  addComponent: (component: CanvasComponent) => void;
+  addComponent: (type: string, parentId?: string) => string;
   removeComponent: (id: string) => void;
-  duplicateComponent: (id: string) => void; // ✅ ADD THIS
-  updateComponent: (id: string, props: Record<string, any>) => void;
-  setTree: (newTree: CanvasComponent[]) => void;
-  selectComponent: (id: string | null) => void;
-
-  // History
+  updateComponent: (id: string, updates: Partial<CanvasComponent>) => void;
+  setCurrentProject: (id: string) => void;
   undo: () => void;
   redo: () => void;
-  clear: () => void;
-
-  hydrate: () => void;
 }
 
 export const useCanvasStore = create<CanvasState>()(
-  devtools(
-    persist(
-      (set, get) => ({
-        projects: [],
-        currentProjectId: null,
-        componentTree: [],
-        selectedComponentId: null,
-        history: [],
-        future: [],
+  persist(
+    (set, get) => ({
+      projects: {},
+      currentProjectId: null,
+      currentProject: null,
+      history: [],
+      future: [],
 
-        createProject: (name, components = []) => {
-          const newProject: Project = {
-            id: `proj-${Date.now()}`,
-            name,
-            createdAt: new Date().toISOString(),
-            components,
+      createProject: (name: string) => {
+        const id = "project-" + Date.now();
+        const now = new Date().toISOString();
+        const newProject: Project = {
+          id,
+          name,
+          components: {},
+          rootComponent: null,
+          createdAt: now,
+          updatedAt: now,
+        };
+        set((state) => ({
+          projects: { ...state.projects, [id]: newProject },
+          currentProjectId: id,
+          currentProject: newProject,
+        }));
+      },
+
+      deleteProject: (id: string) => {
+        set((state) => {
+          const { [id]: deleted, ...remainingProjects } = state.projects;
+          const newCurrentProjectId =
+            state.currentProjectId === id ? null : state.currentProjectId;
+          const newCurrentProject = newCurrentProjectId
+            ? state.projects[newCurrentProjectId] || null
+            : null;
+
+          return {
+            projects: remainingProjects,
+            currentProjectId: newCurrentProjectId,
+            currentProject: newCurrentProject,
           };
-          set((state) => ({
-            projects: [...state.projects, newProject],
-            currentProjectId: newProject.id,
-            componentTree: components,
-          }));
-        },
+        });
+      },
 
-        deleteProject: (id) => {
-          set((state) => ({
-            projects: state.projects.filter((p) => p.id !== id),
-            currentProjectId: null,
-            componentTree: [],
-          }));
-        },
+      addComponent: (type: string, parentId?: string) => {
+        const id = "component-" + Date.now();
+        set((state) => {
+          if (!state.currentProject) return state;
 
-        loadProject: (id) => {
-          const project = get().projects.find((p) => p.id === id);
-          if (project) {
-            set({
-              currentProjectId: id,
-              componentTree: project.components,
-              history: [],
-              future: [],
-              selectedComponentId: null,
-            });
-          }
-        },
-
-        getProjectById: (id) => {
-          return get().projects.find((p) => p.id === id);
-        },
-
-        addComponent: (component) => {
-          const { componentTree, history, projects, currentProjectId } = get();
-          const newTree = [...componentTree, component];
-
-          set({
-            componentTree: newTree,
-            history: [...history, componentTree],
-            future: [],
-          });
-
-          if (currentProjectId) {
-            set((state) => ({
-              projects: state.projects.map((p) =>
-                p.id === currentProjectId ? { ...p, components: newTree } : p
-              ),
-            }));
-          }
-        },
-
-        removeComponent: (id) => {
-          const { componentTree, history, projects, currentProjectId } = get();
-          const newTree = componentTree.filter((c) => c.id !== id);
-
-          set({
-            componentTree: newTree,
-            history: [...history, componentTree],
-            future: [],
-            selectedComponentId: null,
-          });
-
-          if (currentProjectId) {
-            set((state) => ({
-              projects: state.projects.map((p) =>
-                p.id === currentProjectId ? { ...p, components: newTree } : p
-              ),
-            }));
-          }
-        },
-
-        duplicateComponent: (id: string) => {
-          const { componentTree, history, projects, currentProjectId } = get();
-          const componentToDuplicate = componentTree.find((c) => c.id === id);
-
-          if (!componentToDuplicate) return;
-
-          const duplicated: CanvasComponent = {
-            ...componentToDuplicate,
-            id: `${componentToDuplicate.type}-${Date.now()}`,
+          const newComponent: CanvasComponent = {
+            id,
+            type,
+            props: {},
+            children: [],
           };
 
-          const newTree = [...componentTree];
-          const index = newTree.findIndex((c) => c.id === id);
-          newTree.splice(index + 1, 0, duplicated);
+          const updatedComponents: Record<string, CanvasComponent> = {
+            ...state.currentProject.components,
+            [id]: newComponent,
+          };
 
-          set({
-            componentTree: newTree,
-            history: [...history, componentTree],
+          if (parentId && parentId in updatedComponents) {
+            const parent = updatedComponents[parentId];
+            updatedComponents[parentId] = {
+              ...parent,
+              children: [...parent.children, id],
+            };
+          }
+
+          const updatedProject: Project = {
+            ...state.currentProject,
+            components: updatedComponents,
+          };
+
+          return {
+            history: [...state.history, state.currentProject],
             future: [],
-          });
+            currentProject: updatedProject,
+            projects: {
+              ...state.projects,
+              [state.currentProjectId!]: updatedProject,
+            },
+          };
+        });
+        return id;
+      },
 
-          if (currentProjectId) {
-            set((state) => ({
-              projects: state.projects.map((p) =>
-                p.id === currentProjectId ? { ...p, components: newTree } : p
-              ),
-            }));
-          }
-        },
+      removeComponent: (id: string) => {
+        set((state) => {
+          if (!state.currentProject) return state;
 
-        updateComponent: (id, props) => {
-          const { componentTree, history, projects, currentProjectId } = get();
-          const newTree = componentTree.map((c) =>
-            c.id === id ? { ...c, props: { ...c.props, ...props } } : c
-          );
+          const { [id]: removed, ...rest } = state.currentProject.components;
+          const updatedProject: Project = {
+            ...state.currentProject,
+            components: rest,
+          };
 
-          set({
-            componentTree: newTree,
-            history: [...history, componentTree],
+          return {
+            history: [...state.history, state.currentProject],
             future: [],
-          });
+            currentProject: updatedProject,
+            projects: {
+              ...state.projects,
+              [state.currentProjectId!]: updatedProject,
+            },
+          };
+        });
+      },
 
-          if (currentProjectId) {
-            set((state) => ({
-              projects: state.projects.map((p) =>
-                p.id === currentProjectId ? { ...p, components: newTree } : p
-              ),
-            }));
-          }
-        },
+      updateComponent: (id: string, updates: Partial<CanvasComponent>) => {
+        set((state) => {
+          if (!state.currentProject) return state;
 
-        setTree: (newTree) => {
-          const { componentTree, history, projects, currentProjectId } = get();
+          const updatedProject: Project = {
+            ...state.currentProject,
+            components: {
+              ...state.currentProject.components,
+              [id]: { ...state.currentProject.components[id], ...updates },
+            },
+          };
 
-          set({
-            componentTree: newTree,
-            history: [...history, componentTree],
-            future: [],
-          });
+          return {
+            currentProject: updatedProject,
+            projects: {
+              ...state.projects,
+              [state.currentProjectId!]: updatedProject,
+            },
+          };
+        });
+      },
 
-          if (currentProjectId) {
-            set((state) => ({
-              projects: state.projects.map((p) =>
-                p.id === currentProjectId ? { ...p, components: newTree } : p
-              ),
-            }));
-          }
-        },
+      setCurrentProject: (id: string) => {
+        set((state) => ({
+          currentProjectId: id,
+          currentProject: state.projects[id] || null,
+        }));
+      },
 
-        selectComponent: (id) => {
-          set({ selectedComponentId: id });
-        },
+      undo: () => {
+        set((state) => {
+          if (state.history.length === 0) return state;
+          const previous = state.history[state.history.length - 1];
+          return {
+            history: state.history.slice(0, -1),
+            future: state.currentProject
+              ? [...state.future, state.currentProject]
+              : state.future,
+            currentProject: previous,
+            projects: {
+              ...state.projects,
+              [state.currentProjectId!]: previous,
+            },
+          };
+        });
+      },
 
-        undo: () => {
-          const { history, componentTree, future, projects, currentProjectId } =
-            get();
-          if (history.length === 0) return;
-
-          const previous = history[history.length - 1];
-          set({
-            componentTree: previous,
-            history: history.slice(0, -1),
-            future: [componentTree, ...future],
-          });
-
-          if (currentProjectId) {
-            set((state) => ({
-              projects: state.projects.map((p) =>
-                p.id === currentProjectId ? { ...p, components: previous } : p
-              ),
-            }));
-          }
-        },
-
-        redo: () => {
-          const { history, componentTree, future, projects, currentProjectId } =
-            get();
-          if (future.length === 0) return;
-
-          const next = future[0];
-          set({
-            componentTree: next,
-            history: [...history, componentTree],
-            future: future.slice(1),
-          });
-
-          if (currentProjectId) {
-            set((state) => ({
-              projects: state.projects.map((p) =>
-                p.id === currentProjectId ? { ...p, components: next } : p
-              ),
-            }));
-          }
-        },
-
-        clear: () => {
-          const { componentTree, history } = get();
-          set({
-            componentTree: [],
-            history: [...history, componentTree],
-            future: [],
-          });
-        },
-
-        hydrate: () => {
-          // Zustand persist middleware handles this automatically
-        },
-      }),
-      {
-        name: "canvas-projects",
-        version: 1,
-      }
-    )
+      redo: () => {
+        set((state) => {
+          if (state.future.length === 0) return state;
+          const next = state.future[state.future.length - 1];
+          return {
+            future: state.future.slice(0, -1),
+            history: state.currentProject
+              ? [...state.history, state.currentProject]
+              : state.history,
+            currentProject: next,
+            projects: {
+              ...state.projects,
+              [state.currentProjectId!]: next,
+            },
+          };
+        });
+      },
+    }),
+    { name: "canvas-store" }
   )
 );

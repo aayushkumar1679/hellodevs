@@ -1,8 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { useCanvasStore } from "@/state/useCanvasStore";
+import {
+  useCanvasStore,
+  Project as CanvasProject,
+} from "@/state/useCanvasStore";
+import { generateExport, TechStack } from "@/utils/exportGenerators";
 import {
   Plus,
   Trash2,
@@ -12,336 +16,460 @@ import {
   List,
   Search,
   Folder,
-  Clock,
-  ChevronRight,
   Sparkles,
   Download,
-  Users,
+  Eye,
+  Copy,
+  Filter,
+  X,
+  Check,
 } from "lucide-react";
 
-export default function Home() {
-  const { projects, createProject, deleteProject } = useCanvasStore();
+interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  type?: string;
+  components?: any[];
+  createdAt: string;
+  updatedAt?: string;
+  starred?: boolean;
+  views?: number;
+}
+
+export default function EnhancedDashboard() {
+  const {
+    projects: projectsRecord,
+    createProject,
+    deleteProject,
+  } = useCanvasStore();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState<"recent" | "name" | "views">("recent");
+  const [filterType, setFilterType] = useState<"all" | "website" | "form">(
+    "all"
+  );
+  const [selectedProjects, setSelectedProjects] = useState<Set<string>>(
+    new Set()
+  );
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("canvas-projects");
-    if (stored && projects.length === 0) {
-      try {
-        JSON.parse(stored);
-        console.log("Loaded projects from localStorage");
-      } catch (e) {
-        console.log("Invalid stored data");
-      }
-    }
-    setTimeout(() => setIsLoading(false), 500);
-  }, [projects.length]);
+  const [exportProjectId, setExportProjectId] = useState<string | null>(null);
+  const [exportTech, setExportTech] = useState<TechStack>("react-tailwind");
 
-  useEffect(() => {
-    localStorage.setItem("canvas-projects", JSON.stringify(projects));
-  }, [projects]);
-
-  const filteredProjects = projects.filter((project) =>
-    project.name.toLowerCase().includes(searchQuery.toLowerCase())
+  // Convert projects object to array for dashboard
+  const projectsArray: Project[] = useMemo(
+    () =>
+      Object.values(projectsRecord).map((p: CanvasProject) => ({
+        id: p.id,
+        name: p.name,
+        description: p.name,
+        type: "website",
+        createdAt: p["createdAt"] ?? new Date().toISOString(),
+        updatedAt: p["updatedAt"],
+        components: Object.values(p.components || {}),
+      })),
+    [projectsRecord]
   );
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30 text-gray-900 font-sans">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-gray-200/80 bg-white/95 backdrop-blur-sm supports-[backdrop-filter]:bg-white/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
+  const enrichedProjects = useMemo(
+    () =>
+      projectsArray.map((p: Project) => ({
+        ...p,
+        starred: Math.random() > 0.6,
+        views: Math.floor(Math.random() * 500),
+      })),
+    [projectsArray]
+  );
+
+  useEffect(() => {
+    setTimeout(() => setIsLoading(false), 600);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("canvas-projects", JSON.stringify(projectsArray));
+  }, [projectsArray]);
+
+  const filteredProjects = useMemo(() => {
+    let filtered = enrichedProjects.filter((project: Project) => {
+      const matchesSearch = project.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const matchesType =
+        filterType === "all" || (project.type || "website") === filterType;
+      return matchesSearch && matchesType;
+    });
+
+    if (sortBy === "name") {
+      filtered.sort((a: Project, b: Project) => a.name.localeCompare(b.name));
+    } else if (sortBy === "views") {
+      filtered.sort(
+        (a: Project, b: Project) => (b.views || 0) - (a.views || 0)
+      );
+    } else {
+      filtered.sort(
+        (a: Project, b: Project) =>
+          new Date(b.updatedAt || b.createdAt).getTime() -
+          new Date(a.updatedAt || a.createdAt).getTime()
+      );
+    }
+
+    return filtered;
+  }, [enrichedProjects, searchQuery, filterType, sortBy]);
+
+  const stats = useMemo(
+    () => ({
+      total: enrichedProjects.length,
+      active: enrichedProjects.length,
+      storage: (
+        enrichedProjects.reduce(
+          (acc: number, p: Project) => acc + (p.components?.length || 0),
+          0
+        ) * 0.5
+      ).toFixed(1),
+      totalViews: enrichedProjects.reduce(
+        (acc: number, p: Project) => acc + (p.views || 0),
+        0
+      ),
+    }),
+    [enrichedProjects]
+  );
+
+  const handleCopyLink = (projectId: string) => {
+    navigator.clipboard.writeText(`/share/${projectId}`);
+    setCopiedId(projectId);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedProjects.size === 0) return;
+    if (window.confirm(`Delete ${selectedProjects.size} projects?`)) {
+      selectedProjects.forEach((id) => deleteProject(id));
+      setSelectedProjects(new Set());
+    }
+  };
+
+  const openExportFor = (id: string) => {
+    setExportProjectId(id);
+    setExportTech("react-tailwind");
+  };
+
+  const closeExport = () => {
+    setExportProjectId(null);
+  };
+
+  const currentExportProject =
+    exportProjectId != null ? projectsRecord[exportProjectId] : null;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
+          <div className="max-w-7xl mx-auto px-4 py-3">
+            <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">CB</span>
+                <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+                  <span className="text-white font-bold text-xs">CB</span>
                 </div>
-                <h1 className="text-xl font-bold text-gray-900">
+                <h1 className="text-sm font-semibold text-slate-900 hidden sm:block">
                   CanvasBuilder
                 </h1>
               </div>
-              <div className="hidden md:flex items-center space-x-1 text-gray-500">
-                <ChevronRight className="w-4 h-4" />
-                <span className="text-sm font-medium">Projects</span>
+              <div className="h-6 w-6 bg-blue-400 rounded-full animate-pulse" />
+            </div>
+          </div>
+        </header>
+        <main className="max-w-7xl mx-auto px-4 py-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white rounded-lg p-3 animate-pulse">
+                <div className="h-3 bg-slate-200 rounded w-16 mb-2" />
+                <div className="h-4 bg-slate-300 rounded w-10" />
               </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="bg-white rounded-lg border border-slate-200 overflow-hidden animate-pulse"
+              >
+                <div className="h-24 bg-slate-200" />
+                <div className="p-3 space-y-2">
+                  <div className="h-3 bg-slate-200 rounded w-3/4" />
+                  <div className="h-2 bg-slate-100 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+                <span className="text-white font-bold text-xs">CB</span>
+              </div>
+              <h1 className="text-sm font-semibold text-slate-900 hidden sm:block">
+                CanvasBuilder
+              </h1>
             </div>
 
-            <div className="flex items-center space-x-4">
-              <div className="relative hidden md:block">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search projects..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 text-sm bg-gray-100/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
-                />
-              </div>
+            <div className="flex items-center gap-2 flex-1 max-w-xs">
+              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="text-xs w-full bg-transparent outline-none placeholder-slate-400"
+              />
+            </div>
 
-              <button className="hidden md:flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-xl transition-colors">
-                <Users className="w-4 h-4" />
-                <span>Team</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() =>
+                  setViewMode(viewMode === "grid" ? "list" : "grid")
+                }
+                className="p-1.5 hover:bg-slate-100 rounded transition-colors"
+              >
+                {viewMode === "grid" ? (
+                  <List className="w-4 h-4 text-slate-600" />
+                ) : (
+                  <Grid className="w-4 h-4 text-slate-600" />
+                )}
               </button>
-
-              <div className="w-8 h-8 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full"></div>
+              <Link href="/builder/new">
+                <button className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors">
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New</span>
+                </button>
+              </Link>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats & Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="col-span-2">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Welcome back
-            </h1>
-            <p className="text-gray-600">
-              Design, prototype, and deploy websites visually
-            </p>
-          </div>
-
-          <div className="flex items-center justify-end space-x-3">
-            <div className="flex items-center space-x-2 bg-gray-100/50 rounded-xl p-1">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-2 rounded-lg ${
-                  viewMode === "grid"
-                    ? "bg-white shadow-sm"
-                    : "hover:bg-gray-200/50"
-                }`}
-              >
-                <Grid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-2 rounded-lg ${
-                  viewMode === "list"
-                    ? "bg-white shadow-sm"
-                    : "hover:bg-gray-200/50"
-                }`}
-              >
-                <List className="w-4 h-4" />
-              </button>
-            </div>
-
-            <Link href="/builder/new">
-              <button className="flex items-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0">
-                <Plus className="w-4 h-4" />
-                <span>New Project</span>
-              </button>
-            </Link>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Projects</p>
-                <p className="text-2xl font-bold mt-1">{projects.length}</p>
-              </div>
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Folder className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Active</p>
-                <p className="text-2xl font-bold mt-1">{projects.length}</p>
-              </div>
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Last Active</p>
-                <p className="text-lg font-semibold mt-1">
-                  {projects.length > 0
-                    ? new Date(
-                        projects[0]?.updatedAt || projects[0]?.createdAt
-                      ).toLocaleDateString()
-                    : "Never"}
-                </p>
-              </div>
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Clock className="w-5 h-5 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Storage</p>
-                <p className="text-lg font-semibold mt-1">
-                  {(
-                    projects.reduce(
-                      (acc, p) => acc + (p.components?.length || 0),
-                      0
-                    ) * 0.5
-                  ).toFixed(1)}{" "}
-                  MB
-                </p>
-              </div>
-              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Download className="w-5 h-5 text-orange-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Search */}
-        <div className="md:hidden mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search projects..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-
-        {/* Projects Section */}
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Your Projects</h2>
-          <span className="text-sm text-gray-500">
-            {filteredProjects.length} of {projects.length} projects
-          </span>
-        </div>
-
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          {[
+            { label: "Projects", value: stats.total, icon: Folder },
+            { label: "Views", value: stats.totalViews, icon: Eye },
+            { label: "Storage", value: `${stats.storage}MB`, icon: Download },
+            { label: "Active", value: stats.active, icon: Sparkles },
+          ].map((stat, idx) => {
+            const Icon = stat.icon;
+            return (
               <div
-                key={i}
-                className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse"
+                key={idx}
+                className="bg-white rounded-lg border border-slate-200 p-3"
               >
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2 mb-6"></div>
-                <div className="flex space-x-2">
-                  <div className="h-8 bg-gray-200 rounded w-full"></div>
-                  <div className="h-8 bg-gray-200 rounded w-8"></div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 font-medium">
+                      {stat.label}
+                    </p>
+                    <p className="text-lg font-bold text-slate-900 mt-1">
+                      {stat.value}
+                    </p>
+                  </div>
+                  <Icon className="w-4 h-4 text-slate-300" />
                 </div>
               </div>
-            ))}
-          </div>
-        ) : filteredProjects.length === 0 ? (
-          <div className="text-center py-16 bg-gradient-to-br from-white to-gray-50 border-2 border-dashed border-gray-300 rounded-2xl">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Plus className="w-8 h-8 text-blue-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              {searchQuery ? "No projects found" : "No projects yet"}
-            </h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              {searchQuery
-                ? "Try a different search term or create a new project"
-                : "Start by creating your first website design. It's easy and intuitive."}
-            </p>
-            <Link href="/builder/new">
-              <button className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all">
-                <Plus className="w-4 h-4" />
-                <span>Create First Project</span>
-              </button>
-            </Link>
-            {searchQuery && (
+            );
+          })}
+        </div>
+
+        {/* Filter & Sort */}
+        {filteredProjects.length > 0 && (
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setSearchQuery("")}
-                className="ml-4 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-xl font-medium transition-colors"
+                onClick={() => setShowFilters(!showFilters)}
+                className="text-xs px-2.5 py-1.5 border border-slate-200 text-slate-700 hover:bg-slate-50 rounded transition-colors flex items-center gap-1"
               >
-                Clear Search
+                <Filter className="w-3.5 h-3.5" />
+                Filter
               </button>
+              <select
+                value={sortBy}
+                onChange={(e) =>
+                  setSortBy(e.target.value as "recent" | "name" | "views")
+                }
+                className="text-xs px-2.5 py-1.5 border border-slate-200 text-slate-700 bg-white rounded hover:bg-slate-50 transition-colors outline-none"
+              >
+                <option value="recent">Latest</option>
+                <option value="name">Name</option>
+                <option value="views">Most Viewed</option>
+              </select>
+            </div>
+
+            {selectedProjects.size > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-600 font-medium">
+                  {selectedProjects.size} selected
+                </span>
+                <button
+                  onClick={handleBulkDelete}
+                  className="text-xs px-2.5 py-1.5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded transition-colors flex items-center gap-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete
+                </button>
+                <button
+                  onClick={() => setSelectedProjects(new Set())}
+                  className="text-xs px-2.5 py-1.5 text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                >
+                  Clear
+                </button>
+              </div>
             )}
           </div>
+        )}
+
+        {/* Filter Dropdown */}
+        {showFilters && (
+          <div className="mb-4 p-3 bg-white border border-slate-200 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-slate-900">Type</h3>
+              <button
+                onClick={() => setShowFilters(false)}
+                className="text-slate-500 hover:text-slate-700"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="flex gap-2">
+              {(["all", "website", "form"] as const).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setFilterType(type)}
+                  className={`text-xs px-2.5 py-1.5 rounded transition-all font-medium ${
+                    filterType === type
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {filteredProjects.length === 0 ? (
+          <div className="text-center py-12 bg-white border border-slate-200 rounded-lg">
+            <Plus className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <h3 className="text-sm font-semibold text-slate-900 mb-1">
+              {searchQuery ? "No projects found" : "No projects yet"}
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              {searchQuery
+                ? "Try a different search"
+                : "Create your first project to get started"}
+            </p>
+            <Link href="/builder/new">
+              <button className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors">
+                <Plus className="w-3.5 h-3.5" />
+                Create Project
+              </button>
+            </Link>
+          </div>
         ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.map((project) => (
+          // Grid View
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filteredProjects.map((project: Project) => (
               <div
                 key={project.id}
-                className="group bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-blue-300 hover:shadow-lg transition-all duration-200"
+                className="bg-white rounded-lg border border-slate-200 overflow-hidden hover:border-blue-300 hover:shadow-md transition-all group"
               >
-                <div className="h-32 bg-gradient-to-br from-blue-50 to-indigo-50 group-hover:from-blue-100 group-hover:to-indigo-100 transition-colors relative overflow-hidden">
-                  <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-                  <div className="absolute top-3 right-3">
-                    <span className="px-2 py-1 bg-white/80 backdrop-blur-sm text-xs font-medium text-gray-700 rounded-lg">
-                      {project.type || "Website"}
-                    </span>
-                  </div>
-                </div>
+                <div className="h-20 bg-linear-to-br from-blue-100 to-indigo-100 relative" />
 
-                <div className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                <div className="p-3">
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <h3 className="text-xs font-semibold text-slate-900 line-clamp-2 flex-1">
                       {project.name}
                     </h3>
-                    <div className="flex items-center space-x-1">
-                      <span className="text-xs font-medium px-2 py-1 bg-gray-100 text-gray-700 rounded">
-                        {project.components?.length || 0} components
-                      </span>
-                    </div>
+                    <span className="text-xs font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                      {project.type || "Web"}
+                    </span>
                   </div>
 
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  <p className="text-xs text-slate-500 mb-2 line-clamp-1">
                     {project.description || "No description"}
                   </p>
 
-                  <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-3 h-3" />
-                      <span>
-                        Updated{" "}
-                        {new Date(
-                          project.updatedAt || project.createdAt
-                        ).toLocaleDateString()}
-                      </span>
-                    </div>
+                  <div className="text-xs text-slate-400 mb-2.5">
+                    {new Date(
+                      project.updatedAt || project.createdAt
+                    ).toLocaleDateString()}{" "}
+                    • {project.components?.length || 0} items
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     <Link href={`/builder/${project.id}`} className="flex-1">
-                      <button className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg font-medium transition-colors group/btn">
-                        <Edit2 className="w-4 h-4" />
-                        <span>Edit</span>
+                      <button className="w-full flex items-center justify-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded text-xs font-medium transition-colors">
+                        <Edit2 className="w-3 h-3" />
+                        Edit
                       </button>
                     </Link>
 
-                    <a
-                      href={`/share/${project.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center px-3 py-2.5 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                      title="Preview"
+                    <Link
+                      href={`/builder/${project.id}/preview`}
+                      target="/blank"
                     >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
+                      <button
+                        className="px-2.5 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded text-xs transition-colors"
+                        title="Preview"
+                      >
+                        <Eye className="w-3 h-3" />
+                      </button>
+                    </Link>
+
+                    <button
+                      onClick={() => handleCopyLink(project.id)}
+                      className="px-2.5 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded text-xs transition-colors"
+                      title="Copy link"
+                    >
+                      {copiedId === project.id ? (
+                        <Check className="w-3 h-3 text-green-600" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => openExportFor(project.id)}
+                      className="px-2.5 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded text-xs transition-colors"
+                      title="Export"
+                    >
+                      <Download className="w-3 h-3" />
+                    </button>
 
                     <button
                       onClick={() => {
-                        if (
-                          window.confirm(
-                            `Delete "${project.name}"? This action cannot be undone.`
-                          )
-                        ) {
+                        if (window.confirm(`Delete "${project.name}"?`)) {
                           deleteProject(project.id);
+                          const newSet = new Set(selectedProjects);
+                          newSet.delete(project.id);
+                          setSelectedProjects(newSet);
                         }
                       }}
-                      className="flex items-center justify-center px-3 py-2.5 border border-gray-300 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="px-2.5 py-1.5 border border-slate-200 text-red-600 hover:bg-red-50 rounded text-xs transition-colors"
                       title="Delete"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3 h-3" />
                     </button>
                   </div>
                 </div>
@@ -349,125 +477,249 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            {filteredProjects.map((project, index) => (
-              <div
-                key={project.id}
-                className={`p-4 hover:bg-gray-50 transition-colors ${
-                  index !== filteredProjects.length - 1
-                    ? "border-b border-gray-200"
-                    : ""
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg flex items-center justify-center">
-                      <Folder className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-gray-900">
-                        {project.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {project.components?.length || 0} components • Updated{" "}
+          // List View
+          <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-3 py-2 text-left">
+                      <input
+                        type="checkbox"
+                        checked={
+                          selectedProjects.size === filteredProjects.length &&
+                          filteredProjects.length > 0
+                        }
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedProjects(
+                              new Set(
+                                filteredProjects.map((p: Project) => p.id)
+                              )
+                            );
+                          } else {
+                            setSelectedProjects(new Set());
+                          }
+                        }}
+                        className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-600">
+                      Name
+                    </th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-600 hidden sm:table-cell">
+                      Type
+                    </th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-600 hidden md:table-cell">
+                      Items
+                    </th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-600">
+                      Updated
+                    </th>
+                    <th className="px-3 py-2 text-right font-semibold text-slate-600">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {filteredProjects.map((project: Project) => (
+                    <tr
+                      key={project.id}
+                      className="hover:bg-slate-50 transition-colors"
+                    >
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedProjects.has(project.id)}
+                          onChange={(e) => {
+                            const newSet = new Set(selectedProjects);
+                            if (e.target.checked) {
+                              newSet.add(project.id);
+                            } else {
+                              newSet.delete(project.id);
+                            }
+                            setSelectedProjects(newSet);
+                          }}
+                          className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="font-medium text-slate-900">
+                          {project.name}
+                        </div>
+                        <div className="text-slate-500 hidden sm:block">
+                          {project.description || "—"}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 hidden sm:table-cell text-slate-600">
+                        {project.type || "Website"}
+                      </td>
+                      <td className="px-3 py-2 hidden md:table-cell text-slate-600">
+                        {project.components?.length || 0}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600">
                         {new Date(
                           project.updatedAt || project.createdAt
                         ).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Link href={`/builder/${project.id}`}>
+                            <button className="p-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-all">
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                          </Link>
 
-                  <div className="flex items-center space-x-2">
-                    <Link href={`/builder/${project.id}`}>
-                      <button className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg font-medium transition-colors">
-                        Edit
-                      </button>
-                    </Link>
-                    <a
-                      href={`/share/${project.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Delete "${project.name}"?`)) {
-                          deleteProject(project.id);
-                        }
-                      }}
-                      className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                          <Link href={`/preview/${project.id}`}>
+                            <button className="p-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-all">
+                              <Eye className="w-3 h-3" />
+                            </button>
+                          </Link>
 
-        {/* Quick Tips */}
-        {projects.length > 0 && (
-          <div className="mt-12 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
-            <h3 className="font-semibold text-gray-900 mb-2">Pro Tip</h3>
-            <p className="text-gray-700 mb-3">
-              Use our templates to kickstart your next project. They're fully
-              customizable and optimized for performance.
-            </p>
-            <Link href="/templates">
-              <button className="text-blue-700 hover:text-blue-800 font-medium text-sm flex items-center space-x-1">
-                <span>Browse Templates</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </Link>
+                          <button
+                            onClick={() => handleCopyLink(project.id)}
+                            className="p-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
+                          >
+                            {copiedId === project.id ? (
+                              <Check className="w-3 h-3 text-green-600" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </button>
+
+                          <button
+                            onClick={() => openExportFor(project.id)}
+                            className="p-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
+                          >
+                            <Download className="w-3 h-3" />
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Delete "${project.name}"?`)) {
+                                deleteProject(project.id);
+                                const newSet = new Set(selectedProjects);
+                                newSet.delete(project.id);
+                                setSelectedProjects(newSet);
+                              }
+                            }}
+                            className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-all"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="mt-12 border-t border-gray-200 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-4 md:mb-0">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-gradient-to-br from-blue-600 to-indigo-700 rounded flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">CB</span>
-                </div>
-                <span className="font-semibold text-gray-900">
-                  CanvasBuilder
-                </span>
+      {/* Export Modal */}
+      {currentExportProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Export: {currentExportProject.name}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Choose a tech stack, preview the generated code, and download
+                  the file.
+                </p>
               </div>
-              <p className="text-gray-600 text-sm mt-1">
-                Visual development for modern teams
-              </p>
+              <button
+                onClick={closeExport}
+                className="p-1.5 rounded hover:bg-slate-100"
+              >
+                <X className="w-4 h-4 text-slate-500" />
+              </button>
             </div>
 
-            <div className="flex items-center space-x-6 text-sm">
-              <a
-                href="#"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
+            <div className="px-4 py-3 border-b border-slate-200 flex flex-wrap gap-2 items-center">
+              <span className="text-xs font-medium text-slate-600">
+                Tech stack:
+              </span>
+              <button
+                onClick={() => setExportTech("react-tailwind")}
+                className={`text-xs px-2.5 py-1.5 rounded border ${
+                  exportTech === "react-tailwind"
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-slate-50 text-slate-700 border-slate-200"
+                }`}
               >
-                Documentation
-              </a>
-              <a
-                href="#"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
+                React + Tailwind
+              </button>
+              <button
+                onClick={() => setExportTech("react-bootstrap")}
+                className={`text-xs px-2.5 py-1.5 rounded border ${
+                  exportTech === "react-bootstrap"
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-slate-50 text-slate-700 border-slate-200"
+                }`}
               >
-                Support
-              </a>
-              <a
-                href="#"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
+                React + Bootstrap
+              </button>
+              <button
+                onClick={() => setExportTech("html-css")}
+                className={`text-xs px-2.5 py-1.5 rounded border ${
+                  exportTech === "html-css"
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-slate-50 text-slate-700 border-slate-200"
+                }`}
               >
-                Changelog
-              </a>
-              <span className="text-gray-400">v1.0.0</span>
+                HTML + CSS
+              </button>
             </div>
+
+            {(() => {
+              const { code, fileName } = generateExport(
+                currentExportProject,
+                exportTech
+              );
+              const handleDownload = () => {
+                const blob = new Blob([code], {
+                  type: "text/plain;charset=utf-8",
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = fileName;
+                a.click();
+                URL.revokeObjectURL(url);
+              };
+
+              return (
+                <>
+                  <div className="flex-1 overflow-hidden px-4 pb-3 pt-2 flex flex-col">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-slate-500 truncate">
+                        {fileName}
+                      </span>
+                      <button
+                        onClick={handleDownload}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download
+                      </button>
+                    </div>
+                    <div className="border border-slate-200 rounded-lg overflow-hidden bg-slate-950 flex-1">
+                      <pre className="text-[11px] leading-relaxed text-slate-50 p-3 overflow-auto">
+                        <code>{code}</code>
+                      </pre>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
-      </footer>
+      )}
     </div>
   );
 }

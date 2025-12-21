@@ -1,50 +1,51 @@
 "use client";
 
 import React from "react";
-import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { useCanvasStore, CanvasComponent } from "@/state/useCanvasStore";
+import { useCanvasStore } from "@/state/useCanvasStore";
+import { useDesignStore } from "@/state/useDesignStore";
 import ComponentWrapper from "./ComponentWrapper";
 
 export default function Canvas() {
-  const { componentTree, setTree } = useCanvasStore();
+  const { currentProject } = useCanvasStore();
+  const { deselectAll } = useDesignStore();
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
+  if (!currentProject) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-700">
+        <div className="text-center text-gray-400">
+          <p className="text-sm">No project loaded</p>
+          <p className="text-xs">Create or select a project to begin</p>
+        </div>
+      </div>
+    );
+  }
 
-    const oldIndex = componentTree.findIndex((c) => c.id === String(active.id));
-    const newIndex = componentTree.findIndex((c) => c.id === String(over.id));
-
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    const newTree = [...componentTree];
-    const [moved] = newTree.splice(oldIndex, 1);
-    newTree.splice(newIndex, 0, moved);
-
-    setTree(newTree);
-  };
+  const components = Object.values(currentProject.components).filter(
+    (c) =>
+      !Object.values(currentProject.components).some((parent) =>
+        parent.children.includes(c.id)
+      )
+  );
 
   return (
-    <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext
-        items={componentTree.map((c) => c.id)}
-        strategy={verticalListSortingStrategy}
-      >
-        <div className="flex flex-col gap-4 w-full">
-          {componentTree.length === 0 && (
-            <div className="text-center py-12 text-gray-400">
-              <p>Drag components from the library to start building</p>
-            </div>
-          )}
-          {componentTree.map((component) => (
+    <div
+      className="w-full h-full p-8 bg-white overflow-auto"
+      onClick={deselectAll}
+    >
+      <div className="max-w-6xl mx-auto space-y-4">
+        {components.length === 0 ? (
+          <div className="text-center text-gray-400 py-12">
+            <p className="text-sm">No components added</p>
+            <p className="text-xs">
+              Drag components from the left panel to get started
+            </p>
+          </div>
+        ) : (
+          components.map((component) => (
             <ComponentWrapper key={component.id} component={component} />
-          ))}
-        </div>
-      </SortableContext>
-    </DndContext>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
