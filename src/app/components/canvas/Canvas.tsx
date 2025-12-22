@@ -3,11 +3,14 @@
 import React from "react";
 import { useCanvasStore } from "@/state/useCanvasStore";
 import { useDesignStore } from "@/state/useDesignStore";
+import CanvasElement from "./CanvasElement";
 import ComponentWrapper from "./ComponentWrapper";
+import { useSyncStores } from "@/hooks/useSyncStores";
 
 export default function Canvas() {
   const { currentProject } = useCanvasStore();
   const { deselectAll } = useDesignStore();
+  useSyncStores();
 
   if (!currentProject) {
     return (
@@ -42,7 +45,9 @@ export default function Canvas() {
           </div>
         ) : (
           components.map((component) => (
-            <ComponentWrapper key={component.id} component={component} />
+            <CanvasElement key={component.id} elementId={component.id}>
+              <ComponentWrapper component={component} />
+            </CanvasElement>
           ))
         )}
       </div>

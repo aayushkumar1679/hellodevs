@@ -9,10 +9,19 @@ export interface Element {
 interface DesignState {
   elements: Record<string, Element>;
   selectedElements: string[];
-  addElement: (id: string, type: string) => void;
+  addElement: (
+    id: string,
+    type: string,
+    initialCss?: Record<string, any>
+  ) => void;
   selectElement: (id: string, multiSelect?: boolean) => void;
   deselectAll: () => void;
   updateCSSProperty: (elementId: string, property: string, value: any) => void;
+  updateCSSPropertiesBulk: (
+    elementIds: string[],
+    property: string,
+    value: any
+  ) => void;
   removeElement: (id: string) => void;
   updateElement: (id: string, updates: Partial<Element>) => void;
 }
@@ -21,7 +30,8 @@ export const useDesignStore = create<DesignState>((set) => ({
   elements: {},
   selectedElements: [],
 
-  addElement: (id, type) =>
+  // Updated: now accepts initialCss parameter
+  addElement: (id, type, initialCss = {}) =>
     set((state) => ({
       elements: {
         ...state.elements,
@@ -32,6 +42,7 @@ export const useDesignStore = create<DesignState>((set) => ({
             display: "block",
             padding: "10px",
             margin: "0",
+            ...initialCss,
           },
         },
       },
@@ -64,6 +75,23 @@ export const useDesignStore = create<DesignState>((set) => ({
         },
       },
     })),
+
+  // NEW: Bulk CSS update for multiple elements
+  updateCSSPropertiesBulk: (elementIds, property, value) =>
+    set((state) => {
+      const updated = { ...state.elements };
+      elementIds.forEach((id) => {
+        if (!updated[id]) return;
+        updated[id] = {
+          ...updated[id],
+          cssProperties: {
+            ...updated[id].cssProperties,
+            [property]: value,
+          },
+        };
+      });
+      return { elements: updated };
+    }),
 
   removeElement: (id) =>
     set((state) => {
