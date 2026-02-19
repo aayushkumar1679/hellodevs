@@ -6,11 +6,16 @@ import { Trash2 } from "lucide-react";
 import ComponentRenderer from "./ComponentRenderer";
 
 interface ComponentWrapperProps {
-  component: any;
+  component: {
+    id: string;
+    type: string;
+    props?: Record<string, any>;
+    children?: string[];
+  };
 }
 
 export default function ComponentWrapper({ component }: ComponentWrapperProps) {
-  const { updateComponent, removeComponent } = useCanvasStore();
+  const { updateComponent, removeComponent, currentProject } = useCanvasStore();
 
   const isTextComponent =
     component.type === "text" ||
@@ -58,8 +63,21 @@ export default function ComponentWrapper({ component }: ComponentWrapperProps) {
   };
 
   return (
-    <div onDoubleClick={handleDoubleClick} className="relative">
-      {/* Inline edit */}
+    <div
+      data-element-id={component.id}
+      onDoubleClick={handleDoubleClick}
+      className={`
+        relative group
+        rounded-sm
+        transition-all
+        ${
+          isEditing
+            ? "ring-1 ring-blue-400/60 bg-blue-50/30"
+            : "hover:bg-blue-500/5"
+        }
+      `}
+    >
+      {/* Inline edit OR render */}
       {isEditing ? (
         <textarea
           ref={inputRef}
@@ -76,20 +94,58 @@ export default function ComponentWrapper({ component }: ComponentWrapperProps) {
               cancelText();
             }
           }}
-          className="w-full bg-transparent outline-none resize-none text-inherit font-inherit"
+          className="
+            w-full
+            bg-transparent
+            outline-none
+            resize-none
+            text-inherit
+            font-inherit
+            leading-relaxed
+            caret-blue-500
+            selection:bg-blue-200
+            px-0.5
+          "
         />
       ) : (
         <ComponentRenderer component={component} />
       )}
 
-      {/* Delete button (positioned, no layout impact) */}
+      {/* ✅ RENDER CHILDREN (CRITICAL — UNCHANGED LOGIC) */}
+      {component.children &&
+        component.children.length > 0 &&
+        currentProject && (
+          <div className="relative w-full pl-1 mt-0.5">
+            {component.children.map((childId) => {
+              const child = currentProject.components[childId];
+              if (!child) return null;
+
+              return <ComponentWrapper key={child.id} component={child} />;
+            })}
+          </div>
+        )}
+
+      {/* Delete button — IDE-style */}
       <button
         onClick={(e) => {
           e.stopPropagation();
           removeComponent(component.id);
         }}
-        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition"
-        title="Delete"
+        title="Delete component"
+        className="
+          absolute -top-2 -right-2
+          p-1.5
+          rounded-full
+          bg-red-500/90
+          text-white
+          opacity-0
+          scale-90
+          group-hover:opacity-100
+          group-hover:scale-100
+          transition-all
+          shadow-sm
+          hover:bg-red-600
+        "
       >
         <Trash2 size={12} />
       </button>

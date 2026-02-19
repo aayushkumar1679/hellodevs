@@ -390,7 +390,7 @@ export default function CanvasElement({
     const style: React.CSSProperties = {
       transition: isResizing
         ? "none"
-        : "box-shadow 120ms ease, outline 120ms ease",
+        : "box-shadow 120ms ease, outline 120ms ease, transform 120ms ease",
       boxSizing: "border-box",
     };
 
@@ -454,10 +454,12 @@ export default function CanvasElement({
       style={inlineStyle}
       data-resizing={isResizing ? "true" : "false"}
       data-element-id={elementId}
-      className={`relative ${
+      role="group"
+      aria-label={`Canvas element ${elementId}`}
+      className={`relative transition-shadow duration-150 will-change-transform ${
         isSelected
-          ? "outline outline-2 outline-blue-500 outline-offset-2"
-          : "hover:outline hover:outline-1 hover:outline-gray-400"
+          ? "outline outline-2 outline-blue-500 outline-offset-2 shadow-lg"
+          : "hover:outline hover:outline-1 hover:outline-gray-400 hover:shadow-sm"
       } ${className}`}
     >
       {/* Resize handles */}
@@ -479,7 +481,10 @@ export default function CanvasElement({
               key={dir}
               data-resize-handle="true"
               onMouseDown={(e) => startResize(e, dir)}
-              className={`absolute w-2.5 h-2.5 bg-white border border-blue-500 rounded-sm pointer-events-auto ${cls}`}
+              role="button"
+              aria-label={`Resize handle ${dir}`}
+              tabIndex={-1}
+              className={`absolute w-3.5 h-3.5 bg-white border border-blue-500 rounded-sm pointer-events-auto transform transition-transform duration-100 hover:scale-110 ${cls}`}
             />
           ))}
         </div>

@@ -11,6 +11,22 @@ interface ComponentRendererProps {
   };
 }
 
+/* --------------------------------------------------
+ Base render-safe style
+-------------------------------------------------- */
+
+const baseStyle: React.CSSProperties = {
+  boxSizing: "border-box",
+  width: "100%",
+  font: "inherit",
+  color: "inherit",
+  lineHeight: "inherit",
+};
+
+/* --------------------------------------------------
+ Component Renderer
+-------------------------------------------------- */
+
 export default function ComponentRenderer({
   component,
 }: ComponentRendererProps) {
@@ -23,6 +39,7 @@ export default function ComponentRenderer({
 
   /* ===============================
      Layout Components
+     (Intentionally empty shells)
      =============================== */
 
   if (
@@ -36,9 +53,9 @@ export default function ComponentRenderer({
     return (
       <div
         style={{
-          width: "100%",
-          minHeight: "40px",
-          boxSizing: "border-box",
+          ...baseStyle,
+          minHeight: 40,
+          borderRadius: 4,
         }}
       />
     );
@@ -55,11 +72,12 @@ export default function ComponentRenderer({
         `h${level}`,
         {
           style: {
+            ...baseStyle,
             margin: 0,
             padding: 0,
-            width: "100%",
-            boxSizing: "border-box",
-          },
+            fontWeight: 600,
+            letterSpacing: "-0.01em",
+          } as React.CSSProperties,
         },
         props.text ?? "Heading"
       );
@@ -69,10 +87,10 @@ export default function ComponentRenderer({
       return (
         <p
           style={{
+            ...baseStyle,
             margin: 0,
             padding: 0,
-            width: "100%",
-            boxSizing: "border-box",
+            opacity: props.text ? 1 : 0.6,
           }}
         >
           {props.text ?? "Text"}
@@ -83,12 +101,16 @@ export default function ComponentRenderer({
       return (
         <button
           style={{
-            margin: 0,
+            ...baseStyle,
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            boxSizing: "border-box",
-            width: "100%",
+            padding: "6px 12px",
+            borderRadius: 4,
+            border: "1px solid currentColor",
+            background: "transparent",
+            cursor: "pointer",
+            userSelect: "none",
           }}
         >
           {props.text ?? "Button"}
@@ -100,18 +122,33 @@ export default function ComponentRenderer({
        =============================== */
 
     case "image":
-      return (
+      return props.src ? (
         <img
           src={props.src}
           alt={props.alt || ""}
           style={{
-            width: "100%",
+            ...baseStyle,
             height: "100%",
             objectFit: "contain",
             display: "block",
-            boxSizing: "border-box",
           }}
         />
+      ) : (
+        <div
+          style={{
+            ...baseStyle,
+            height: 120,
+            background: "rgba(0,0,0,0.05)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 12,
+            color: "#888",
+            borderRadius: 4,
+          }}
+        >
+          Image
+        </div>
       );
 
     /* ===============================
@@ -123,8 +160,11 @@ export default function ComponentRenderer({
         <input
           placeholder={props.placeholder}
           style={{
-            width: "100%",
-            boxSizing: "border-box",
+            ...baseStyle,
+            padding: "6px 8px",
+            borderRadius: 4,
+            border: "1px solid #ccc",
+            outline: "none",
           }}
         />
       );
@@ -134,10 +174,13 @@ export default function ComponentRenderer({
         <textarea
           placeholder={props.placeholder}
           style={{
-            width: "100%",
+            ...baseStyle,
             height: "100%",
             resize: "none",
-            boxSizing: "border-box",
+            padding: "6px 8px",
+            borderRadius: 4,
+            border: "1px solid #ccc",
+            outline: "none",
           }}
         />
       );
@@ -152,9 +195,15 @@ export default function ComponentRenderer({
           style={{
             display: "inline-block",
             boxSizing: "border-box",
+            padding: "2px 6px",
+            borderRadius: 999,
+            fontSize: 11,
+            fontWeight: 500,
+            lineHeight: "1.2",
+            background: "rgba(0,0,0,0.08)",
           }}
         >
-          {props.text}
+          {props.text ?? "Badge"}
         </span>
       );
 
@@ -162,13 +211,21 @@ export default function ComponentRenderer({
       return (
         <div
           style={{
-            width: "100%",
-            boxSizing: "border-box",
+            ...baseStyle,
+            padding: "8px 10px",
+            borderRadius: 4,
+            background: "rgba(255,0,0,0.05)",
+            border: "1px solid rgba(255,0,0,0.2)",
+            fontSize: 13,
           }}
         >
-          {props.text}
+          {props.text ?? "Alert message"}
         </div>
       );
+
+    /* ===============================
+       Fallback
+       =============================== */
 
     default:
       return (
@@ -177,6 +234,7 @@ export default function ComponentRenderer({
             fontSize: 12,
             color: "#999",
             fontStyle: "italic",
+            padding: "4px 0",
           }}
         >
           Unknown component: {component.type}

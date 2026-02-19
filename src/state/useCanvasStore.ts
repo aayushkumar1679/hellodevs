@@ -1,5 +1,31 @@
+// src/state/useCanvasStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { COMPONENT_LIBRARY } from "@/config/componentRegistry";
+
+/* -------------------------------------------------
+ * Helpers for registry / blueprints
+ * ------------------------------------------------- */
+const getComponentDef = (type: string) =>
+  COMPONENT_LIBRARY.find((c) => c.type === type);
+
+const buildFromBlueprint = (
+  blueprint: any,
+  add: (type: string, parentId?: string) => string,
+  parentId?: string
+): string => {
+  const id = add(blueprint.type, parentId);
+
+  // If blueprint node has props or css, we'll rely on updateComponent elsewhere.
+  // But we still create subtree.
+  if (blueprint.children?.length) {
+    blueprint.children.forEach((child: any) => {
+      buildFromBlueprint(child, add, id);
+    });
+  }
+
+  return id;
+};
 
 /* -------------------------------------------------
  * Types
@@ -19,13 +45,11 @@ export interface Project {
 
   /**
    * First root component (legacy / optional)
-   * Canvas rendering may rely on this
    */
   rootComponent: string | null;
 
   /**
-   * ✅ ORDERED list of root-level components
-   * REQUIRED for Layers drag-reorder to work
+   * Ordered list of root-level components (required)
    */
   rootOrder: string[];
 
@@ -46,19 +70,12 @@ interface CanvasState {
   addComponent: (type: string, parentId?: string) => string;
   removeComponent: (id: string) => void;
 
-  /**
-   * Used for re-parenting or move-with-index
-   */
   moveComponent: (
     id: string,
     newParentId: string | null,
     index?: number
   ) => void;
 
-  /**
-   * ✅ ORDER-ONLY API (SAFE)
-   * Used by LayersPanel drag-reorder
-   */
   reorderChildren: (parentId: string | null, orderedIds: string[]) => void;
 
   updateComponent: (id: string, updates: Partial<CanvasComponent>) => void;
@@ -69,11 +86,13 @@ interface CanvasState {
 }
 
 /* -------------------------------------------------
- * Helpers
+ * Local helpers
  * ------------------------------------------------- */
 
+/** Deep clone to protect undo history */
 const cloneProject = (p: Project): Project => JSON.parse(JSON.stringify(p));
 
+/** Recursively collect component subtree */
 const collectSubtree = (
   components: Record<string, CanvasComponent>,
   rootId: string,
@@ -92,336 +111,435 @@ const collectSubtree = (
 
 export const useCanvasStore = create<CanvasState>()(
   persist(
-    (set) => ({
-      projects: {},
-      currentProjectId: null,
-      currentProject: null,
-      history: [],
-      future: [],
-
-      /* ---------- Project ---------- */
-
-      createProject: (name) => {
-        const id = `project-${Date.now()}`;
-        const now = new Date().toISOString();
-
-        const project: Project = {
-          id,
-          name,
-          components: {},
-          rootComponent: null,
-          rootOrder: [], // ✅ IMPORTANT
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        set(() => ({
-          projects: { [id]: project },
-          currentProjectId: id,
-          currentProject: project,
-          history: [],
-          future: [],
-        }));
-      },
-
-      deleteProject: (id) => {
+    (set, get) => {
+      /**
+       * originalAddComponent - fallback single-component adder used by addComponent
+       * Implemented here (closure) so it can call set() and return new id synchronously.
+       */
+      const originalAddComponent = (type: string, parentId?: string) => {
+        let newId = "";
         set((state) => {
-          const { [id]: _, ...rest } = state.projects;
-          return {
-            projects: rest,
-            currentProjectId:
-              state.currentProjectId === id ? null : state.currentProjectId,
-            currentProject:
-              state.currentProjectId === id ? null : state.currentProject,
+          if (!state.currentProject) return state;
+
+          const prev = cloneProject(state.currentProject);
+
+          const id = `component-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 9)}`;
+
+          // initialize props from registry defaultProps if present
+          const def = getComponentDef(type);
+
+          prev.components[id] = {
+            id,
+            type,
+            props: def?.defaultProps ? { ...def.defaultProps } : {},
+            children: [],
           };
-        });
-      },
 
-      setCurrentProject: (id) => {
-        set((state) => {
-          const project = state.projects[id];
-          if (!project) return state;
-
-          // ✅ MIGRATION: ensure rootOrder exists
-          if (!Array.isArray(project.rootOrder)) {
-            const rootIds = Object.values(project.components)
-              .filter(
-                (c) =>
-                  !Object.values(project.components).some((p) =>
-                    p.children.includes(c.id)
-                  )
-              )
-              .map((c) => c.id);
-
-            project.rootOrder = rootIds;
+          if (parentId && prev.components[parentId]) {
+            prev.components[parentId].children.push(id);
+          } else {
+            // insert into rootOrder
+            prev.rootOrder = prev.rootOrder ?? [];
+            prev.rootOrder.push(id);
+            prev.rootComponent = prev.rootComponent ?? id;
           }
 
+          const project: Project = {
+            ...prev,
+            updatedAt: new Date().toISOString(),
+          };
+
+          newId = id;
+
           return {
+            history: [...state.history, cloneProject(state.currentProject)],
+            future: [],
+            currentProject: project,
+            projects: {
+              ...state.projects,
+              [state.currentProjectId!]: project,
+            },
+          };
+        });
+
+        return newId;
+      };
+
+      return {
+        projects: {},
+        currentProjectId: null,
+        currentProject: null,
+        history: [],
+        future: [],
+
+        /* ---------- Project ---------- */
+
+        createProject: (name) => {
+          const id = `project-${Date.now()}`;
+          const now = new Date().toISOString();
+
+          const project: Project = {
+            id,
+            name,
+            components: {},
+            rootComponent: null,
+            rootOrder: [],
+            createdAt: now,
+            updatedAt: now,
+          };
+
+          set(() => ({
+            projects: { [id]: project },
             currentProjectId: id,
             currentProject: project,
             history: [],
             future: [],
-          };
-        });
-      },
+          }));
+        },
 
-      /* ---------- Components ---------- */
-
-      addComponent: (type, parentId) => {
-        const id = `component-${Date.now()}`;
-
-        set((state) => {
-          if (!state.currentProject) return state;
-
-          const prev = cloneProject(state.currentProject);
-
-          const component: CanvasComponent = {
-            id,
-            type,
-            props: {},
-            children: [],
-          };
-
-          const components = {
-            ...prev.components,
-            [id]: component,
-          };
-
-          if (parentId && components[parentId]) {
-            components[parentId].children.push(id);
-          }
-
-          const project: Project = {
-            ...prev,
-            components,
-            rootComponent: prev.rootComponent ?? id,
-
-            /**
-             * ✅ ADD TO ROOT ORDER ONLY IF NO PARENT
-             */
-            rootOrder: parentId ? prev.rootOrder : [...prev.rootOrder, id],
-
-            updatedAt: new Date().toISOString(),
-          };
-
-          return {
-            history: [...state.history, prev],
-            future: [],
-            currentProject: project,
-            projects: {
-              ...state.projects,
-              [state.currentProjectId!]: project,
-            },
-          };
-        });
-
-        return id;
-      },
-
-      removeComponent: (id) => {
-        set((state) => {
-          if (!state.currentProject) return state;
-
-          const prev = cloneProject(state.currentProject);
-          const components = { ...prev.components };
-
-          if (!components[id]) return state;
-
-          const toRemove = collectSubtree(components, id);
-
-          Object.values(components).forEach((c) => {
-            c.children = c.children.filter((cid) => !toRemove.has(cid));
+        deleteProject: (id) => {
+          set((state) => {
+            const { [id]: _, ...rest } = state.projects;
+            return {
+              projects: rest,
+              currentProjectId:
+                state.currentProjectId === id ? null : state.currentProjectId,
+              currentProject:
+                state.currentProjectId === id ? null : state.currentProject,
+            };
           });
+        },
 
-          toRemove.forEach((cid) => delete components[cid]);
+        setCurrentProject: (id) => {
+          set((state) => {
+            const project = state.projects[id];
+            if (!project) return state;
 
-          const project: Project = {
-            ...prev,
-            components,
+            // MIGRATION: ensure rootOrder exists and fallback to computed root ids
+            if (!Array.isArray(project.rootOrder)) {
+              const rootIds = Object.values(project.components)
+                .filter(
+                  (c) =>
+                    !Object.values(project.components).some((p) =>
+                      p.children.includes(c.id)
+                    )
+                )
+                .map((c) => c.id);
 
-            /**
-             * ✅ CLEAN ROOT ORDER
-             */
-            rootOrder: prev.rootOrder.filter((cid) => !toRemove.has(cid)),
+              project.rootOrder = rootIds;
+            }
 
-            rootComponent:
-              prev.rootComponent && toRemove.has(prev.rootComponent)
-                ? null
-                : prev.rootComponent,
+            // ensure arrays exist
+            project.rootOrder = project.rootOrder ?? [];
+            project.components = project.components ?? {};
+            project.rootComponent =
+              project.rootComponent ?? project.rootOrder[0] ?? null;
 
-            updatedAt: new Date().toISOString(),
-          };
+            return {
+              currentProjectId: id,
+              currentProject: project,
+              history: [],
+              future: [],
+            };
+          });
+        },
 
-          return {
-            history: [...state.history, prev],
-            future: [],
-            currentProject: project,
-            projects: {
-              ...state.projects,
-              [state.currentProjectId!]: project,
-            },
-          };
-        });
-      },
+        /* ---------- Components ---------- */
 
-      /* ---------- MOVE / REORDER ---------- */
+        addComponent: (type, parentId) => {
+          const def = getComponentDef(type);
 
-      moveComponent: (id, newParentId, index) => {
-        set((state) => {
-          if (!state.currentProject) return state;
+          // If component type has a blueprint -> expand into multiple nodes
+          if (def?.blueprint) {
+            // We'll expand the blueprint in a single set() call to keep history coherent.
+            let rootId = "";
+            set((state) => {
+              if (!state.currentProject) return state;
 
-          const prev = cloneProject(state.currentProject);
-          const components = { ...prev.components };
+              const prev = cloneProject(state.currentProject);
 
-          const comp = components[id];
-          if (!comp) return state;
+              // temporary add function used by buildFromBlueprint
+              const add = (t: string, p?: string) => {
+                const id = `component-${Date.now()}-${Math.random()
+                  .toString(36)
+                  .slice(2, 9)}`;
 
-          const currentParentEntry = Object.entries(components).find(([, c]) =>
-            c.children.includes(id)
-          );
-          const currentParentId = currentParentEntry
-            ? currentParentEntry[0]
-            : null;
+                const d = getComponentDef(t);
 
-          // remove from old parent
-          if (currentParentId) {
-            components[currentParentId].children = components[
-              currentParentId
-            ].children.filter((cid) => cid !== id);
-          } else {
-            prev.rootOrder = prev.rootOrder.filter((cid) => cid !== id);
+                prev.components[id] = {
+                  id,
+                  type: t,
+                  props: d?.defaultProps ? { ...d.defaultProps } : {},
+                  children: [],
+                };
+
+                if (p && prev.components[p]) {
+                  prev.components[p].children.push(id);
+                } else {
+                  prev.rootOrder = prev.rootOrder ?? [];
+                  prev.rootOrder.push(id);
+                  prev.rootComponent = prev.rootComponent ?? id;
+                }
+
+                return id;
+              };
+
+              // build from blueprint, starting at optional parentId
+              rootId = buildFromBlueprint(def.blueprint, add, parentId);
+
+              // ensure rootComponent exists
+              prev.rootComponent = prev.rootComponent ?? rootId;
+              prev.rootOrder = prev.rootOrder ?? [];
+
+              const project: Project = {
+                ...prev,
+                updatedAt: new Date().toISOString(),
+              };
+
+              return {
+                history: [...state.history, cloneProject(state.currentProject)],
+                future: [],
+                currentProject: project,
+                projects: {
+                  ...state.projects,
+                  [state.currentProjectId!]: project,
+                },
+              };
+            });
+
+            return rootId;
           }
 
-          // add to new parent
-          if (newParentId && components[newParentId]) {
-            const target = components[newParentId].children;
-            const insertAt =
-              index === undefined
-                ? target.length
-                : Math.max(0, Math.min(index, target.length));
-            target.splice(insertAt, 0, id);
-          } else {
-            const insertAt =
-              index === undefined
-                ? prev.rootOrder.length
-                : Math.max(0, Math.min(index, prev.rootOrder.length));
-            prev.rootOrder.splice(insertAt, 0, id);
-          }
+          // Fallback: single component - delegate to originalAddComponent helper
+          return originalAddComponent(type, parentId);
+        },
 
-          const project: Project = {
-            ...prev,
-            components,
-            updatedAt: new Date().toISOString(),
-          };
+        removeComponent: (id) => {
+          set((state) => {
+            if (!state.currentProject) return state;
 
-          return {
-            history: [...state.history, prev],
-            future: [],
-            currentProject: project,
-            projects: {
-              ...state.projects,
-              [state.currentProjectId!]: project,
-            },
-          };
-        });
-      },
+            const prev = cloneProject(state.currentProject);
+            const components = { ...prev.components };
 
-      reorderChildren: (parentId, orderedIds) => {
-        set((state) => {
-          if (!state.currentProject) return state;
+            if (!components[id]) return state;
 
-          const prev = cloneProject(state.currentProject);
-          const components = { ...prev.components };
+            // collect subtree
+            const toRemove = collectSubtree(components, id);
 
-          if (parentId === null) {
-            prev.rootOrder = orderedIds;
-          } else {
-            if (!components[parentId]) return state;
-            components[parentId].children = orderedIds;
-          }
+            // remove references from parents
+            Object.values(components).forEach((c) => {
+              c.children = c.children.filter((cid) => !toRemove.has(cid));
+            });
 
-          const project: Project = {
-            ...prev,
-            components,
-            updatedAt: new Date().toISOString(),
-          };
+            // delete subtree
+            toRemove.forEach((cid) => {
+              delete components[cid];
+            });
 
-          return {
-            history: [...state.history, prev],
-            future: [],
-            currentProject: project,
-            projects: {
-              ...state.projects,
-              [state.currentProjectId!]: project,
-            },
-          };
-        });
-      },
+            const project: Project = {
+              ...prev,
+              components,
 
-      updateComponent: (id, updates) => {
-        set((state) => {
-          if (!state.currentProject) return state;
+              // CLEAN rootOrder from removed ids
+              rootOrder: (prev.rootOrder || []).filter(
+                (cid) => !toRemove.has(cid)
+              ),
 
-          const prev = cloneProject(state.currentProject);
-          if (!prev.components[id]) return state;
+              rootComponent:
+                prev.rootComponent && toRemove.has(prev.rootComponent)
+                  ? null
+                  : prev.rootComponent,
 
-          prev.components[id] = {
-            ...prev.components[id],
-            ...updates,
-          };
+              updatedAt: new Date().toISOString(),
+            };
 
-          return {
-            currentProject: prev,
-            projects: {
-              ...state.projects,
-              [state.currentProjectId!]: prev,
-            },
-          };
-        });
-      },
+            return {
+              history: [...state.history, prev],
+              future: [],
+              currentProject: project,
+              projects: {
+                ...state.projects,
+                [state.currentProjectId!]: project,
+              },
+            };
+          });
+        },
 
-      /* ---------- Undo / Redo ---------- */
+        /* ---------- MOVE / REORDER ---------- */
 
-      undo: () => {
-        set((state) => {
-          if (state.history.length === 0) return state;
+        moveComponent: (id, newParentId, index) => {
+          set((state) => {
+            if (!state.currentProject) return state;
 
-          const prev = state.history[state.history.length - 1];
+            const prev = cloneProject(state.currentProject);
+            const components = { ...prev.components };
 
-          return {
-            history: state.history.slice(0, -1),
-            future: state.currentProject
-              ? [cloneProject(state.currentProject), ...state.future]
-              : state.future,
-            currentProject: cloneProject(prev),
-            projects: {
-              ...state.projects,
-              [state.currentProjectId!]: cloneProject(prev),
-            },
-          };
-        });
-      },
+            const comp = components[id];
+            if (!comp) return state;
 
-      redo: () => {
-        set((state) => {
-          if (state.future.length === 0) return state;
+            // find current parent (if any)
+            const currentParentEntry = Object.entries(components).find(
+              ([, c]) => c.children.includes(id)
+            );
+            const currentParentId = currentParentEntry
+              ? currentParentEntry[0]
+              : null;
 
-          const next = state.future[0];
+            // remove from old parent or rootOrder
+            if (currentParentId) {
+              components[currentParentId] = {
+                ...components[currentParentId],
+                children: components[currentParentId].children.filter(
+                  (cid) => cid !== id
+                ),
+              };
+            } else {
+              prev.rootOrder = (prev.rootOrder || []).filter(
+                (cid) => cid !== id
+              );
+            }
 
-          return {
-            history: state.currentProject
-              ? [...state.history, cloneProject(state.currentProject)]
-              : state.history,
-            future: state.future.slice(1),
-            currentProject: cloneProject(next),
-            projects: {
-              ...state.projects,
-              [state.currentProjectId!]: cloneProject(next),
-            },
-          };
-        });
-      },
-    }),
+            // add to new parent children OR rootOrder at index
+            if (newParentId && components[newParentId]) {
+              const targetChildren = [...components[newParentId].children];
+              const insertIndex =
+                index === undefined
+                  ? targetChildren.length
+                  : Math.max(0, Math.min(index, targetChildren.length));
+              targetChildren.splice(insertIndex, 0, id);
+              components[newParentId] = {
+                ...components[newParentId],
+                children: targetChildren,
+              };
+            } else {
+              prev.rootOrder = prev.rootOrder ?? [];
+              const insertIndex =
+                index === undefined
+                  ? prev.rootOrder.length
+                  : Math.max(0, Math.min(index, prev.rootOrder.length));
+              prev.rootOrder.splice(insertIndex, 0, id);
+            }
+
+            const project: Project = {
+              ...prev,
+              components,
+              updatedAt: new Date().toISOString(),
+            };
+
+            return {
+              history: [...state.history, prev],
+              future: [],
+              currentProject: project,
+              projects: {
+                ...state.projects,
+                [state.currentProjectId!]: project,
+              },
+            };
+          });
+        },
+
+        reorderChildren: (parentId, orderedIds) => {
+          set((state) => {
+            if (!state.currentProject) return state;
+
+            const prev = cloneProject(state.currentProject);
+            const components = { ...prev.components };
+
+            if (parentId === null) {
+              prev.rootOrder = orderedIds;
+            } else {
+              if (!components[parentId]) return state;
+              components[parentId] = {
+                ...components[parentId],
+                children: orderedIds,
+              };
+            }
+
+            const project: Project = {
+              ...prev,
+              components,
+              updatedAt: new Date().toISOString(),
+            };
+
+            return {
+              history: [...state.history, prev],
+              future: [],
+              currentProject: project,
+              projects: {
+                ...state.projects,
+                [state.currentProjectId!]: project,
+              },
+            };
+          });
+        },
+
+        updateComponent: (id, updates) => {
+          set((state) => {
+            if (!state.currentProject) return state;
+
+            const prev = cloneProject(state.currentProject);
+            if (!prev.components[id]) return state;
+
+            prev.components[id] = {
+              ...prev.components[id],
+              ...updates,
+            };
+
+            return {
+              currentProject: prev,
+              projects: {
+                ...state.projects,
+                [state.currentProjectId!]: prev,
+              },
+            };
+          });
+        },
+
+        /* ---------- Undo / Redo ---------- */
+
+        undo: () => {
+          set((state) => {
+            if (state.history.length === 0) return state;
+
+            const prev = state.history[state.history.length - 1];
+
+            return {
+              history: state.history.slice(0, -1),
+              future: state.currentProject
+                ? [cloneProject(state.currentProject), ...state.future]
+                : state.future,
+              currentProject: cloneProject(prev),
+              projects: {
+                ...state.projects,
+                [state.currentProjectId!]: cloneProject(prev),
+              },
+            };
+          });
+        },
+
+        redo: () => {
+          set((state) => {
+            if (state.future.length === 0) return state;
+
+            const next = state.future[0];
+
+            return {
+              history: state.currentProject
+                ? [...state.history, cloneProject(state.currentProject)]
+                : state.history,
+              future: state.future.slice(1),
+              currentProject: cloneProject(next),
+              projects: {
+                ...state.projects,
+                [state.currentProjectId!]: cloneProject(next),
+              },
+            };
+          });
+        },
+      };
+    },
     { name: "canvas-store" }
   )
 );

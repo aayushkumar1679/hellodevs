@@ -708,7 +708,7 @@ export default function Canvas() {
   return (
     <div
       ref={canvasRef}
-      className="relative w-full h-full bg-gray-100 overflow-auto select-none"
+      className="relative w-full h-full bg-[#020617] overflow-auto select-none"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -716,7 +716,7 @@ export default function Canvas() {
       {/* Marquee */}
       {selectionBox && canvasRectForRender && (
         <div
-          className="absolute z-50 border border-blue-400 bg-blue-400/10 pointer-events-none"
+          className="absolute z-50 border border-blue-400 bg-blue-400/10 pointer-events-none rounded"
           style={{
             left: selectionBox.x - canvasRectForRender.left,
             top: selectionBox.y - canvasRectForRender.top,
@@ -731,7 +731,7 @@ export default function Canvas() {
         <React.Fragment key={i}>
           {g.x !== undefined && (
             <div
-              className="absolute z-60 bg-blue-400/70 pointer-events-none"
+              className="absolute z-60 bg-blue-400/70 pointer-events-none transition-all"
               style={{
                 left: g.x,
                 top: 0,
@@ -742,7 +742,7 @@ export default function Canvas() {
           )}
           {g.y !== undefined && (
             <div
-              className="absolute z-60 bg-blue-400/70 pointer-events-none"
+              className="absolute z-60 bg-blue-400/70 pointer-events-none transition-all"
               style={{
                 top: g.y,
                 left: 0,
@@ -757,7 +757,7 @@ export default function Canvas() {
       {distanceLabels.map((d, i) => (
         <div
           key={i}
-          className="absolute z-60 text-[10px] font-medium text-pink-500 bg-pink-100 px-1 rounded pointer-events-none"
+          className="absolute z-60 text-[10px] font-medium text-white bg-pink-600/90 px-1 rounded pointer-events-none shadow"
           style={{
             left: d.x,
             top: d.y,
@@ -772,12 +772,12 @@ export default function Canvas() {
       {previewEnabled && (
         <div className="flex justify-center py-12">
           <div
-            className="bg-white shadow-md min-h-screen transition-[width] duration-200 relative"
+            className="bg-white shadow-lg min-h-screen transition-[width] duration-200 relative rounded-lg border border-white/5 overflow-hidden"
             style={{ width: viewportWidth }}
           >
             <div className="p-8 space-y-4 relative">
               {rootComponents.length === 0 ? (
-                <div className="text-center text-gray-400 py-12">
+                <div className="text-center text-gray-500 py-12">
                   <p className="text-sm">No components added</p>
                   <p className="text-xs">
                     Drag components from the left panel to get started
@@ -795,7 +795,7 @@ export default function Canvas() {
                         width: groupBoxLocal.w,
                         height: groupBoxLocal.h,
                         boxSizing: "border-box",
-                        border: "1px dashed rgba(59,130,246,0.8)",
+                        border: "1px dashed rgba(59,130,246,0.9)",
                         background: "transparent",
                       }}
                     >

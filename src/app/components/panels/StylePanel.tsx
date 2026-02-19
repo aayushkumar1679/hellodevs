@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useDesignStore } from "@/state/useDesignStore";
 import { useCanvasStore } from "@/state/useCanvasStore";
@@ -52,12 +52,14 @@ const gradientToCss = (g?: Gradient) => {
 };
 
 const inputCls =
-  "w-full px-2 py-1 bg-gray-800 border border-gray-700 rounded-sm text-xs text-gray-100";
+  "w-full px-3 py-1.5 bg-[#020617] border border-white/10 rounded-md text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors";
+
+const selectCls =
+  "w-full px-3 py-1.5 bg-[#020617] border border-white/10 rounded-md text-xs text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors appearance-none cursor-pointer";
 
 /* --------------------------- component --------------------------- */
 
 export default function StylePanel() {
-  /* ---------- Hooks: MUST stay unconditional ---------- */
   const selectedElements = useDesignStore((s: any) => s.selectedElements);
   const elements = useDesignStore((s: any) => s.elements);
   const updateElement = useDesignStore((s: any) => s.updateElement);
@@ -71,7 +73,6 @@ export default function StylePanel() {
   const barRef = useRef<HTMLDivElement | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
-  /* ---------- Derived state ---------- */
   const hasSelection = !!selectedElements && selectedElements.length > 0;
   const primaryId = hasSelection ? selectedElements[0] : null;
   const element = primaryId ? elements[primaryId] : null;
@@ -87,9 +88,7 @@ export default function StylePanel() {
 
   const composedBg = css.background || gradientToCss(gradient);
 
-  /* ---------- Helpers to avoid stale writes ---------- */
   const getLatestElement = () =>
-    // @ts-ignore runtime getState is available on the zustand hook function
     (useDesignStore as any).getState().elements[primaryId] || {
       cssProperties: {},
     };
@@ -100,8 +99,9 @@ export default function StylePanel() {
     const latestCss = latest.cssProperties || {};
     const nextBucket = { ...(latestCss[bucket] || {}) };
     nextBucket[prop] = value;
-    const nextCss = { ...latestCss, [bucket]: nextBucket };
-    updateElement(primaryId, { cssProperties: nextCss });
+    updateElement(primaryId, {
+      cssProperties: { ...latestCss, [bucket]: nextBucket },
+    });
   }
 
   function updateGradientPartial(partial: Partial<Gradient>) {
@@ -110,7 +110,7 @@ export default function StylePanel() {
     const latestCss = latest.cssProperties || {};
     const bucketObj = { ...(latestCss[bucket] || {}) };
 
-    const existing: Gradient =
+    const existing =
       bucketObj.backgroundGradient &&
       Array.isArray(bucketObj.backgroundGradient.stops)
         ? bucketObj.backgroundGradient
@@ -119,17 +119,16 @@ export default function StylePanel() {
     const next: Gradient = {
       ...existing,
       ...partial,
-      stops: partial.stops ?? existing.stops ?? DEFAULT_GRADIENT.stops,
+      stops: partial.stops ?? existing.stops,
     };
 
     bucketObj.backgroundGradient = next;
     bucketObj.background = gradientToCss(next);
-
-    const nextCssProperties = { ...latestCss, [bucket]: bucketObj };
-    updateElement(primaryId, { cssProperties: nextCssProperties });
+    updateElement(primaryId, {
+      cssProperties: { ...latestCss, [bucket]: bucketObj },
+    });
   }
 
-  /* ---------- Drag effect: always declared ---------- */
   useEffect(() => {
     if (dragIndex === null) return;
 
@@ -140,30 +139,23 @@ export default function StylePanel() {
         ev instanceof TouchEvent
           ? ev.touches[0]?.clientX ?? 0
           : (ev as MouseEvent).clientX;
-      const pos = clamp(
-        Math.round(((clientX - rect.left) / rect.width) * 100),
-        0,
-        100
-      );
+      const pos = clamp(Math.round(((clientX - rect.left) / rect.width) * 100));
 
-      // read freshest stops & write
       const latest = getLatestElement();
       const latestCss = latest.cssProperties || {};
       const bucketObj = { ...(latestCss[bucket] || {}) };
 
-      const existing: Gradient =
+      const existing =
         bucketObj.backgroundGradient &&
         Array.isArray(bucketObj.backgroundGradient.stops)
           ? bucketObj.backgroundGradient
-          : gradient || DEFAULT_GRADIENT;
+          : gradient;
 
       const stops = (existing.stops || []).slice();
-      if (!stops[dragIndex]) return;
       stops[dragIndex] = { ...stops[dragIndex], position: pos };
 
-      const next: Gradient = { ...existing, stops };
-      bucketObj.backgroundGradient = next;
-      bucketObj.background = gradientToCss(next);
+      bucketObj.backgroundGradient = { ...existing, stops };
+      bucketObj.background = gradientToCss(bucketObj.backgroundGradient);
 
       updateElement(primaryId, {
         cssProperties: { ...latestCss, [bucket]: bucketObj },
@@ -180,23 +172,12 @@ export default function StylePanel() {
 
     window.addEventListener("mousemove", move as any);
     window.addEventListener("mouseup", up as any);
-    window.addEventListener(
-      "touchmove",
-      move as any,
-      { passive: false } as any
-    );
+    window.addEventListener("touchmove", move as any);
     window.addEventListener("touchend", up as any);
 
-    return () => {
-      window.removeEventListener("mousemove", move as any);
-      window.removeEventListener("mouseup", up as any);
-      window.removeEventListener("touchmove", move as any);
-      window.removeEventListener("touchend", up as any);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return up;
   }, [dragIndex]);
 
-  /* ---------- small UI helpers ---------- */
   const Section = ({
     id,
     title,
@@ -208,7 +189,7 @@ export default function StylePanel() {
   }) => {
     const open = expanded.has(id);
     return (
-      <div className="p-2 rounded bg-gray-800/50 border border-gray-700/50">
+      <div className="rounded-lg border border-white/5 bg-white/2 overflow-hidden">
         <button
           onClick={() =>
             setExpanded((s) => {
@@ -217,14 +198,21 @@ export default function StylePanel() {
               return n;
             })
           }
-          className="w-full flex justify-between items-center text-xs text-gray-300"
+          className="w-full px-3 py-2 flex justify-between items-center text-xs text-gray-300 hover:text-gray-100 hover:bg-white/5 transition-colors group"
         >
-          <span>{title}</span>
+          <span className="font-medium">{title}</span>
           <ChevronDown
-            className={`w-3 h-3 transition ${open ? "rotate-180" : ""}`}
+            size={14}
+            className={`text-gray-400 group-hover:text-gray-300 transition-all duration-200 ${
+              open ? "rotate-180" : ""
+            }`}
           />
         </button>
-        {open && <div className="mt-2 space-y-2">{children}</div>}
+        {open && (
+          <div className="px-3 py-2.5 space-y-2 border-t border-white/5 bg-white/1">
+            {children}
+          </div>
+        )}
       </div>
     );
   };
@@ -232,7 +220,6 @@ export default function StylePanel() {
   const getElementInfo = (id: string) =>
     currentProject?.components?.[id]?.type || "Unknown";
 
-  /* ---------- small gradient helpers ---------- */
   function addStop() {
     const stops = (gradient.stops || []).slice();
     const pos = stops.length
@@ -241,27 +228,32 @@ export default function StylePanel() {
     stops.push({ color: "#000000", alpha: 1, position: pos });
     updateGradientPartial({ stops });
   }
+
   function removeStop(idx: number) {
     const stops = (gradient.stops || []).slice();
     if (stops.length <= 1) return;
     stops.splice(idx, 1);
     updateGradientPartial({ stops });
   }
+
   function setStopColor(idx: number, color: string) {
     const stops = (gradient.stops || []).slice();
     stops[idx] = { ...stops[idx], color };
     updateGradientPartial({ stops });
   }
+
   function setStopAlpha(idx: number, alpha: number) {
     const stops = (gradient.stops || []).slice();
     stops[idx] = { ...stops[idx], alpha: Math.max(0, Math.min(1, alpha)) };
     updateGradientPartial({ stops });
   }
+
   function setStopPosition(idx: number, pos: number) {
     const stops = (gradient.stops || []).slice();
     stops[idx] = { ...stops[idx], position: clamp(Math.round(pos), 0, 100) };
     updateGradientPartial({ stops });
   }
+
   function setAngle(a: number) {
     updateGradientPartial({ angle: clamp(a, 0, 360) });
   }
@@ -280,282 +272,282 @@ export default function StylePanel() {
     "#9B5DE5",
   ];
 
-  /* ---------- Render: NO early returns (render inside JSX) ---------- */
-
   return (
-    <div className="p-3 space-y-4 bg-gray-900 text-gray-100 h-full overflow-y-auto">
+    <div className="flex flex-col h-full bg-[linear-gradient(180deg,#020617_0%,#020617_100%)] text-gray-100">
       {/* Header */}
-      <div className="px-2 py-1 bg-gray-800 border border-gray-700 rounded">
-        <p className="text-[10px] text-gray-400">
-          Editing:{" "}
-          <span className="font-semibold capitalize">{activeBreakpoint}</span>
+      <div className="shrink-0 px-3 py-2.5 border-b border-white/5 bg-white/3 backdrop-blur-sm">
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+          Styles
+          <span className="ml-2 inline-block px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-300 font-mono text-[9px]">
+            {activeBreakpoint}
+          </span>
         </p>
-        <p className="text-xs">
-          {primaryId ? getElementInfo(primaryId) : "No element"}
+        <p className="text-xs font-medium text-gray-100 mt-1">
+          {primaryId ? getElementInfo(primaryId) : "No element selected"}
         </p>
       </div>
 
-      {/* If no selection show friendly message */}
-      {!hasSelection ? (
-        <div className="p-4 text-gray-400 text-xs text-center">
-          No element selected — click a canvas item to edit styles
-        </div>
-      ) : (
-        <>
-          {/* Layout */}
-          <Section id="layout" title="Layout">
-            <select
-              className={inputCls}
-              value={css.display || "block"}
-              onChange={(e) => writeBucketProp("display", e.target.value)}
-            >
-              <option value="block">Block</option>
-              <option value="inline">Inline</option>
-              <option value="inline-block">Inline Block</option>
-              <option value="flex">Flex</option>
-              <option value="grid">Grid</option>
-            </select>
-
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                className={inputCls}
-                placeholder="Width (e.g. 100%, 320px)"
-                value={css.width || ""}
-                onChange={(e) => writeBucketProp("width", e.target.value)}
-              />
-              <input
-                className={inputCls}
-                placeholder="Height (e.g. auto, 200px)"
-                value={css.height || ""}
-                onChange={(e) => writeBucketProp("height", e.target.value)}
-              />
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        {!hasSelection ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="p-4 rounded-lg border border-white/5 bg-white/2">
+              <p className="text-xs text-gray-400 text-center">
+                Select an element on the canvas to edit styles
+              </p>
             </div>
-
-            {/* Flex helpers */}
-            {css.display === "flex" && (
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                <select
-                  className={inputCls}
-                  value={css.flexDirection || "row"}
-                  onChange={(e) =>
-                    writeBucketProp("flexDirection", e.target.value)
-                  }
-                >
-                  <option value="row">row</option>
-                  <option value="row-reverse">row-reverse</option>
-                  <option value="column">column</option>
-                  <option value="column-reverse">column-reverse</option>
-                </select>
-                <select
-                  className={inputCls}
-                  value={css.justifyContent || "flex-start"}
-                  onChange={(e) =>
-                    writeBucketProp("justifyContent", e.target.value)
-                  }
-                >
-                  <option value="flex-start">justify-start</option>
-                  <option value="center">center</option>
-                  <option value="flex-end">justify-end</option>
-                  <option value="space-between">space-between</option>
-                  <option value="space-around">space-around</option>
-                  <option value="space-evenly">space-evenly</option>
-                </select>
-                <select
-                  className={inputCls}
-                  value={css.alignItems || "stretch"}
-                  onChange={(e) =>
-                    writeBucketProp("alignItems", e.target.value)
-                  }
-                >
-                  <option value="stretch">stretch</option>
-                  <option value="flex-start">flex-start</option>
-                  <option value="center">center</option>
-                  <option value="flex-end">flex-end</option>
-                </select>
-                <input
-                  className={inputCls}
-                  placeholder="Gap (e.g. 12px)"
-                  value={css.gap || ""}
-                  onChange={(e) => writeBucketProp("gap", e.target.value)}
-                />
-              </div>
-            )}
-          </Section>
-
-          {/* Spacing */}
-          <Section id="spacing" title="Spacing">
-            <input
-              className={inputCls}
-              placeholder="Padding (e.g. 12px 16px)"
-              value={css.padding || ""}
-              onChange={(e) => writeBucketProp("padding", e.target.value)}
-            />
-            <input
-              className={inputCls}
-              placeholder="Margin (e.g. 0 auto)"
-              value={css.margin || ""}
-              onChange={(e) => writeBucketProp("margin", e.target.value)}
-            />
-          </Section>
-
-          {/* Colors & Gradient */}
-          <Section id="colors" title="Colors & Gradient">
-            <div className="flex gap-2 items-center">
+          </div>
+        ) : (
+          <>
+            {/* Layout */}
+            <Section id="layout" title="Layout">
               <select
-                className="px-2 py-1 bg-gray-800 border border-gray-700 rounded-sm text-xs"
-                value={gradient.type}
-                onChange={(e) =>
-                  updateGradientPartial({ type: e.target.value as any })
-                }
+                className={selectCls}
+                value={css.display || "block"}
+                onChange={(e) => writeBucketProp("display", e.target.value)}
               >
-                <option value="solid">Solid</option>
-                <option value="linear">Linear</option>
-                <option value="radial">Radial</option>
+                <option value="block">Block</option>
+                <option value="inline">Inline</option>
+                <option value="inline-block">Inline Block</option>
+                <option value="flex">Flex</option>
+                <option value="grid">Grid</option>
               </select>
 
-              {gradient.type === "linear" && (
-                <>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  className={inputCls}
+                  placeholder="Width (px, %)"
+                  value={css.width || ""}
+                  onChange={(e) => writeBucketProp("width", e.target.value)}
+                />
+                <input
+                  className={inputCls}
+                  placeholder="Height (px, auto)"
+                  value={css.height || ""}
+                  onChange={(e) => writeBucketProp("height", e.target.value)}
+                />
+              </div>
+
+              {css.display === "flex" && (
+                <div className="space-y-2 pt-2 border-t border-white/5 mt-2">
+                  <select
+                    className={selectCls}
+                    value={css.flexDirection || "row"}
+                    onChange={(e) =>
+                      writeBucketProp("flexDirection", e.target.value)
+                    }
+                  >
+                    <option value="row">row</option>
+                    <option value="row-reverse">row-reverse</option>
+                    <option value="column">column</option>
+                    <option value="column-reverse">column-reverse</option>
+                  </select>
+                  <select
+                    className={selectCls}
+                    value={css.justifyContent || "flex-start"}
+                    onChange={(e) =>
+                      writeBucketProp("justifyContent", e.target.value)
+                    }
+                  >
+                    <option value="flex-start">justify-start</option>
+                    <option value="center">center</option>
+                    <option value="flex-end">justify-end</option>
+                    <option value="space-between">space-between</option>
+                    <option value="space-around">space-around</option>
+                    <option value="space-evenly">space-evenly</option>
+                  </select>
+                  <select
+                    className={selectCls}
+                    value={css.alignItems || "stretch"}
+                    onChange={(e) =>
+                      writeBucketProp("alignItems", e.target.value)
+                    }
+                  >
+                    <option value="stretch">stretch</option>
+                    <option value="flex-start">flex-start</option>
+                    <option value="center">center</option>
+                    <option value="flex-end">flex-end</option>
+                  </select>
                   <input
-                    type="range"
-                    min={0}
-                    max={360}
-                    value={gradient.angle ?? 90}
-                    onChange={(e) => setAngle(Number(e.target.value))}
+                    className={inputCls}
+                    placeholder="Gap (px)"
+                    value={css.gap || ""}
+                    onChange={(e) => writeBucketProp("gap", e.target.value)}
                   />
-                  <input
-                    className="w-20 px-2 py-1 bg-gray-800 border border-gray-700 rounded-sm text-xs"
-                    type="number"
-                    min={0}
-                    max={360}
-                    value={gradient.angle ?? 90}
-                    onChange={(e) => setAngle(Number(e.target.value))}
-                  />
-                </>
+                </div>
               )}
-            </div>
+            </Section>
 
-            {/* Gradient preview bar */}
-            <div
-              style={{ background: composedBg }}
-              className="mb-2 h-10 rounded border"
-              ref={barRef}
-              onMouseDown={(ev) => {
-                const rect = barRef.current?.getBoundingClientRect();
-                if (!rect) return;
-                const pos = clamp(
-                  Math.round(((ev.clientX - rect.left) / rect.width) * 100),
-                  0,
-                  100
-                );
-                const nextStops = (gradient.stops || []).slice();
-                nextStops.push({
-                  color: nextStops[0]?.color ?? "#000000",
-                  alpha: 1,
-                  position: pos,
-                });
-                updateGradientPartial({ stops: nextStops });
-              }}
-            >
-              {stopsSorted.map((s, i) => {
-                // find original index (for accurate mutation index)
-                const origIndex = (gradient.stops || []).findIndex(
-                  (x) =>
-                    x.position === s.position &&
-                    x.color === s.color &&
-                    x.alpha === s.alpha
-                );
-                const idx = origIndex >= 0 ? origIndex : i;
-                return (
-                  <div
-                    key={`${s.color}-${s.position}-${idx}`}
-                    style={{
-                      left: `${clamp(s.position)}%`,
-                      position: "absolute",
-                      transform: "translate(-50%,-50%)",
-                      top: "50%",
-                    }}
-                  >
+            {/* Spacing */}
+            <Section id="spacing" title="Spacing">
+              <input
+                className={inputCls}
+                placeholder="Padding (e.g. 12px 16px)"
+                value={css.padding || ""}
+                onChange={(e) => writeBucketProp("padding", e.target.value)}
+              />
+              <input
+                className={inputCls}
+                placeholder="Margin (e.g. 0 auto)"
+                value={css.margin || ""}
+                onChange={(e) => writeBucketProp("margin", e.target.value)}
+              />
+            </Section>
+
+            {/* Colors & Gradient */}
+            <Section id="colors" title="Colors & Gradient">
+              <div className="flex gap-2 items-center">
+                <select
+                  className={selectCls}
+                  value={gradient.type}
+                  onChange={(e) =>
+                    updateGradientPartial({ type: e.target.value as any })
+                  }
+                >
+                  <option value="solid">Solid</option>
+                  <option value="linear">Linear</option>
+                  <option value="radial">Radial</option>
+                </select>
+
+                {gradient.type === "linear" && (
+                  <div className="flex items-center gap-2 flex-1">
+                    <input
+                      type="range"
+                      min={0}
+                      max={360}
+                      value={gradient.angle ?? 90}
+                      onChange={(e) => setAngle(Number(e.target.value))}
+                      className="flex-1 h-1.5 bg-white/10 rounded-full cursor-pointer accent-blue-500"
+                    />
+                    <input
+                      className="w-14 px-2 py-1.5 bg-[#020617] border border-white/10 rounded-md text-xs text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
+                      type="number"
+                      min={0}
+                      max={360}
+                      value={gradient.angle ?? 90}
+                      onChange={(e) => setAngle(Number(e.target.value))}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Gradient preview bar */}
+              <div
+                ref={barRef}
+                style={{ background: composedBg }}
+                className="relative h-10 rounded-md border border-white/10 cursor-crosshair hover:border-white/20 transition-colors overflow-hidden"
+                onMouseDown={(ev) => {
+                  const rect = barRef.current?.getBoundingClientRect();
+                  if (!rect) return;
+                  const pos = clamp(
+                    Math.round(((ev.clientX - rect.left) / rect.width) * 100),
+                    0,
+                    100
+                  );
+                  const nextStops = (gradient.stops || []).slice();
+                  nextStops.push({
+                    color: nextStops[0]?.color ?? "#000000",
+                    alpha: 1,
+                    position: pos,
+                  });
+                  updateGradientPartial({ stops: nextStops });
+                }}
+              >
+                {stopsSorted.map((s, i) => {
+                  const origIndex = (gradient.stops || []).findIndex(
+                    (x) =>
+                      x.position === s.position &&
+                      x.color === s.color &&
+                      x.alpha === s.alpha
+                  );
+                  const idx = origIndex >= 0 ? origIndex : i;
+                  return (
                     <div
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                        setDragIndex(idx);
+                      key={`${s.color}-${s.position}-${idx}`}
+                      style={{
+                        left: `${clamp(s.position)}%`,
+                        position: "absolute",
+                        transform: "translate(-50%,-50%)",
+                        top: "50%",
                       }}
-                      onTouchStart={(e) => {
-                        e.stopPropagation();
-                        setDragIndex(idx);
-                      }}
-                      className="w-4 h-4 rounded-full border"
-                      style={{ background: hexToRgba(s.color, s.alpha) }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Stops controls */}
-            <div className="space-y-2">
-              {stopsSorted.map((s, shownIndex) => {
-                const origIndex = (gradient.stops || []).findIndex(
-                  (x) =>
-                    x.position === s.position &&
-                    x.color === s.color &&
-                    x.alpha === s.alpha
-                );
-                const idx = origIndex >= 0 ? origIndex : shownIndex;
-                return (
-                  <div
-                    key={`${idx}-${s.color}`}
-                    className="flex items-center gap-2"
-                  >
-                    <input
-                      type="color"
-                      value={s.color}
-                      onChange={(e) => setStopColor(idx, e.target.value)}
-                      className="w-8 h-8 rounded"
-                    />
-                    <input
-                      className="w-20 px-2 py-1 bg-gray-800 border border-gray-700 rounded-sm text-xs"
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={s.position}
-                      onChange={(e) =>
-                        setStopPosition(idx, Number(e.target.value))
-                      }
-                    />
-                    <span className="text-xs text-gray-400">%</span>
-                    <input
-                      className="w-20 px-2 py-1 bg-gray-800 border border-gray-700 rounded-sm text-xs"
-                      type="number"
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      value={s.alpha}
-                      onChange={(e) =>
-                        setStopAlpha(idx, Number(e.target.value))
-                      }
-                    />
-                    <input
-                      className="flex-1 px-2 py-1 bg-gray-800 border border-gray-700 rounded-sm text-xs"
-                      value={s.color}
-                      onChange={(e) => setStopColor(idx, e.target.value)}
-                    />
-                    <button
-                      onClick={() => removeStop(idx)}
-                      disabled={(gradient.stops || []).length <= 1}
-                      className="text-xs px-2 py-1 bg-red-600/10 border border-red-600/20 rounded text-red-300 disabled:opacity-40"
                     >
-                      Remove
-                    </button>
-                  </div>
-                );
-              })}
+                      <div
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          setDragIndex(idx);
+                        }}
+                        onTouchStart={(e) => {
+                          e.stopPropagation();
+                          setDragIndex(idx);
+                        }}
+                        className="w-4 h-4 rounded-full border border-white/40 shadow-lg hover:scale-110 transition-transform cursor-grab active:cursor-grabbing"
+                        style={{ background: hexToRgba(s.color, s.alpha) }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2">
+              {/* Stops controls */}
+              <div className="space-y-2">
+                {stopsSorted.map((s, shownIndex) => {
+                  const origIndex = (gradient.stops || []).findIndex(
+                    (x) =>
+                      x.position === s.position &&
+                      x.color === s.color &&
+                      x.alpha === s.alpha
+                  );
+                  const idx = origIndex >= 0 ? origIndex : shownIndex;
+                  return (
+                    <div
+                      key={`${idx}-${s.color}`}
+                      className="flex items-center gap-2 p-2 rounded-md bg-white/2 border border-white/5 hover:border-white/10 transition-colors"
+                    >
+                      <input
+                        type="color"
+                        value={s.color}
+                        onChange={(e) => setStopColor(idx, e.target.value)}
+                        className="w-8 h-8 rounded-md border border-white/10 cursor-pointer"
+                      />
+                      <div className="flex items-center gap-1">
+                        <input
+                          className="w-12 px-2 py-1 bg-[#020617] border border-white/10 rounded text-xs text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={s.position}
+                          onChange={(e) =>
+                            setStopPosition(idx, Number(e.target.value))
+                          }
+                        />
+                        <span className="text-xs text-gray-500">%</span>
+                      </div>
+                      <input
+                        className="w-12 px-2 py-1 bg-[#020617] border border-white/10 rounded text-xs text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-colors"
+                        type="number"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={s.alpha}
+                        onChange={(e) =>
+                          setStopAlpha(idx, Number(e.target.value))
+                        }
+                      />
+                      <button
+                        onClick={() => removeStop(idx)}
+                        disabled={(gradient.stops || []).length <= 1}
+                        className="px-2 py-1 text-xs font-medium rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
+
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
                   <button
                     onClick={() => addStop()}
-                    className="text-xs text-blue-400 hover:underline px-2 py-1"
+                    className="text-xs font-medium px-2 py-1 rounded-md text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
                   >
                     + Add stop
                   </button>
@@ -567,13 +559,13 @@ export default function StylePanel() {
                         angle: 90,
                       })
                     }
-                    className="text-xs text-gray-300 px-2 py-1"
+                    className="text-xs font-medium px-2 py-1 rounded-md text-gray-400 hover:text-gray-300 hover:bg-white/5 transition-colors"
                   >
                     Reset
                   </button>
                 </div>
 
-                <div className="flex gap-1">
+                <div className="flex gap-1 pt-1">
                   {PRESET_COLORS.map((c) => (
                     <button
                       key={c}
@@ -585,210 +577,218 @@ export default function StylePanel() {
                         updateGradientPartial({ stops });
                       }}
                       title={c}
-                      className="w-6 h-6 rounded border"
+                      className="w-6 h-6 rounded-md border border-white/10 hover:scale-110 hover:border-white/20 transition-all shadow-sm cursor-pointer"
                       style={{ background: c }}
                     />
                   ))}
                 </div>
               </div>
-            </div>
 
-            {/* Text color */}
-            <div className="flex gap-2 pt-3">
-              <input
-                type="color"
-                className="w-8 h-8 rounded"
-                value={css.color || "#000000"}
-                onChange={(e) => writeBucketProp("color", e.target.value)}
-              />
+              {/* Text color */}
+              <div className="flex gap-2 pt-3 border-t border-white/5">
+                <input
+                  type="color"
+                  className="w-8 h-8 rounded-md border border-white/10 cursor-pointer"
+                  value={css.color || "#000000"}
+                  onChange={(e) => writeBucketProp("color", e.target.value)}
+                />
+                <input
+                  className={inputCls}
+                  placeholder="Text color (hex)"
+                  value={css.color || ""}
+                  onChange={(e) => writeBucketProp("color", e.target.value)}
+                />
+              </div>
+            </Section>
+
+            {/* Typography */}
+            <Section id="typography" title="Typography">
               <input
                 className={inputCls}
-                placeholder="Text color (hex)"
-                value={css.color || ""}
-                onChange={(e) => writeBucketProp("color", e.target.value)}
+                placeholder="Font size (px)"
+                value={css.fontSize || ""}
+                onChange={(e) => writeBucketProp("fontSize", e.target.value)}
               />
-            </div>
-          </Section>
-
-          {/* Typography */}
-          <Section id="typography" title="Typography">
-            <input
-              className={inputCls}
-              placeholder="Font size (e.g. 16px)"
-              value={css.fontSize || ""}
-              onChange={(e) => writeBucketProp("fontSize", e.target.value)}
-            />
-            <select
-              className={inputCls}
-              value={css.fontWeight || "400"}
-              onChange={(e) => writeBucketProp("fontWeight", e.target.value)}
-            >
-              <option value="300">Light</option>
-              <option value="400">Normal</option>
-              <option value="500">Medium</option>
-              <option value="600">Semibold</option>
-              <option value="700">Bold</option>
-            </select>
-            <input
-              className={inputCls}
-              placeholder="Line height (e.g. 1.5)"
-              value={css.lineHeight || ""}
-              onChange={(e) => writeBucketProp("lineHeight", e.target.value)}
-            />
-            <select
-              className={inputCls}
-              value={css.textAlign || "left"}
-              onChange={(e) => writeBucketProp("textAlign", e.target.value)}
-            >
-              <option value="left">Left</option>
-              <option value="center">Center</option>
-              <option value="right">Right</option>
-              <option value="justify">Justify</option>
-            </select>
-          </Section>
-
-          {/* Effects */}
-          <Section id="effects" title="Effects">
-            <input
-              className={inputCls}
-              placeholder="Border radius (e.g. 8px)"
-              value={css.borderRadius || ""}
-              onChange={(e) => writeBucketProp("borderRadius", e.target.value)}
-            />
-            <input
-              className={inputCls}
-              placeholder="Box shadow (e.g. 0 4px 8px rgba(0,0,0,0.1))"
-              value={css.boxShadow || ""}
-              onChange={(e) => writeBucketProp("boxShadow", e.target.value)}
-            />
-            <div className="flex items-center gap-2">
+              <select
+                className={selectCls}
+                value={css.fontWeight || "400"}
+                onChange={(e) => writeBucketProp("fontWeight", e.target.value)}
+              >
+                <option value="300">Light</option>
+                <option value="400">Normal</option>
+                <option value="500">Medium</option>
+                <option value="600">Semibold</option>
+                <option value="700">Bold</option>
+              </select>
               <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={typeof css.opacity === "number" ? css.opacity : 1}
+                className={inputCls}
+                placeholder="Line height (e.g. 1.5)"
+                value={css.lineHeight || ""}
+                onChange={(e) => writeBucketProp("lineHeight", e.target.value)}
+              />
+              <select
+                className={selectCls}
+                value={css.textAlign || "left"}
+                onChange={(e) => writeBucketProp("textAlign", e.target.value)}
+              >
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+                <option value="justify">Justify</option>
+              </select>
+            </Section>
+
+            {/* Effects */}
+            <Section id="effects" title="Effects">
+              <input
+                className={inputCls}
+                placeholder="Border radius (px)"
+                value={css.borderRadius || ""}
                 onChange={(e) =>
-                  writeBucketProp("opacity", Number(e.target.value))
+                  writeBucketProp("borderRadius", e.target.value)
                 }
-                className="flex-1"
-              />
-              <span className="text-xs text-gray-400">
-                {Math.round(
-                  (typeof css.opacity === "number" ? css.opacity : 1) * 100
-                )}
-                %
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                className={inputCls}
-                placeholder="Border width (e.g. 1px)"
-                value={css.borderWidth || ""}
-                onChange={(e) => writeBucketProp("borderWidth", e.target.value)}
               />
               <input
                 className={inputCls}
-                placeholder="Border color (hex)"
-                value={css.borderColor || ""}
-                onChange={(e) => writeBucketProp("borderColor", e.target.value)}
+                placeholder="Box shadow"
+                value={css.boxShadow || ""}
+                onChange={(e) => writeBucketProp("boxShadow", e.target.value)}
               />
-            </div>
-          </Section>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={typeof css.opacity === "number" ? css.opacity : 1}
+                    onChange={(e) =>
+                      writeBucketProp("opacity", Number(e.target.value))
+                    }
+                    className="flex-1 h-1.5 bg-white/10 rounded-full cursor-pointer accent-blue-500"
+                  />
+                  <span className="text-xs font-medium text-gray-400 min-w-[40px]">
+                    {Math.round(
+                      (typeof css.opacity === "number" ? css.opacity : 1) * 100
+                    )}
+                    %
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  className={inputCls}
+                  placeholder="Border width (px)"
+                  value={css.borderWidth || ""}
+                  onChange={(e) =>
+                    writeBucketProp("borderWidth", e.target.value)
+                  }
+                />
+                <input
+                  className={inputCls}
+                  placeholder="Border color (hex)"
+                  value={css.borderColor || ""}
+                  onChange={(e) =>
+                    writeBucketProp("borderColor", e.target.value)
+                  }
+                />
+              </div>
+            </Section>
 
-          {/* Position */}
-          <Section id="position" title="Position">
-            <select
-              className={inputCls}
-              value={css.position || "static"}
-              onChange={(e) => writeBucketProp("position", e.target.value)}
-            >
-              <option value="static">Static</option>
-              <option value="relative">Relative</option>
-              <option value="absolute">Absolute</option>
-              <option value="fixed">Fixed</option>
-            </select>
+            {/* Position */}
+            <Section id="position" title="Position">
+              <select
+                className={selectCls}
+                value={css.position || "static"}
+                onChange={(e) => writeBucketProp("position", e.target.value)}
+              >
+                <option value="static">Static</option>
+                <option value="relative">Relative</option>
+                <option value="absolute">Absolute</option>
+                <option value="fixed">Fixed</option>
+              </select>
 
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                className={inputCls}
-                placeholder="Top (e.g. 10px)"
-                value={css.top || ""}
-                onChange={(e) => writeBucketProp("top", e.target.value)}
-              />
-              <input
-                className={inputCls}
-                placeholder="Left (e.g. 10px)"
-                value={css.left || ""}
-                onChange={(e) => writeBucketProp("left", e.target.value)}
-              />
-              <input
-                className={inputCls}
-                placeholder="Right (e.g. 10px)"
-                value={css.right || ""}
-                onChange={(e) => writeBucketProp("right", e.target.value)}
-              />
-              <input
-                className={inputCls}
-                placeholder="Bottom (e.g. 10px)"
-                value={css.bottom || ""}
-                onChange={(e) => writeBucketProp("bottom", e.target.value)}
-              />
-            </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  className={inputCls}
+                  placeholder="Top (px)"
+                  value={css.top || ""}
+                  onChange={(e) => writeBucketProp("top", e.target.value)}
+                />
+                <input
+                  className={inputCls}
+                  placeholder="Left (px)"
+                  value={css.left || ""}
+                  onChange={(e) => writeBucketProp("left", e.target.value)}
+                />
+                <input
+                  className={inputCls}
+                  placeholder="Right (px)"
+                  value={css.right || ""}
+                  onChange={(e) => writeBucketProp("right", e.target.value)}
+                />
+                <input
+                  className={inputCls}
+                  placeholder="Bottom (px)"
+                  value={css.bottom || ""}
+                  onChange={(e) => writeBucketProp("bottom", e.target.value)}
+                />
+              </div>
 
-            <input
-              className={inputCls}
-              placeholder="z-index"
-              value={css.zIndex || ""}
-              onChange={(e) => writeBucketProp("zIndex", e.target.value)}
-            />
-            <select
-              className={inputCls}
-              value={css.overflow || "visible"}
-              onChange={(e) => writeBucketProp("overflow", e.target.value)}
-            >
-              <option value="visible">visible</option>
-              <option value="hidden">hidden</option>
-              <option value="scroll">scroll</option>
-              <option value="auto">auto</option>
-            </select>
-          </Section>
+              <input
+                className={inputCls}
+                placeholder="z-index"
+                value={css.zIndex || ""}
+                onChange={(e) => writeBucketProp("zIndex", e.target.value)}
+              />
+              <select
+                className={selectCls}
+                value={css.overflow || "visible"}
+                onChange={(e) => writeBucketProp("overflow", e.target.value)}
+              >
+                <option value="visible">visible</option>
+                <option value="hidden">hidden</option>
+                <option value="scroll">scroll</option>
+                <option value="auto">auto</option>
+              </select>
+            </Section>
 
-          {/* Misc / Grid helpers */}
-          <Section id="layout-advanced" title="Layout — Advanced">
-            <input
-              className={inputCls}
-              placeholder="min-width"
-              value={css.minWidth || ""}
-              onChange={(e) => writeBucketProp("minWidth", e.target.value)}
-            />
-            <input
-              className={inputCls}
-              placeholder="max-width"
-              value={css.maxWidth || ""}
-              onChange={(e) => writeBucketProp("maxWidth", e.target.value)}
-            />
-            <input
-              className={inputCls}
-              placeholder="min-height"
-              value={css.minHeight || ""}
-              onChange={(e) => writeBucketProp("minHeight", e.target.value)}
-            />
-            <input
-              className={inputCls}
-              placeholder="max-height"
-              value={css.maxHeight || ""}
-              onChange={(e) => writeBucketProp("maxHeight", e.target.value)}
-            />
-            <input
-              className={inputCls}
-              placeholder="order (flex)"
-              value={css.order || ""}
-              onChange={(e) => writeBucketProp("order", e.target.value)}
-            />
-          </Section>
-        </>
-      )}
+            {/* Advanced */}
+            <Section id="layout-advanced" title="Layout — Advanced">
+              <input
+                className={inputCls}
+                placeholder="min-width (px, %)"
+                value={css.minWidth || ""}
+                onChange={(e) => writeBucketProp("minWidth", e.target.value)}
+              />
+              <input
+                className={inputCls}
+                placeholder="max-width (px, %)"
+                value={css.maxWidth || ""}
+                onChange={(e) => writeBucketProp("maxWidth", e.target.value)}
+              />
+              <input
+                className={inputCls}
+                placeholder="min-height (px)"
+                value={css.minHeight || ""}
+                onChange={(e) => writeBucketProp("minHeight", e.target.value)}
+              />
+              <input
+                className={inputCls}
+                placeholder="max-height (px)"
+                value={css.maxHeight || ""}
+                onChange={(e) => writeBucketProp("maxHeight", e.target.value)}
+              />
+              <input
+                className={inputCls}
+                placeholder="order (flex)"
+                value={css.order || ""}
+                onChange={(e) => writeBucketProp("order", e.target.value)}
+              />
+            </Section>
+          </>
+        )}
+      </div>
     </div>
   );
 }
