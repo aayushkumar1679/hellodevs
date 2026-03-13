@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useCanvasStore } from "@/state/useCanvasStore";
 import { useDesignStore } from "@/state/useDesignStore";
+import { COMPONENT_LIBRARY } from "@/config/componentRegistry";
 
 /**
  * Hook that syncs canvas components to design store on mount
@@ -15,25 +16,30 @@ import { useDesignStore } from "@/state/useDesignStore";
  * when the component first mounts.
  */
 export function useSyncStores() {
+  const currentProject = useCanvasStore((state) => state.currentProject);
+  const addElement = useDesignStore((state) => state.addElement);
+
   useEffect(() => {
-    // Get current state from both stores
-    const canvasState = useCanvasStore.getState();
     const designState = useDesignStore.getState();
 
-    // If there's a current project in canvas store
-    if (canvasState.currentProject) {
-      // For each component in the canvas store
-      Object.values(canvasState.currentProject.components).forEach(
-        (component) => {
-          // Check if it already exists in design store
-          if (!designState.elements[component.id]) {
-            // If not, add it (initializes with empty cssProperties)
-            designState.addElement(component.id, component.type);
-          }
-        }
-      );
+    if (!currentProject) {
+      return;
     }
-  }, []); // Empty dependency array = run once on mount
+
+    Object.values(currentProject.components).forEach((component) => {
+      if (!designState.elements[component.id]) {
+        const definition = COMPONENT_LIBRARY.find(
+          (item) => item.type === component.type
+        );
+
+        addElement(
+          component.id,
+          component.type,
+          definition?.defaultCss ? { ...definition.defaultCss } : {}
+        );
+      }
+    });
+  }, [addElement, currentProject]);
 }
 
 export default useSyncStores;

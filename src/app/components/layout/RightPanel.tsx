@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+import { X } from "lucide-react";
 import StylePanel from "../panels/StylePanel";
 import SettingsPanel from "../panels/SettingsPanel";
 import InteractionsPanel from "../panels/InteractionsPanel";
 import ElementInspector from "../panels/ElementInspector";
 import { useDesignStore } from "@/state/useDesignStore";
-import { X } from "lucide-react";
 
 interface RightPanelProps {
   isOpen: boolean;
@@ -17,9 +17,7 @@ type Tab = "style" | "settings" | "interactions";
 
 export default function RightPanel({ isOpen, onClose }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>("style");
-  const selectedElements = useDesignStore(
-    (state) => state.selectedElements || []
-  );
+  const selectedElements = useDesignStore((state) => state.selectedElements || []);
 
   if (!isOpen) return null;
 
@@ -31,17 +29,32 @@ export default function RightPanel({ isOpen, onClose }: RightPanelProps) {
 
   return (
     <aside
-      className="w-80 flex-shrink-0 flex flex-col h-full border-l border-white/5
-                 bg-[linear-gradient(180deg,#020617_0%,#040810_100%)] shadow-lg"
+      className="flex h-full w-[22rem] flex-shrink-0 flex-col border-l border-slate-200 bg-white/88 shadow-[-24px_0_60px_-48px_rgba(15,23,42,0.35)] backdrop-blur-xl"
       role="complementary"
       aria-label="Inspector"
     >
-      {/* Header (tabs + close) */}
-      <div
-        className="h-14 flex items-center justify-between px-3 border-b border-white/5
-                   bg-[linear-gradient(90deg,#020617_0%,#041022_100%)]"
-      >
-        <div role="tablist" aria-label="Inspector tabs" className="flex gap-1">
+      <div className="border-b border-slate-200 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400">
+              Inspector
+            </p>
+            <p className="mt-1 text-sm font-semibold text-slate-950">
+              Refine the selected layer
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close inspector"
+            className="rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-950"
+            title="Close panel"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div role="tablist" aria-label="Inspector tabs" className="mt-4 flex gap-2">
           {tabs.map((tab) => {
             const active = tab.id === activeTab;
             return (
@@ -50,87 +63,47 @@ export default function RightPanel({ isOpen, onClose }: RightPanelProps) {
                 type="button"
                 role="tab"
                 aria-selected={active}
-                aria-controls={`panel-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition
-                  ${
-                    active
-                      ? "bg-blue-500/15 text-blue-300 shadow-[0_6px_18px_rgba(59,130,246,0.06)]"
-                      : "text-gray-400 hover:text-gray-100 hover:bg-white/5"
-                  }`}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                  active
+                    ? "bg-slate-950 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-950"
+                }`}
               >
                 {tab.label}
               </button>
             );
           })}
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close inspector"
-            className="p-1.5 rounded-md text-gray-400 hover:text-gray-100 hover:bg-white/5 transition"
-            title="Close panel"
-          >
-            <X size={16} />
-          </button>
-        </div>
       </div>
 
-      {/* Empty selection hint for Style tab */}
       {selectedElements.length === 0 && activeTab === "style" && (
-        <div className="px-4 py-3 bg-white/2 border-b border-white/3">
-          <p className="text-xs text-gray-400">
-            👈 Select an element on the canvas to edit styles
-          </p>
+        <div className="border-b border-slate-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+          Select an element on the canvas to unlock styling controls.
         </div>
       )}
 
-      {/* Content - scrollable areas with clear boundaries */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Style Tab splits: ElementInspector (top) + StylePanel (scroll) */}
+      <div className="flex flex-1 flex-col overflow-hidden">
         {activeTab === "style" && (
           <>
-            <div
-              id="panel-style"
-              role="tabpanel"
-              aria-labelledby="tab-style"
-              className="flex-shrink-0 border-b border-white/5 max-h-[220px] overflow-auto"
-            >
-              <div className="px-3 py-2">
-                <ElementInspector />
-              </div>
+            <div className="max-h-[220px] flex-shrink-0 overflow-auto border-b border-slate-200 bg-slate-50/60 px-3 py-3">
+              <ElementInspector />
             </div>
 
             <div className="flex-1 overflow-auto">
-              <div className="px-3 py-3">
-                <StylePanel />
-              </div>
+              <StylePanel />
             </div>
           </>
         )}
 
-        {/* Settings Tab */}
         {activeTab === "settings" && (
-          <div
-            id="panel-settings"
-            role="tabpanel"
-            aria-labelledby="tab-settings"
-            className="flex-1 overflow-auto px-3 py-3"
-          >
+          <div className="flex-1 overflow-auto px-3 py-3">
             <SettingsPanel />
           </div>
         )}
 
-        {/* Interactions Tab */}
         {activeTab === "interactions" && (
-          <div
-            id="panel-interactions"
-            role="tabpanel"
-            aria-labelledby="tab-interactions"
-            className="flex-1 overflow-auto px-3 py-3"
-          >
+          <div className="flex-1 overflow-auto px-3 py-3">
             <InteractionsPanel />
           </div>
         )}

@@ -1,7 +1,10 @@
 // src/state/useCanvasStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import debounce from "lodash.debounce";
 import { COMPONENT_LIBRARY } from "@/config/componentRegistry";
+import { useDesignStore, type Element } from "@/state/useDesignStore";
+import type { BlueprintNode } from "@/config/componentRegistry";
 
 /* -------------------------------------------------
  * Helpers for registry / blueprints
@@ -10,7 +13,7 @@ const getComponentDef = (type: string) =>
   COMPONENT_LIBRARY.find((c) => c.type === type);
 
 const buildFromBlueprint = (
-  blueprint: any,
+  blueprint: BlueprintNode,
   add: (type: string, parentId?: string) => string,
   parentId?: string
 ): string => {
@@ -19,7 +22,7 @@ const buildFromBlueprint = (
   // If blueprint node has props or css, we'll rely on updateComponent elsewhere.
   // But we still create subtree.
   if (blueprint.children?.length) {
-    blueprint.children.forEach((child: any) => {
+    blueprint.children.forEach((child: BlueprintNode) => {
       buildFromBlueprint(child, add, id);
     });
   }
@@ -34,7 +37,7 @@ const buildFromBlueprint = (
 export interface CanvasComponent {
   id: string;
   type: string;
-  props: Record<string, any>;
+  props: Record<string, unknown>;
   children: string[];
 }
 
@@ -42,6 +45,8 @@ export interface Project {
   id: string;
   name: string;
   components: Record<string, CanvasComponent>;
+  designElements: Record<string, Element>;
+
 
   /**
    * First root component (legacy / optional)
@@ -55,6 +60,20 @@ export interface Project {
 
   createdAt?: string;
   updatedAt?: string;
+  generationPrompt?: string;
+  generationModel?: string;
+  generationSummary?: string;
+}
+
+export interface ProjectHydrationPayload {
+  name?: string;
+  components: Record<string, CanvasComponent>;
+  rootOrder: string[];
+  rootComponent?: string | null;
+  designElements?: Record<string, Element>;
+  generationPrompt?: string;
+  generationModel?: string;
+  generationSummary?: string;
 }
 
 interface CanvasState {
@@ -64,8 +83,9 @@ interface CanvasState {
   history: Project[];
   future: Project[];
 
-  createProject: (name: string) => void;
+  createProject: (name: string) => string;
   deleteProject: (id: string) => void;
+  hydrateCurrentProject: (payload: ProjectHydrationPayload) => void;
 
   addComponent: (type: string, parentId?: string) => string;
   removeComponent: (id: string) => void;
@@ -81,6 +101,7 @@ interface CanvasState {
   updateComponent: (id: string, updates: Partial<CanvasComponent>) => void;
 
   setCurrentProject: (id: string) => void;
+  fetchProjects: () => Promise<void>;
   undo: () => void;
   redo: () => void;
 }
@@ -108,6 +129,24 @@ const collectSubtree = (
 /* -------------------------------------------------
  * Store
  * ------------------------------------------------- */
+
+// Debounced helper to save to API
+const syncToServer = debounce(async (project: Project) => {
+  try {
+    const designElements = useDesignStore.getState().elements;
+    
+    await fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...project,
+        designElements,
+      }),
+    });
+  } catch (error) {
+    console.error("Failed to sync project to server", error);
+  }
+}, 2000); // 2 second debounce
 
 export const useCanvasStore = create<CanvasState>()(
   persist(
@@ -153,7 +192,7 @@ export const useCanvasStore = create<CanvasState>()(
 
           newId = id;
 
-          return {
+          const nextState = {
             history: [...state.history, cloneProject(state.currentProject)],
             future: [],
             currentProject: project,
@@ -162,6 +201,8 @@ export const useCanvasStore = create<CanvasState>()(
               [state.currentProjectId!]: project,
             },
           };
+          syncToServer(project);
+          return nextState;
         });
 
         return newId;
@@ -184,31 +225,88 @@ export const useCanvasStore = create<CanvasState>()(
             id,
             name,
             components: {},
+            designElements: {},
             rootComponent: null,
             rootOrder: [],
             createdAt: now,
             updatedAt: now,
           };
 
-          set(() => ({
-            projects: { [id]: project },
+          set((state) => ({
+            projects: {
+              ...state.projects,
+              [id]: project,
+            },
             currentProjectId: id,
             currentProject: project,
             history: [],
             future: [],
           }));
+
+          return id;
         },
 
         deleteProject: (id) => {
           set((state) => {
+            const project = state.projects[id];
+            const componentIds = project ? Object.keys(project.components) : [];
             const { [id]: _, ...rest } = state.projects;
-            return {
+
+            if (componentIds.length > 0) {
+              useDesignStore.getState().removeElements(componentIds);
+            }
+
+            const nextState = {
               projects: rest,
               currentProjectId:
                 state.currentProjectId === id ? null : state.currentProjectId,
               currentProject:
                 state.currentProjectId === id ? null : state.currentProject,
             };
+            if (state.currentProjectId && state.currentProjectId !== id && rest[state.currentProjectId]) {
+               syncToServer(rest[state.currentProjectId]!);
+            }
+            return nextState;
+          });
+        },
+
+        hydrateCurrentProject: (payload) => {
+          set((state) => {
+            if (!state.currentProject || !state.currentProjectId) {
+              return state;
+            }
+
+            const prev = cloneProject(state.currentProject);
+            const project: Project = {
+              ...prev,
+              name: payload.name ?? prev.name,
+              components: payload.components,
+              designElements: payload.designElements ?? prev.designElements ?? {},
+              rootOrder: payload.rootOrder,
+              rootComponent:
+                payload.rootComponent ?? payload.rootOrder[0] ?? null,
+              generationPrompt: payload.generationPrompt ?? prev.generationPrompt,
+              generationModel: payload.generationModel ?? prev.generationModel,
+              generationSummary:
+                payload.generationSummary ?? prev.generationSummary,
+              updatedAt: new Date().toISOString(),
+            };
+
+            if (payload.designElements) {
+              useDesignStore.getState().replaceElements(payload.designElements);
+            }
+
+            const nextState = {
+              history: [...state.history, prev],
+              future: [],
+              currentProject: project,
+              projects: {
+                ...state.projects,
+                [state.currentProjectId]: project,
+              },
+            };
+            syncToServer(project);
+            return nextState;
           });
         },
 
@@ -237,12 +335,14 @@ export const useCanvasStore = create<CanvasState>()(
             project.rootComponent =
               project.rootComponent ?? project.rootOrder[0] ?? null;
 
-            return {
+            const nextState = {
               currentProjectId: id,
               currentProject: project,
               history: [],
               future: [],
             };
+            syncToServer(project);
+            return nextState;
           });
         },
 
@@ -250,6 +350,11 @@ export const useCanvasStore = create<CanvasState>()(
 
         addComponent: (type, parentId) => {
           const def = getComponentDef(type);
+          const createdElements: Array<{
+            id: string;
+            type: string;
+            css: Record<string, any>;
+          }> = [];
 
           // If component type has a blueprint -> expand into multiple nodes
           if (def?.blueprint) {
@@ -263,8 +368,8 @@ export const useCanvasStore = create<CanvasState>()(
               // temporary add function used by buildFromBlueprint
               const add = (t: string, p?: string) => {
                 const id = `component-${Date.now()}-${Math.random()
-                  .toString(36)
-                  .slice(2, 9)}`;
+                   .toString(36)
+                   .slice(2, 9)}`;
 
                 const d = getComponentDef(t);
 
@@ -274,6 +379,12 @@ export const useCanvasStore = create<CanvasState>()(
                   props: d?.defaultProps ? { ...d.defaultProps } : {},
                   children: [],
                 };
+
+                createdElements.push({
+                   id,
+                   type: t,
+                   css: d?.defaultCss || {},
+                });
 
                 if (p && prev.components[p]) {
                   prev.components[p].children.push(id);
@@ -287,7 +398,12 @@ export const useCanvasStore = create<CanvasState>()(
               };
 
               // build from blueprint, starting at optional parentId
-              rootId = buildFromBlueprint(def.blueprint, add, parentId);
+              if (def.blueprint) {
+                rootId = buildFromBlueprint(def.blueprint, add, parentId);
+              } else {
+                // Should not happen as we checked def.blueprint above, but for TS safety
+                rootId = add(type, parentId);
+              }
 
               // ensure rootComponent exists
               prev.rootComponent = prev.rootComponent ?? rootId;
@@ -298,7 +414,7 @@ export const useCanvasStore = create<CanvasState>()(
                 updatedAt: new Date().toISOString(),
               };
 
-              return {
+              const nextState = {
                 history: [...state.history, cloneProject(state.currentProject)],
                 future: [],
                 currentProject: project,
@@ -307,16 +423,28 @@ export const useCanvasStore = create<CanvasState>()(
                   [state.currentProjectId!]: project,
                 },
               };
+              syncToServer(project);
+              return nextState;
             });
+
+            if (createdElements.length > 0) {
+              const designStore = useDesignStore.getState();
+              createdElements.forEach((item) => {
+                designStore.addElement(item.id, item.type, item.css);
+              });
+            }
 
             return rootId;
           }
 
           // Fallback: single component - delegate to originalAddComponent helper
-          return originalAddComponent(type, parentId);
+          const id = originalAddComponent(type, parentId);
+          useDesignStore.getState().addElement(id, type, def?.defaultCss || {});
+          return id;
         },
 
         removeComponent: (id) => {
+          let removedIds: string[] = [];
           set((state) => {
             if (!state.currentProject) return state;
 
@@ -327,6 +455,7 @@ export const useCanvasStore = create<CanvasState>()(
 
             // collect subtree
             const toRemove = collectSubtree(components, id);
+            removedIds = Array.from(toRemove);
 
             // remove references from parents
             Object.values(components).forEach((c) => {
@@ -355,7 +484,7 @@ export const useCanvasStore = create<CanvasState>()(
               updatedAt: new Date().toISOString(),
             };
 
-            return {
+            const nextState = {
               history: [...state.history, prev],
               future: [],
               currentProject: project,
@@ -364,7 +493,13 @@ export const useCanvasStore = create<CanvasState>()(
                 [state.currentProjectId!]: project,
               },
             };
+            syncToServer(project);
+            return nextState;
           });
+
+          if (removedIds.length > 0) {
+            useDesignStore.getState().removeElements(removedIds);
+          }
         },
 
         /* ---------- MOVE / REORDER ---------- */
@@ -428,7 +563,7 @@ export const useCanvasStore = create<CanvasState>()(
               updatedAt: new Date().toISOString(),
             };
 
-            return {
+            const nextState = {
               history: [...state.history, prev],
               future: [],
               currentProject: project,
@@ -437,6 +572,8 @@ export const useCanvasStore = create<CanvasState>()(
                 [state.currentProjectId!]: project,
               },
             };
+            syncToServer(project);
+            return nextState;
           });
         },
 
@@ -463,7 +600,7 @@ export const useCanvasStore = create<CanvasState>()(
               updatedAt: new Date().toISOString(),
             };
 
-            return {
+            const nextState = {
               history: [...state.history, prev],
               future: [],
               currentProject: project,
@@ -472,6 +609,8 @@ export const useCanvasStore = create<CanvasState>()(
                 [state.currentProjectId!]: project,
               },
             };
+            syncToServer(project);
+            return nextState;
           });
         },
 
@@ -487,13 +626,15 @@ export const useCanvasStore = create<CanvasState>()(
               ...updates,
             };
 
-            return {
+            const nextState = {
               currentProject: prev,
               projects: {
                 ...state.projects,
                 [state.currentProjectId!]: prev,
               },
             };
+            syncToServer(prev);
+            return nextState;
           });
         },
 
@@ -505,7 +646,7 @@ export const useCanvasStore = create<CanvasState>()(
 
             const prev = state.history[state.history.length - 1];
 
-            return {
+            const nextState = {
               history: state.history.slice(0, -1),
               future: state.currentProject
                 ? [cloneProject(state.currentProject), ...state.future]
@@ -516,6 +657,8 @@ export const useCanvasStore = create<CanvasState>()(
                 [state.currentProjectId!]: cloneProject(prev),
               },
             };
+            syncToServer(prev);
+            return nextState;
           });
         },
 
@@ -525,7 +668,7 @@ export const useCanvasStore = create<CanvasState>()(
 
             const next = state.future[0];
 
-            return {
+            const nextState = {
               history: state.currentProject
                 ? [...state.history, cloneProject(state.currentProject)]
                 : state.history,
@@ -536,7 +679,43 @@ export const useCanvasStore = create<CanvasState>()(
                 [state.currentProjectId!]: cloneProject(next),
               },
             };
+            syncToServer(next);
+            return nextState;
           });
+        },
+
+        fetchProjects: async () => {
+          try {
+            const res = await fetch("/api/projects");
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            const projectsMap: Record<string, Project> = {};
+            data.forEach((p: Project) => {
+              projectsMap[p.id] = {
+                id: p.id,
+                name: p.name,
+                components: p.components,
+                designElements: p.designElements || {},
+                rootOrder: p.rootOrder,
+                rootComponent: p.rootComponent,
+                createdAt: p.createdAt,
+                updatedAt: p.updatedAt,
+                generationPrompt: p.generationPrompt,
+                generationModel: p.generationModel,
+                generationSummary: p.generationSummary,
+              };
+            });
+
+            set((state) => ({
+              projects: {
+                ...state.projects,
+                ...projectsMap,
+              }
+            }));
+          } catch (error) {
+            console.error("Failed to fetch projects", error);
+          }
         },
       };
     },

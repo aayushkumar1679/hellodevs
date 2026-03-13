@@ -12,19 +12,29 @@ interface ComponentRendererProps {
 }
 
 /* --------------------------------------------------
- Base render-safe style
+  Base render-safe style
+  These styles ensure the component fits its container
+  without overriding visual properties like color/bg.
 -------------------------------------------------- */
 
 const baseStyle: React.CSSProperties = {
   boxSizing: "border-box",
   width: "100%",
+  height: "100%",
   font: "inherit",
   color: "inherit",
+  background: "transparent",
+  border: "none",
+  margin: 0,
+  padding: 0,
   lineHeight: "inherit",
+  display: "inherit",
+  alignItems: "inherit",
+  justifyContent: "inherit",
 };
 
 /* --------------------------------------------------
- Component Renderer
+  Component Renderer
 -------------------------------------------------- */
 
 export default function ComponentRenderer({
@@ -39,7 +49,6 @@ export default function ComponentRenderer({
 
   /* ===============================
      Layout Components
-     (Intentionally empty shells)
      =============================== */
 
   if (
@@ -48,17 +57,11 @@ export default function ComponentRenderer({
     component.type === "flex-row" ||
     component.type === "flex-column" ||
     component.type === "grid" ||
-    component.type === "card"
+    component.type === "card" ||
+    component.type === "form"
   ) {
-    return (
-      <div
-        style={{
-          ...baseStyle,
-          minHeight: 40,
-          borderRadius: 4,
-        }}
-      />
-    );
+    // These are layout shells; they rely entirely on CanvasElement styles
+    return null; 
   }
 
   /* ===============================
@@ -73,10 +76,7 @@ export default function ComponentRenderer({
         {
           style: {
             ...baseStyle,
-            margin: 0,
-            padding: 0,
-            fontWeight: 600,
-            letterSpacing: "-0.01em",
+            fontWeight: "inherit", // Inherit from container
           } as React.CSSProperties,
         },
         props.text ?? "Heading"
@@ -85,14 +85,7 @@ export default function ComponentRenderer({
 
     case "text":
       return (
-        <p
-          style={{
-            ...baseStyle,
-            margin: 0,
-            padding: 0,
-            opacity: props.text ? 1 : 0.6,
-          }}
-        >
+        <p style={baseStyle}>
           {props.text ?? "Text"}
         </p>
       );
@@ -105,21 +98,68 @@ export default function ComponentRenderer({
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: "6px 12px",
-            borderRadius: 4,
-            border: "1px solid currentColor",
-            background: "transparent",
             cursor: "pointer",
             userSelect: "none",
+            borderRadius: "inherit", // Respect container's border radius
+            padding: "inherit",      // Respect container's padding
           }}
         >
           {props.text ?? "Button"}
         </button>
       );
 
-    /* ===============================
-       Media
-       =============================== */
+    case "navbar":
+      return (
+        <div
+          style={{
+            ...baseStyle,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <strong>{props.brand?.text ?? "Polyglot"}</strong>
+          <div style={{ display: "flex", gap: "inherit", opacity: 0.8, fontSize: "0.9em" }}>
+            {(props.links ?? []).slice(0, 3).map((link: any, index: number) => (
+              <span key={`${link?.label ?? "link"}-${index}`}>
+                {link?.label ?? "Link"}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+
+    case "hero":
+      return (
+        <div style={{ ...baseStyle, display: "flex", flexDirection: "column" }}>
+          <h1 style={{ margin: 0, fontSize: "2.5em", lineHeight: 1.1, fontWeight: 700 }}>
+            {props.title ?? "Build better, faster."}
+          </h1>
+          <p style={{ margin: "1rem 0", fontSize: "1.1em", opacity: 0.8 }}>
+            {props.subtitle ?? "A premium product page generated from your prompt."}
+          </p>
+        </div>
+      );
+
+    case "cta":
+      return (
+        <div style={{ ...baseStyle, textAlign: "center" }}>
+          <h2 style={{ fontSize: "1.5em", marginBottom: "1rem" }}>{props.text ?? "Ready to build?"}</h2>
+          <button
+            style={{
+              padding: "0.75rem 1.5rem",
+              borderRadius: "99px",
+              background: "currentColor", // Interesting default
+              color: "white", // Simplified
+              filter: "invert(1)",
+              border: "none",
+              fontWeight: 600,
+            }}
+          >
+            {props.cta?.text ?? "Start free"}
+          </button>
+        </div>
+      );
 
     case "image":
       return props.src ? (
@@ -128,32 +168,44 @@ export default function ComponentRenderer({
           alt={props.alt || ""}
           style={{
             ...baseStyle,
-            height: "100%",
-            objectFit: "contain",
+            objectFit: props.objectFit ?? "cover",
             display: "block",
+            borderRadius: "inherit",
           }}
         />
       ) : (
         <div
           style={{
             ...baseStyle,
-            height: 120,
+            height: "100%",
             background: "rgba(0,0,0,0.05)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontSize: 12,
             color: "#888",
-            borderRadius: 4,
+            borderRadius: "inherit",
           }}
         >
           Image
         </div>
       );
 
-    /* ===============================
-       Form
-       =============================== */
+    case "badge":
+      return (
+        <span
+          style={{
+            display: "inline-block",
+            padding: "2px 8px",
+            borderRadius: "99px",
+            fontSize: "0.75em",
+            fontWeight: 600,
+            background: "rgba(0,0,0,0.1)",
+          }}
+        >
+          {props.text ?? "Badge"}
+        </span>
+      );
 
     case "input":
       return (
@@ -161,10 +213,10 @@ export default function ComponentRenderer({
           placeholder={props.placeholder}
           style={{
             ...baseStyle,
-            padding: "6px 8px",
-            borderRadius: 4,
-            border: "1px solid #ccc",
-            outline: "none",
+            padding: "0.5rem",
+            borderRadius: "inherit",
+            border: "1px solid rgba(0,0,0,0.1)",
+            background: "white",
           }}
         />
       );
@@ -177,67 +229,18 @@ export default function ComponentRenderer({
             ...baseStyle,
             height: "100%",
             resize: "none",
-            padding: "6px 8px",
-            borderRadius: 4,
-            border: "1px solid #ccc",
-            outline: "none",
+            padding: "0.5rem",
+            borderRadius: "inherit",
+            border: "1px solid rgba(0,0,0,0.1)",
+            background: "white",
           }}
         />
       );
 
-    /* ===============================
-       Feedback
-       =============================== */
-
-    case "badge":
-      return (
-        <span
-          style={{
-            display: "inline-block",
-            boxSizing: "border-box",
-            padding: "2px 6px",
-            borderRadius: 999,
-            fontSize: 11,
-            fontWeight: 500,
-            lineHeight: "1.2",
-            background: "rgba(0,0,0,0.08)",
-          }}
-        >
-          {props.text ?? "Badge"}
-        </span>
-      );
-
-    case "alert":
-      return (
-        <div
-          style={{
-            ...baseStyle,
-            padding: "8px 10px",
-            borderRadius: 4,
-            background: "rgba(255,0,0,0.05)",
-            border: "1px solid rgba(255,0,0,0.2)",
-            fontSize: 13,
-          }}
-        >
-          {props.text ?? "Alert message"}
-        </div>
-      );
-
-    /* ===============================
-       Fallback
-       =============================== */
-
     default:
       return (
-        <div
-          style={{
-            fontSize: 12,
-            color: "#999",
-            fontStyle: "italic",
-            padding: "4px 0",
-          }}
-        >
-          Unknown component: {component.type}
+        <div style={{ fontSize: 12, color: "#999", fontStyle: "italic" }}>
+          {component.type} Component
         </div>
       );
   }

@@ -274,7 +274,7 @@ export default function CSSPropertyPanel() {
               <div className="p-4 space-y-4 border-t border-gray-200">
                 {category.properties.map((prop) => {
                   const currentValue =
-                    selectedElement.cssProperties?.[
+                    selectedElement.cssProperties?.base?.[
                       prop.key as keyof CSSProperties
                     ] || "";
 

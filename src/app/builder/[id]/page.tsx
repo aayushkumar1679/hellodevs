@@ -1,14 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import BuilderHeader from "@/app/components/layout/BuilderHeader";
-// import LeftSidebar from "@/app/components/layout/LeftSidebar";
 import LeftSidebar from "@/app/components/layout/LeftSidebar";
 import RightPanel from "@/app/components/layout/RightPanel";
 import Canvas from "@/app/components/canvas/Canvas";
 import ComponentLibrary from "@/app/components/panels/ComponentLibrary";
 import LayersPanel from "@/app/components/panels/LayersPanel";
+import AIPromptPanel from "@/app/components/panels/AIPromptPanel";
 import { useCanvasStore } from "@/state/useCanvasStore";
 import { useDesignStore } from "@/state/useDesignStore";
 
@@ -17,31 +17,32 @@ export default function BuilderPage() {
   const projectId = params.id as string;
   const { setCurrentProject, undo, redo } = useCanvasStore();
   const { deselectAll } = useDesignStore();
-  const [activeLeftPanel, setActiveLeftPanel] = useState<string | null>(
-    "components"
-  );
+  const [activeLeftPanel, setActiveLeftPanel] = useState<string | null>("ai");
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
 
   useEffect(() => {
     if (projectId) {
       setCurrentProject(projectId);
+      useCanvasStore.getState().fetchProjects();
     }
   }, [projectId, setCurrentProject]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "z" && !event.shiftKey) {
+        event.preventDefault();
         undo();
       }
+
       if (
-        (e.ctrlKey || e.metaKey) &&
-        (e.key === "y" || (e.key === "z" && e.shiftKey))
+        (event.ctrlKey || event.metaKey) &&
+        (event.key === "y" || (event.key === "z" && event.shiftKey))
       ) {
-        e.preventDefault();
+        event.preventDefault();
         redo();
       }
-      if (e.key === "Escape") {
+
+      if (event.key === "Escape") {
         deselectAll();
       }
     };
@@ -51,7 +52,7 @@ export default function BuilderPage() {
   }, [undo, redo, deselectAll]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900">
+    <div className="flex h-screen flex-col bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-950">
       <BuilderHeader />
 
       <div className="flex flex-1 overflow-hidden">
@@ -61,23 +62,27 @@ export default function BuilderPage() {
         />
 
         {activeLeftPanel && (
-          <div className="w-64 bg-gray-800 border-r border-gray-700 overflow-y-auto">
+          <div className="w-[360px] border-r border-slate-200 bg-white/80 backdrop-blur-xl overflow-y-auto">
+            {activeLeftPanel === "ai" && <AIPromptPanel />}
             {activeLeftPanel === "components" && <ComponentLibrary />}
             {activeLeftPanel === "layers" && <LayersPanel />}
             {activeLeftPanel === "assets" && (
-              <div className="p-4 text-gray-400 text-sm">
-                Assets coming soon
+              <div className="p-6 text-sm text-slate-500">
+                Asset management is next in the roadmap. Use the AI panel to
+                generate image sections and the inspector to tune visuals.
               </div>
             )}
             {activeLeftPanel === "history" && (
-              <div className="p-4 text-gray-400 text-sm">
-                History coming soon
+              <div className="p-6 text-sm text-slate-500">
+                Version history is still coming. Undo and redo are live in the
+                header while we build the full timeline experience.
               </div>
             )}
           </div>
         )}
 
-        <div className="flex-1 bg-gray-700 overflow-auto relative">
+        <div className="relative flex-1 overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.12),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.16),transparent_28%)]" />
           <Canvas />
         </div>
 

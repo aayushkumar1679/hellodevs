@@ -1,102 +1,82 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import CanvasPreview from "@/app/components/export/CanvasPreview";
+import { Eye, Code2 } from "lucide-react";
 import { useCanvasStore } from "@/state/useCanvasStore";
-import { generateReactCode } from "@/utils/codeGenerator";
+import { useDesignStore } from "@/state/useDesignStore";
+import { generateExport } from "@/utils/exportGenerators";
 
 export default function SharePage() {
-  const params = useParams();
-  const projectId = params.id as string;
-  const store = useCanvasStore();
-
-  const [project, setProject] = useState<any>(null);
+  const params = useParams() as { id: string };
+  const project = useCanvasStore((state) => state.projects[params.id]);
+  const designElements = useDesignStore((state) => state.elements);
   const [showCode, setShowCode] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Get project from store
-    const currentProject = store.projects.find((p) => p.id === projectId);
-
-    if (currentProject) {
-      setProject(currentProject);
-    }
-
-    setLoading(false);
-  }, [projectId, store.projects]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="text-gray-600 mt-4">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const exportedCode = useMemo(() => {
+    if (!project) return "";
+    return generateExport(project, "react-tailwind", designElements).code;
+  }, [designElements, project]);
 
   if (!project) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Project not found</h1>
-          <p className="text-gray-600 mb-4">
-            This project doesn't exist or was deleted
-          </p>
-          <Link href="/">
-            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              Back to Home
-            </button>
-          </Link>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="rounded-[24px] border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
+          Project not found.
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)]">
+      <header className="border-b border-slate-200 bg-white/85 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div>
-            <h1 className="text-2xl font-bold">{project.name}</h1>
-            <p className="text-sm text-gray-600">Shared Preview • View Only</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400">
+              Shared preview
+            </p>
+            <h1 className="mt-1 text-xl font-semibold text-slate-950">
+              {project.name}
+            </h1>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowCode(!showCode)}
-              className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 transition text-sm font-medium"
+              onClick={() => setShowCode((value) => !value)}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
             >
-              {showCode ? "Hide Code" : "View Code"}
+              <Code2 className="h-4 w-4" />
+              {showCode ? "Hide code" : "Show code"}
             </button>
-            <Link href="/">
-              <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm font-medium">
-                Create Your Own
-              </button>
+            <Link
+              href={`/builder/${project.id}/preview`}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              <Eye className="h-4 w-4" />
+              Open live preview
             </Link>
           </div>
         </div>
       </header>
 
-      {/* Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Preview */}
-        <div className={`${showCode ? "flex-1" : "w-full"} overflow-y-auto`}>
-          <CanvasPreview components={project.components} />
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-6 lg:flex-row">
+        <div className={`${showCode ? "lg:w-[58%]" : "w-full"} overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_24px_60px_-40px_rgba(15,23,42,0.3)]`}>
+          <iframe
+            title={`${project.name} preview`}
+            src={`/builder/${project.id}/preview`}
+            className="h-[78vh] w-full border-0"
+          />
         </div>
 
-        {/* Code Panel */}
         {showCode && (
-          <div className="w-96 border-l border-gray-200 overflow-auto bg-slate-900 flex flex-col">
-            <div className="p-4 border-b border-gray-700 sticky top-0 bg-slate-900">
-              <h3 className="font-bold text-white text-sm">React Code</h3>
+          <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-slate-950 lg:w-[42%]">
+            <div className="border-b border-slate-800 px-5 py-4 text-sm font-semibold text-white">
+              React export
             </div>
-            <pre className="text-xs text-gray-100 font-mono p-4 whitespace-pre-wrap break-words flex-1 overflow-auto">
-              <code>{generateReactCode(project.components)}</code>
+            <pre className="h-[78vh] overflow-auto p-5 text-[12px] leading-6 text-slate-100">
+              <code>{exportedCode}</code>
             </pre>
           </div>
         )}

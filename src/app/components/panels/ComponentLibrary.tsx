@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState } from "react";
 import { useCanvasStore } from "@/state/useCanvasStore";
-import { useDesignStore } from "@/state/useDesignStore";
 import {
   Plus,
   Search,
@@ -34,10 +33,6 @@ interface ComponentLibraryProps {
   onComponentAdd?: (def: ComponentDefinition, id: string) => void;
 }
 
-/* ----------------------------------------
-   Icon map
------------------------------------------ */
-
 const COMPONENT_ICONS: Record<string, React.ReactNode> = {
   section: <LayoutTemplate size={16} />,
   "flex-row": <Rows size={16} />,
@@ -47,6 +42,10 @@ const COMPONENT_ICONS: Record<string, React.ReactNode> = {
   spacer: <Minus size={16} />,
   divider: <Minus size={16} />,
   navbar: <Navigation size={16} />,
+  "feature-section": <Grid3x3 size={16} />,
+  "testimonial-section": <Rows size={16} />,
+  "pricing-section": <Columns size={16} />,
+  "stats-strip": <LayoutTemplate size={16} />,
   card: <Square size={16} />,
   heading: <Type size={16} />,
   text: <FileText size={16} />,
@@ -58,16 +57,11 @@ const COMPONENT_ICONS: Record<string, React.ReactNode> = {
 
 const FALLBACK_ICON = <Square size={16} />;
 
-/* ========================================
-   Component Library
-======================================== */
-
 export default function ComponentLibrary({
   categories,
   onComponentAdd,
 }: ComponentLibraryProps) {
   const { addComponent } = useCanvasStore();
-  const { addElement } = useDesignStore();
 
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<
@@ -76,170 +70,146 @@ export default function ComponentLibrary({
 
   const handleAddComponent = (def: ComponentDefinition) => {
     const componentId = addComponent(def.type);
-    addElement(componentId, def.type, def.defaultCss ?? {});
     onComponentAdd?.(def, componentId);
   };
 
-  /* ----------------------------------------
-     Data helpers
-  ----------------------------------------- */
-
   const availableCategories = useMemo(
-    () => Array.from(new Set(COMPONENT_LIBRARY.map((c) => c.category))).sort(),
+    () => Array.from(new Set(COMPONENT_LIBRARY.map((component) => component.category))).sort(),
     []
   );
 
   const filteredComponents = useMemo(() => {
-    return COMPONENT_LIBRARY.filter((c) => {
-      if (categories && !categories.includes(c.category)) return false;
-      if (activeCategory !== "all" && c.category !== activeCategory)
+    return COMPONENT_LIBRARY.filter((component) => {
+      if (categories && !categories.includes(component.category)) return false;
+      if (activeCategory !== "all" && component.category !== activeCategory) {
         return false;
+      }
       if (!search.trim()) return true;
-      const q = search.toLowerCase();
+
+      const query = search.toLowerCase();
       return (
-        c.label.toLowerCase().includes(q) ||
-        c.type.toLowerCase().includes(q) ||
-        c.description.toLowerCase().includes(q)
+        component.label.toLowerCase().includes(query) ||
+        component.type.toLowerCase().includes(query) ||
+        component.description.toLowerCase().includes(query)
       );
     });
   }, [categories, activeCategory, search]);
 
-  const groupedComponents = useMemo(() => {
-    const groups: Record<string, ComponentDefinition[]> = {};
-    filteredComponents.forEach((c) => {
-      (groups[c.category] ??= []).push(c);
-    });
-    return groups;
-  }, [filteredComponents]);
-
-  // Display groups logic:
-  // - If "all" selected -> show single "All Components" group with all filtered components
-  // - If a specific category selected -> show only that category (if present)
-  // - Otherwise show groupedComponents
   const displayGroups = useMemo(() => {
     if (activeCategory === "all") {
       return { "All Components": filteredComponents };
     }
-    // specific category selected
-    if (groupedComponents[activeCategory]) {
-      return { [activeCategory]: groupedComponents[activeCategory] };
-    }
-    // fallback: show groupedComponents (covers case activeCategory missing)
-    return groupedComponents;
-  }, [activeCategory, filteredComponents, groupedComponents]);
 
-  /* ----------------------------------------
-     Render
-  ----------------------------------------- */
+    return {
+      [activeCategory]: filteredComponents,
+    };
+  }, [activeCategory, filteredComponents]);
 
   return (
-    <div className="p-3 space-y-3 text-gray-100 ">
-      {/* Header */}
-      <div className="flex items-center justify-between px-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-          Component Library
-        </p>
-        <SlidersHorizontal className="w-3.5 h-3.5 text-gray-500" />
+    <div className="space-y-4 p-4 text-slate-900">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400">
+            Component Library
+          </p>
+          <h2 className="mt-1 text-base font-semibold text-slate-950">
+            Build the layout by hand
+          </h2>
+        </div>
+        <div className="rounded-full border border-slate-200 bg-white p-2 text-slate-400 shadow-sm">
+          <SlidersHorizontal className="h-4 w-4" />
+        </div>
       </div>
 
-      {/* Search */}
-      <div className="px-2 flex items-center gap-1.5 rounded-md border border-white/5 bg-[#020617] focus-within:border-blue-500/40 transition-colors">
-        <Search className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+      <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+        <Search className="h-4 w-4 shrink-0 text-slate-400" />
         <input
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search components…"
-          className="bg-transparent text-[11px] text-gray-200 placeholder-gray-500 outline-none py-1.5 flex-1"
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search components..."
+          className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
         />
         {search && (
           <button
             onClick={() => setSearch("")}
-            className="text-gray-500 hover:text-gray-300 transition-colors"
+            className="text-slate-400 transition hover:text-slate-700"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="h-4 w-4" />
           </button>
         )}
       </div>
 
-      {/* Categories */}
-      <div className="flex flex-wrap gap-1 px-2 max-h-20 overflow-y-auto">
-        {["all", ...availableCategories].map((cat) => {
-          const active = activeCategory === cat;
+      <div className="flex max-h-24 flex-wrap gap-2 overflow-y-auto">
+        {["all", ...availableCategories].map((category) => {
+          const active = activeCategory === category;
           return (
             <button
-              key={cat}
+              key={category}
               onClick={() =>
                 setActiveCategory(
-                  cat === "all" ? "all" : (cat as ComponentCategory)
+                  category === "all"
+                    ? "all"
+                    : (category as ComponentCategory)
                 )
               }
-              className={`px-2 py-0.5 rounded-full text-[10px] border whitespace-nowrap transition-colors
-                ${
-                  active
-                    ? "bg-blue-500/20 text-blue-300 border-blue-500/40"
-                    : "border-white/10 text-gray-400 hover:bg-white/5"
-                }`}
+              className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
+                active
+                  ? "border-slate-950 bg-slate-950 text-white"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950"
+              }`}
             >
-              {cat === "all" ? "All" : cat}
+              {category === "all" ? "All" : category}
             </button>
           );
         })}
       </div>
 
-      {/* Component groups (uses displayGroups so "All" is non-empty) */}
-      <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
-        {Object.entries(displayGroups).map(([category, comps]) => (
-          <div key={category}>
-            <p className="px-2 pt-2 pb-1 text-[9px] uppercase tracking-wider text-gray-500">
-              {category}
+      <div className="space-y-4 overflow-y-auto pr-1">
+        {Object.entries(displayGroups).map(([group, components]) => (
+          <div key={group}>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+              {group}
             </p>
 
-            <div className="space-y-1">
-              {comps.map((comp) => (
+            <div className="space-y-2">
+              {components.map((component) => (
                 <button
-                  key={comp.type}
-                  onClick={() => handleAddComponent(comp)}
-                  className="w-full flex items-center gap-2 px-2 py-2 text-left text-xs rounded-md
-                    text-gray-300 transition-colors
-                    hover:bg-white/5 hover:text-gray-100 group"
+                  key={component.type}
+                  onClick={() => handleAddComponent(component)}
+                  className="group flex w-full items-center gap-3 rounded-[22px] border border-slate-200 bg-white px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_18px_35px_-28px_rgba(15,23,42,0.45)]"
                 >
-                  <span
-                    className="w-7 h-7 flex items-center justify-center rounded-md
-                    bg-white/5 text-gray-300
-                    group-hover:bg-blue-500/15 group-hover:text-blue-300"
-                  >
-                    {COMPONENT_ICONS[comp.type] ?? FALLBACK_ICON}
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-amber-100 group-hover:text-amber-800">
+                    {COMPONENT_ICONS[component.type] ?? FALLBACK_ICON}
                   </span>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="font-medium truncate text-gray-200">
-                        {comp.label}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-slate-900">
+                        {component.label}
                       </p>
-                      {comp.isLayout && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300">
+                      {component.isLayout && (
+                        <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
                           Layout
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-gray-400 truncate">
-                      {comp.description}
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      {component.description}
                     </p>
                   </div>
 
-                  <Plus
-                    size={14}
-                    className="shrink-0 text-gray-500 group-hover:text-blue-400 transition-colors"
-                  />
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500 transition group-hover:border-slate-950 group-hover:bg-slate-950 group-hover:text-white">
+                    <Plus size={14} />
+                  </span>
                 </button>
               ))}
             </div>
           </div>
         ))}
 
-        {Object.keys(displayGroups).length === 0 && (
-          <p className="text-[11px] text-gray-500 px-2 py-3 text-center">
-            No components match your search.
+        {filteredComponents.length === 0 && (
+          <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+            No components match that search.
           </p>
         )}
       </div>

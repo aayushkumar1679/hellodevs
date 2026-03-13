@@ -72,8 +72,8 @@ export default function ComponentWrapper({ component }: ComponentWrapperProps) {
         transition-all
         ${
           isEditing
-            ? "ring-1 ring-blue-400/60 bg-blue-50/30"
-            : "hover:bg-blue-500/5"
+            ? "ring-1 ring-sky-400/60 bg-sky-50/60"
+            : "hover:bg-slate-100/70"
         }
       `}
     >
@@ -136,15 +136,15 @@ export default function ComponentWrapper({ component }: ComponentWrapperProps) {
           absolute -top-2 -right-2
           p-1.5
           rounded-full
-          bg-red-500/90
+          bg-rose-500/95
           text-white
           opacity-0
           scale-90
           group-hover:opacity-100
           group-hover:scale-100
           transition-all
-          shadow-sm
-          hover:bg-red-600
+          shadow-[0_12px_20px_-12px_rgba(225,29,72,0.9)]
+          hover:bg-rose-600
         "
       >
         <Trash2 size={12} />

@@ -674,12 +674,19 @@ export default function Canvas() {
 ------------------------------------- */
 
   const rootComponents = currentProject
-    ? Object.values(currentProject.components).filter(
-        (c) =>
-          !Object.values(currentProject.components).some((parent) =>
-            parent.children.includes(c.id)
-          )
+    ? (currentProject.rootOrder?.length
+        ? currentProject.rootOrder
+        : Object.values(currentProject.components)
+            .filter(
+              (component) =>
+                !Object.values(currentProject.components).some((parent) =>
+                  parent.children.includes(component.id)
+                )
+            )
+            .map((component) => component.id)
       )
+        .map((id) => currentProject.components[id])
+        .filter(Boolean)
     : [];
 
   // compute canvas-local group box for render (returns {left, top, w, h} local to canvas)
@@ -708,11 +715,13 @@ export default function Canvas() {
   return (
     <div
       ref={canvasRef}
-      className="relative w-full h-full bg-[#020617] overflow-auto select-none"
+      className="relative h-full w-full overflow-auto select-none bg-[radial-gradient(circle_at_top_left,rgba(125,211,252,0.15),transparent_20%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.16),transparent_18%),linear-gradient(180deg,#f8fafc_0%,#e2e8f0_100%)]"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.45)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.45)_1px,transparent_1px)] bg-[size:32px_32px] opacity-50" />
+
       {/* Marquee */}
       {selectionBox && canvasRectForRender && (
         <div
@@ -768,92 +777,80 @@ export default function Canvas() {
         </div>
       ))}
 
-      {/* Viewport */}
-      {previewEnabled && (
-        <div className="flex justify-center py-12">
-          <div
-            className="bg-white shadow-lg min-h-screen transition-[width] duration-200 relative rounded-lg border border-white/5 overflow-hidden"
-            style={{ width: viewportWidth }}
-          >
-            <div className="p-8 space-y-4 relative">
-              {rootComponents.length === 0 ? (
-                <div className="text-center text-gray-500 py-12">
-                  <p className="text-sm">No components added</p>
-                  <p className="text-xs">
-                    Drag components from the left panel to get started
+      <div className="flex justify-center px-8 py-12">
+        <div
+          className="relative min-h-screen overflow-hidden rounded-[36px] border border-white/70 bg-white/92 shadow-[0_45px_120px_-65px_rgba(15,23,42,0.55)] transition-[width] duration-200"
+          style={{ width: previewEnabled ? viewportWidth : Math.max(viewportWidth, 1320) }}
+        >
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.14),transparent_65%)]" />
+          <div className="relative space-y-4 p-8">
+            {rootComponents.length === 0 ? (
+              <div className="flex min-h-[60vh] items-center justify-center">
+                <div className="max-w-md rounded-[32px] border border-dashed border-slate-300 bg-slate-50/90 px-8 py-10 text-center shadow-inner">
+                  <p className="text-sm font-semibold text-slate-900">
+                    Your canvas is ready.
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    Start with the AI panel for a full page, or drag components in
+                    manually to shape the layout.
                   </p>
                 </div>
-              ) : (
-                <>
-                  {/* Multi-select bounding box overlay & handles */}
-                  {groupBoxLocal && (
-                    <div
-                      className="absolute pointer-events-auto z-50"
-                      style={{
-                        left: groupBoxLocal.left,
-                        top: groupBoxLocal.top,
-                        width: groupBoxLocal.w,
-                        height: groupBoxLocal.h,
-                        boxSizing: "border-box",
-                        border: "1px dashed rgba(59,130,246,0.9)",
-                        background: "transparent",
-                      }}
-                    >
-                      {/* handles */}
-                      {(
-                        [
-                          ["nw", "top-0 left-0 cursor-nw-resize"],
-                          [
-                            "n",
-                            "top-0 left-1/2 -translate-x-1/2 cursor-n-resize",
-                          ],
-                          ["ne", "top-0 right-0 cursor-ne-resize"],
-                          [
-                            "e",
-                            "top-1/2 right-0 -translate-y-1/2 cursor-e-resize",
-                          ],
-                          ["se", "bottom-0 right-0 cursor-se-resize"],
-                          [
-                            "s",
-                            "bottom-0 left-1/2 -translate-x-1/2 cursor-s-resize",
-                          ],
-                          ["sw", "bottom-0 left-0 cursor-sw-resize"],
-                          [
-                            "w",
-                            "top-1/2 left-0 -translate-y-1/2 cursor-w-resize",
-                          ],
-                        ] as [string, string][]
-                      ).map(([dir, cls]) => (
-                        <div
-                          key={dir}
-                          role="button"
-                          data-resize-handle="true"
-                          onMouseDown={(e) => startGroupResize(e, dir)}
-                          className={`absolute w-3 h-3 bg-white border border-blue-500 rounded-sm ${cls}`}
-                          style={{ transform: undefined }}
-                        />
-                      ))}
-                    </div>
-                  )}
+              </div>
+            ) : (
+              <>
+                {groupBoxLocal && (
+                  <div
+                    className="absolute pointer-events-auto z-50"
+                    style={{
+                      left: groupBoxLocal.left,
+                      top: groupBoxLocal.top,
+                      width: groupBoxLocal.w,
+                      height: groupBoxLocal.h,
+                      boxSizing: "border-box",
+                      border: "1px dashed rgba(14,165,233,0.95)",
+                      background: "transparent",
+                    }}
+                  >
+                    {(
+                      [
+                        ["nw", "top-0 left-0 cursor-nw-resize"],
+                        ["n", "top-0 left-1/2 -translate-x-1/2 cursor-n-resize"],
+                        ["ne", "top-0 right-0 cursor-ne-resize"],
+                        ["e", "top-1/2 right-0 -translate-y-1/2 cursor-e-resize"],
+                        ["se", "bottom-0 right-0 cursor-se-resize"],
+                        ["s", "bottom-0 left-1/2 -translate-x-1/2 cursor-s-resize"],
+                        ["sw", "bottom-0 left-0 cursor-sw-resize"],
+                        ["w", "top-1/2 left-0 -translate-y-1/2 cursor-w-resize"],
+                      ] as [string, string][]
+                    ).map(([dir, cls]) => (
+                      <div
+                        key={dir}
+                        role="button"
+                        data-resize-handle="true"
+                        onMouseDown={(e) => startGroupResize(e, dir)}
+                        className={`absolute h-3 w-3 rounded-sm border border-sky-500 bg-white ${cls}`}
+                        style={{ transform: undefined }}
+                      />
+                    ))}
+                  </div>
+                )}
 
-                  {/* Components */}
-                  {rootComponents.map((component) => (
-                    <CanvasElement
-                      key={component.id}
-                      elementId={component.id}
-                      onRect={(rect) => registerRect(component.id, rect)}
-                      getSnapTargets={() => buildSnapTargets()}
-                      onGuide={(g) => onElementGuide(g)}
-                    >
-                      <ComponentWrapper component={component} />
-                    </CanvasElement>
-                  ))}
-                </>
-              )}
-            </div>
+                {rootComponents.map((component) => (
+                  <CanvasElement
+                    key={component.id}
+                    elementId={component.id}
+                    onRect={(rect) => registerRect(component.id, rect)}
+                    getSnapTargets={() => getSnapTargets()}
+                    onGuide={(guidesClient) => onElementGuide(guidesClient)}
+                  >
+                    <ComponentWrapper component={component} />
+                  </CanvasElement>
+                ))}
+              </>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

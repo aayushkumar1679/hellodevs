@@ -1,725 +1,524 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  useCanvasStore,
-  Project as CanvasProject,
-} from "@/state/useCanvasStore";
-import { generateExport, TechStack } from "@/utils/exportGenerators";
-import {
-  Plus,
-  Trash2,
-  ExternalLink,
-  Edit2,
-  Grid,
-  List,
-  Search,
-  Folder,
-  Sparkles,
+  ArrowRight,
   Download,
   Eye,
-  Copy,
-  Filter,
+  FolderOpen,
+  Layers3,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
   X,
+  Copy,
   Check,
 } from "lucide-react";
+import { useCanvasStore, type Project as CanvasProject } from "@/state/useCanvasStore";
+import { useDesignStore } from "@/state/useDesignStore";
+import { generateExport, type TechStack } from "@/utils/exportGenerators";
+import { generateNextJsProject } from "@/utils/exporter";
+import { useSession, signOut } from "next-auth/react";
+import { User as UserIcon, LogOut } from "lucide-react";
 
-interface Project {
+interface ProjectCard {
   id: string;
   name: string;
-  description?: string;
-  type?: string;
-  components?: any[];
   createdAt: string;
   updatedAt?: string;
-  starred?: boolean;
-  views?: number;
+  componentCount: number;
 }
 
-export default function EnhancedDashboard() {
-  const {
-    projects: projectsRecord,
-    createProject,
-    deleteProject,
-  } = useCanvasStore();
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy] = useState<"recent" | "name" | "views">("recent");
-  const [filterType, setFilterType] = useState<"all" | "website" | "form">(
-    "all"
-  );
-  const [selectedProjects, setSelectedProjects] = useState<Set<string>>(
-    new Set()
-  );
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+export default function HomePage() {
+  const { projects: projectsRecord, deleteProject, fetchProjects } = useCanvasStore();
+  const designElements = useDesignStore((state) => state.elements);
 
+  const { data: session } = useSession();
+  const [search, setSearch] = useState("");
   const [exportProjectId, setExportProjectId] = useState<string | null>(null);
   const [exportTech, setExportTech] = useState<TechStack>("react-tailwind");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
-  // Convert projects object to array for dashboard
-  const projectsArray: Project[] = useMemo(
+  React.useEffect(() => {
+    if (session) {
+      fetchProjects();
+    }
+  }, [session, fetchProjects]);
+
+
+  const projects = useMemo<ProjectCard[]>(
     () =>
-      Object.values(projectsRecord).map((p: CanvasProject) => ({
-        id: p.id,
-        name: p.name,
-        description: p.name,
-        type: "website",
-        createdAt: p["createdAt"] ?? new Date().toISOString(),
-        updatedAt: p["updatedAt"],
-        components: Object.values(p.components || {}),
-      })),
+      Object.values(projectsRecord)
+        .map((project: CanvasProject) => ({
+          id: project.id,
+          name: project.name,
+          createdAt: project.createdAt ?? new Date().toISOString(),
+          updatedAt: project.updatedAt,
+          componentCount: Object.keys(project.components || {}).length,
+        }))
+        .sort(
+          (left, right) =>
+            new Date(right.updatedAt || right.createdAt).getTime() -
+            new Date(left.updatedAt || left.createdAt).getTime()
+        ),
     [projectsRecord]
   );
 
-  const enrichedProjects = useMemo(
+  const filteredProjects = useMemo(
     () =>
-      projectsArray.map((p: Project) => ({
-        ...p,
-        starred: Math.random() > 0.6,
-        views: Math.floor(Math.random() * 500),
-      })),
-    [projectsArray]
+      projects.filter((project) =>
+        project.name.toLowerCase().includes(search.toLowerCase())
+      ),
+    [projects, search]
   );
-
-  useEffect(() => {
-    setTimeout(() => setIsLoading(false), 600);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("canvas-projects", JSON.stringify(projectsArray));
-  }, [projectsArray]);
-
-  const filteredProjects = useMemo(() => {
-    let filtered = enrichedProjects.filter((project: Project) => {
-      const matchesSearch = project.name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-      const matchesType =
-        filterType === "all" || (project.type || "website") === filterType;
-      return matchesSearch && matchesType;
-    });
-
-    if (sortBy === "name") {
-      filtered.sort((a: Project, b: Project) => a.name.localeCompare(b.name));
-    } else if (sortBy === "views") {
-      filtered.sort(
-        (a: Project, b: Project) => (b.views || 0) - (a.views || 0)
-      );
-    } else {
-      filtered.sort(
-        (a: Project, b: Project) =>
-          new Date(b.updatedAt || b.createdAt).getTime() -
-          new Date(a.updatedAt || a.createdAt).getTime()
-      );
-    }
-
-    return filtered;
-  }, [enrichedProjects, searchQuery, filterType, sortBy]);
 
   const stats = useMemo(
     () => ({
-      total: enrichedProjects.length,
-      active: enrichedProjects.length,
-      storage: (
-        enrichedProjects.reduce(
-          (acc: number, p: Project) => acc + (p.components?.length || 0),
-          0
-        ) * 0.5
-      ).toFixed(1),
-      totalViews: enrichedProjects.reduce(
-        (acc: number, p: Project) => acc + (p.views || 0),
-        0
-      ),
+      projects: projects.length,
+      layers: projects.reduce((sum, project) => sum + project.componentCount, 0),
+      lastUpdated:
+        projects[0]?.updatedAt || projects[0]?.createdAt || new Date().toISOString(),
     }),
-    [enrichedProjects]
+    [projects]
   );
-
-  const handleCopyLink = (projectId: string) => {
-    navigator.clipboard.writeText(`/share/${projectId}`);
-    setCopiedId(projectId);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const handleBulkDelete = () => {
-    if (selectedProjects.size === 0) return;
-    if (window.confirm(`Delete ${selectedProjects.size} projects?`)) {
-      selectedProjects.forEach((id) => deleteProject(id));
-      setSelectedProjects(new Set());
-    }
-  };
-
-  const openExportFor = (id: string) => {
-    setExportProjectId(id);
-    setExportTech("react-tailwind");
-  };
-
-  const closeExport = () => {
-    setExportProjectId(null);
-  };
 
   const currentExportProject =
     exportProjectId != null ? projectsRecord[exportProjectId] : null;
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
-          <div className="max-w-7xl mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">CB</span>
-                </div>
-                <h1 className="text-sm font-semibold text-slate-900 hidden sm:block">
-                  CanvasBuilder
-                </h1>
-              </div>
-              <div className="h-6 w-6 bg-blue-400 rounded-full animate-pulse" />
-            </div>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 py-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white rounded-lg p-3 animate-pulse">
-                <div className="h-3 bg-slate-200 rounded w-16 mb-2" />
-                <div className="h-4 bg-slate-300 rounded w-10" />
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="bg-white rounded-lg border border-slate-200 overflow-hidden animate-pulse"
-              >
-                <div className="h-24 bg-slate-200" />
-                <div className="p-3 space-y-2">
-                  <div className="h-3 bg-slate-200 rounded w-3/4" />
-                  <div className="h-2 bg-slate-100 rounded w-1/2" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </main>
-      </div>
+  const handleCopyLink = async (projectId: string) => {
+    await navigator.clipboard.writeText(
+      `${window.location.origin}/builder/${projectId}/preview`
     );
-  }
+    setCopiedId(projectId);
+    window.setTimeout(() => setCopiedId(null), 1800);
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
-                <span className="text-white font-bold text-xs">CB</span>
-              </div>
-              <h1 className="text-sm font-semibold text-slate-900 hidden sm:block">
-                CanvasBuilder
+    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_35%,#f8fafc_100%)] text-slate-950">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-[0_24px_40px_-24px_rgba(15,23,42,0.9)]">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">
+                Polyglot
+              </p>
+              <h1 className="text-sm font-semibold text-slate-950">
+                AI + visual web builder
               </h1>
             </div>
+          </div>
 
-            <div className="flex items-center gap-2 flex-1 max-w-xs">
-              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="text-xs w-full bg-transparent outline-none placeholder-slate-400"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() =>
-                  setViewMode(viewMode === "grid" ? "list" : "grid")
-                }
-                className="p-1.5 hover:bg-slate-100 rounded transition-colors"
-              >
-                {viewMode === "grid" ? (
-                  <List className="w-4 h-4 text-slate-600" />
-                ) : (
-                  <Grid className="w-4 h-4 text-slate-600" />
-                )}
-              </button>
-              <Link href="/builder/new">
-                <button className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors">
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>New</span>
+          <div className="flex items-center gap-4">
+            {session ? (
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu((v) => !v)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition hover:border-slate-300"
+                >
+                  {session.user?.image ? (
+                    <img
+                      src={session.user.image}
+                      alt="User"
+                      className="h-8 w-8 rounded-full"
+                    />
+                  ) : (
+                    <UserIcon size={18} className="text-slate-500" />
+                  )}
                 </button>
+
+                {showUserMenu && (
+                  <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-[28px] border border-slate-200 bg-white p-2 shadow-[0_24px_60px_-30px_rgba(15,23,42,0.35)]">
+                    <div className="px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+                        Account
+                      </p>
+                      <p className="mt-1 truncate text-sm font-semibold text-slate-950">
+                        {session.user?.name || "User"}
+                      </p>
+                      <p className="truncate text-[11px] text-slate-500">
+                        {session.user?.email}
+                      </p>
+                    </div>
+                    <div className="h-px bg-slate-100 mx-2" />
+                    <button
+                      onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+                      className="flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50"
+                    >
+                      <LogOut size={16} />
+                      Log out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/auth/signin"
+                className="text-sm font-semibold text-slate-600 transition hover:text-slate-950"
+              >
+                Sign in
               </Link>
-            </div>
+            )}
+
+            <Link
+              href="/builder/new"
+              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              <Plus className="h-4 w-4" />
+              New project
+            </Link>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          {[
-            { label: "Projects", value: stats.total, icon: Folder },
-            { label: "Views", value: stats.totalViews, icon: Eye },
-            { label: "Storage", value: `${stats.storage}MB`, icon: Download },
-            { label: "Active", value: stats.active, icon: Sparkles },
-          ].map((stat, idx) => {
-            const Icon = stat.icon;
-            return (
-              <div
-                key={idx}
-                className="bg-white rounded-lg border border-slate-200 p-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-slate-500 font-medium">
-                      {stat.label}
-                    </p>
-                    <p className="text-lg font-bold text-slate-900 mt-1">
-                      {stat.value}
-                    </p>
-                  </div>
-                  <Icon className="w-4 h-4 text-slate-300" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Filter & Sort */}
-        {filteredProjects.length > 0 && (
-          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="text-xs px-2.5 py-1.5 border border-slate-200 text-slate-700 hover:bg-slate-50 rounded transition-colors flex items-center gap-1"
-              >
-                <Filter className="w-3.5 h-3.5" />
-                Filter
-              </button>
-              <select
-                value={sortBy}
-                onChange={(e) =>
-                  setSortBy(e.target.value as "recent" | "name" | "views")
-                }
-                className="text-xs px-2.5 py-1.5 border border-slate-200 text-slate-700 bg-white rounded hover:bg-slate-50 transition-colors outline-none"
-              >
-                <option value="recent">Latest</option>
-                <option value="name">Name</option>
-                <option value="views">Most Viewed</option>
-              </select>
-            </div>
-
-            {selectedProjects.size > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-600 font-medium">
-                  {selectedProjects.size} selected
-                </span>
-                <button
-                  onClick={handleBulkDelete}
-                  className="text-xs px-2.5 py-1.5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded transition-colors flex items-center gap-1"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Delete
-                </button>
-                <button
-                  onClick={() => setSelectedProjects(new Set())}
-                  className="text-xs px-2.5 py-1.5 text-slate-600 hover:bg-slate-100 rounded transition-colors"
-                >
-                  Clear
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Filter Dropdown */}
-        {showFilters && (
-          <div className="mb-4 p-3 bg-white border border-slate-200 rounded-lg">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-semibold text-slate-900">Type</h3>
-              <button
-                onClick={() => setShowFilters(false)}
-                className="text-slate-500 hover:text-slate-700"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <div className="flex gap-2">
-              {(["all", "website", "form"] as const).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setFilterType(type)}
-                  className={`text-xs px-2.5 py-1.5 rounded transition-all font-medium ${
-                    filterType === type
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  }`}
-                >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {filteredProjects.length === 0 ? (
-          <div className="text-center py-12 bg-white border border-slate-200 rounded-lg">
-            <Plus className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-            <h3 className="text-sm font-semibold text-slate-900 mb-1">
-              {searchQuery ? "No projects found" : "No projects yet"}
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              {searchQuery
-                ? "Try a different search"
-                : "Create your first project to get started"}
+      <main className="mx-auto max-w-7xl space-y-10 px-6 py-10">
+        <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-[40px] border border-slate-200 bg-white/88 p-8 shadow-[0_40px_90px_-50px_rgba(15,23,42,0.45)] backdrop-blur-xl">
+            <p className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-700">
+              <Sparkles className="h-3.5 w-3.5" />
+              World-class building flow
             </p>
-            <Link href="/builder/new">
-              <button className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors">
-                <Plus className="w-3.5 h-3.5" />
-                Create Project
-              </button>
-            </Link>
-          </div>
-        ) : viewMode === "grid" ? (
-          // Grid View
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filteredProjects.map((project: Project) => (
-              <div
-                key={project.id}
-                className="bg-white rounded-lg border border-slate-200 overflow-hidden hover:border-blue-300 hover:shadow-md transition-all group"
+            <h2 className="mt-5 max-w-3xl text-5xl font-semibold leading-tight tracking-tight text-slate-950">
+              Prompt, sculpt, and export launch-ready websites in one studio.
+            </h2>
+            <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
+              Polyglot combines OpenAI-assisted page generation, a visual canvas,
+              and deterministic export so ideas turn into polished frontends fast.
+            </p>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/builder/new"
+                className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
               >
-                <div className="h-20 bg-linear-to-br from-blue-100 to-indigo-100 relative" />
+                Open the studio
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <a
+                href="#projects"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
+              >
+                Browse projects
+              </a>
+            </div>
 
-                <div className="p-3">
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <h3 className="text-xs font-semibold text-slate-900 line-clamp-2 flex-1">
-                      {project.name}
-                    </h3>
-                    <span className="text-xs font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
-                      {project.type || "Web"}
-                    </span>
+            <div className="mt-10 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[28px] border border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  Projects
+                </p>
+                <p className="mt-2 text-3xl font-semibold text-slate-950">
+                  {stats.projects}
+                </p>
+              </div>
+              <div className="rounded-[28px] border border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  Layers
+                </p>
+                <p className="mt-2 text-3xl font-semibold text-slate-950">
+                  {stats.layers}
+                </p>
+              </div>
+              <div className="rounded-[28px] border border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                  Last update
+                </p>
+                <p className="mt-2 text-base font-semibold text-slate-950">
+                  {new Date(stats.lastUpdated).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative overflow-hidden rounded-[40px] border border-slate-200 bg-[radial-gradient(circle_at_top,#fef3c7,transparent_35%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-8 shadow-[0_40px_90px_-50px_rgba(15,23,42,0.45)]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.16),transparent_34%)]" />
+            <div className="relative">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">
+                3D-ready visual system
+              </p>
+              <div className="mt-6 space-y-4">
+                {[0, 1, 2].map((index) => (
+                  <div
+                    key={index}
+                    className="rounded-[32px] border border-white/80 bg-white/90 p-5 shadow-[0_32px_50px_-35px_rgba(15,23,42,0.45)]"
+                    style={{
+                      transform: `perspective(1100px) rotateX(15deg) rotateY(${
+                        index === 0 ? -8 : index === 1 ? 5 : -4
+                      }deg) translateZ(${index * 8}px)`,
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-950">
+                          {index === 0
+                            ? "Prompt-generated hero"
+                            : index === 1
+                            ? "Glassmorphism card"
+                            : "Export package"}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {index === 0
+                            ? "OpenAI creates structured sections."
+                            : index === 1
+                            ? "Use depth presets in the inspector."
+                            : "React and HTML exports stay deterministic."}
+                        </p>
+                      </div>
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-white">
+                        {index === 2 ? (
+                          <Download className="h-4 w-4" />
+                        ) : index === 1 ? (
+                          <Layers3 className="h-4 w-4" />
+                        ) : (
+                          <Sparkles className="h-4 w-4" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="projects" className="space-y-5">
+          <div className="flex flex-col gap-4 rounded-[32px] border border-slate-200 bg-white/85 px-6 py-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.25)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">
+                Workspace
+              </p>
+              <h3 className="mt-1 text-xl font-semibold text-slate-950">
+                Recent projects
+              </h3>
+            </div>
+
+            <div className="flex w-full items-center gap-3 md:max-w-md">
+              <div className="flex flex-1 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+                <Search className="h-4 w-4 text-slate-400" />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search projects"
+                  className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+                />
+              </div>
+
+              <Link
+                href="/builder/new"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
+              >
+                <FolderOpen className="h-4 w-4" />
+                Create
+              </Link>
+            </div>
+          </div>
+
+          {filteredProjects.length === 0 ? (
+            <div className="rounded-[36px] border border-dashed border-slate-300 bg-white/80 px-8 py-16 text-center shadow-inner">
+              <p className="text-xl font-semibold text-slate-950">
+                {projects.length === 0 ? "No projects yet" : "No matches found"}
+              </p>
+              <p className="mt-3 text-base text-slate-500">
+                {projects.length === 0
+                  ? "Create a project and use the AI panel to generate your first page."
+                  : "Try a different search query or create a fresh project."}
+              </p>
+              <Link
+                href="/builder/new"
+                className="mt-6 inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                <Plus className="h-4 w-4" />
+                Create project
+              </Link>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {filteredProjects.map((project, index) => (
+                <article
+                  key={project.id}
+                  className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_24px_60px_-40px_rgba(15,23,42,0.3)] transition hover:-translate-y-1 hover:border-slate-300"
+                >
+                  <div className="relative h-36 overflow-hidden bg-[linear-gradient(135deg,#f8fafc_0%,#e0f2fe_45%,#fef3c7_100%)]">
+                    <div
+                      className="absolute left-6 top-6 h-24 w-32 rounded-[28px] border border-white/80 bg-white/90"
+                      style={{
+                        transform: `perspective(1000px) rotateX(18deg) rotateY(${
+                          index % 2 === 0 ? -10 : 8
+                        }deg)`,
+                      }}
+                    />
+                    <div
+                      className="absolute bottom-6 right-6 h-20 w-28 rounded-[24px] border border-white/80 bg-white/80"
+                      style={{
+                        transform: `perspective(900px) rotateX(12deg) rotateY(${
+                          index % 2 === 0 ? 8 : -8
+                        }deg)`,
+                      }}
+                    />
                   </div>
 
-                  <p className="text-xs text-slate-500 mb-2 line-clamp-1">
-                    {project.description || "No description"}
-                  </p>
+                  <div className="space-y-4 p-5">
+                    <div>
+                      <div className="flex items-center justify-between gap-3">
+                        <h4 className="text-lg font-semibold text-slate-950">
+                          {project.name}
+                        </h4>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                          {project.componentCount} layers
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm text-slate-500">
+                        Updated{" "}
+                        {new Date(
+                          project.updatedAt || project.createdAt
+                        ).toLocaleDateString()}
+                      </p>
+                    </div>
 
-                  <div className="text-xs text-slate-400 mb-2.5">
-                    {new Date(
-                      project.updatedAt || project.createdAt
-                    ).toLocaleDateString()}{" "}
-                    • {project.components?.length || 0} items
-                  </div>
-
-                  <div className="flex gap-1.5">
-                    <Link href={`/builder/${project.id}`} className="flex-1">
-                      <button className="w-full flex items-center justify-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded text-xs font-medium transition-colors">
-                        <Edit2 className="w-3 h-3" />
-                        Edit
-                      </button>
-                    </Link>
-
-                    <Link
-                      href={`/builder/${project.id}/preview`}
-                      target="/blank"
-                    >
-                      <button
-                        className="px-2.5 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded text-xs transition-colors"
+                    <div className="grid grid-cols-5 gap-2">
+                      <Link
+                        href={`/builder/${project.id}`}
+                        className="col-span-2 inline-flex items-center justify-center gap-2 rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                      >
+                        Open
+                      </Link>
+                      <Link
+                        href={`/builder/${project.id}/preview`}
+                        className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2.5 text-slate-600 transition hover:border-slate-300 hover:text-slate-950"
                         title="Preview"
                       >
-                        <Eye className="w-3 h-3" />
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                      <button
+                        onClick={() => handleCopyLink(project.id)}
+                        className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2.5 text-slate-600 transition hover:border-slate-300 hover:text-slate-950"
+                        title="Copy preview link"
+                      >
+                        {copiedId === project.id ? (
+                          <Check className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
                       </button>
-                    </Link>
-
-                    <button
-                      onClick={() => handleCopyLink(project.id)}
-                      className="px-2.5 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded text-xs transition-colors"
-                      title="Copy link"
-                    >
-                      {copiedId === project.id ? (
-                        <Check className="w-3 h-3 text-green-600" />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => openExportFor(project.id)}
-                      className="px-2.5 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded text-xs transition-colors"
-                      title="Export"
-                    >
-                      <Download className="w-3 h-3" />
-                    </button>
+                      <button
+                        onClick={() => {
+                          setExportProjectId(project.id);
+                          setExportTech("react-tailwind");
+                        }}
+                        className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2.5 text-slate-600 transition hover:border-slate-300 hover:text-slate-950"
+                        title="Export"
+                      >
+                        <Download className="h-4 w-4" />
+                      </button>
+                    </div>
 
                     <button
                       onClick={() => {
                         if (window.confirm(`Delete "${project.name}"?`)) {
                           deleteProject(project.id);
-                          const newSet = new Set(selectedProjects);
-                          newSet.delete(project.id);
-                          setSelectedProjects(newSet);
                         }
                       }}
-                      className="px-2.5 py-1.5 border border-slate-200 text-red-600 hover:bg-red-50 rounded text-xs transition-colors"
-                      title="Delete"
+                      className="inline-flex items-center gap-2 text-sm font-medium text-rose-600 transition hover:text-rose-700"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="h-4 w-4" />
+                      Delete project
                     </button>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          // List View
-          <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="px-3 py-2 text-left">
-                      <input
-                        type="checkbox"
-                        checked={
-                          selectedProjects.size === filteredProjects.length &&
-                          filteredProjects.length > 0
-                        }
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedProjects(
-                              new Set(
-                                filteredProjects.map((p: Project) => p.id)
-                              )
-                            );
-                          } else {
-                            setSelectedProjects(new Set());
-                          }
-                        }}
-                        className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-1 focus:ring-blue-500"
-                      />
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-600">
-                      Name
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-600 hidden sm:table-cell">
-                      Type
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-600 hidden md:table-cell">
-                      Items
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-600">
-                      Updated
-                    </th>
-                    <th className="px-3 py-2 text-right font-semibold text-slate-600">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {filteredProjects.map((project: Project) => (
-                    <tr
-                      key={project.id}
-                      className="hover:bg-slate-50 transition-colors"
-                    >
-                      <td className="px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedProjects.has(project.id)}
-                          onChange={(e) => {
-                            const newSet = new Set(selectedProjects);
-                            if (e.target.checked) {
-                              newSet.add(project.id);
-                            } else {
-                              newSet.delete(project.id);
-                            }
-                            setSelectedProjects(newSet);
-                          }}
-                          className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="font-medium text-slate-900">
-                          {project.name}
-                        </div>
-                        <div className="text-slate-500 hidden sm:block">
-                          {project.description || "—"}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 hidden sm:table-cell text-slate-600">
-                        {project.type || "Website"}
-                      </td>
-                      <td className="px-3 py-2 hidden md:table-cell text-slate-600">
-                        {project.components?.length || 0}
-                      </td>
-                      <td className="px-3 py-2 text-slate-600">
-                        {new Date(
-                          project.updatedAt || project.createdAt
-                        ).toLocaleDateString()}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Link href={`/builder/${project.id}`}>
-                            <button className="p-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-all">
-                              <Edit2 className="w-3 h-3" />
-                            </button>
-                          </Link>
-
-                          <Link href={`/preview/${project.id}`}>
-                            <button className="p-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-all">
-                              <Eye className="w-3 h-3" />
-                            </button>
-                          </Link>
-
-                          <button
-                            onClick={() => handleCopyLink(project.id)}
-                            className="p-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
-                          >
-                            {copiedId === project.id ? (
-                              <Check className="w-3 h-3 text-green-600" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
-                          </button>
-
-                          <button
-                            onClick={() => openExportFor(project.id)}
-                            className="p-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
-                          >
-                            <Download className="w-3 h-3" />
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`Delete "${project.name}"?`)) {
-                                deleteProject(project.id);
-                                const newSet = new Set(selectedProjects);
-                                newSet.delete(project.id);
-                                setSelectedProjects(newSet);
-                              }
-                            }}
-                            className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-all"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                </article>
+              ))}
             </div>
-          </div>
-        )}
+          )}
+        </section>
       </main>
 
-      {/* Export Modal */}
-      {currentExportProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
-            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">
-                  Export: {currentExportProject.name}
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Choose a tech stack, preview the generated code, and download
-                  the file.
-                </p>
+      {currentExportProject && (() => {
+        const handleDownloadZip = async () => {
+          if (!currentExportProject) return;
+          try {
+            const response = await fetch("/api/export", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ projectId: currentExportProject.id }),
+            });
+            if (!response.ok) throw new Error("Export failed");
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${currentExportProject.name.replace(/[^a-z0-9]/gi, "_")}-export.zip`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+          } catch (e) {
+            console.error(e);
+            alert("Failed to download project zip.");
+          }
+        };
+
+        const files = generateNextJsProject(currentExportProject as any, designElements);
+        const mainPage = files.find(f => f.name === "src/app/page.tsx") || files[0];
+        const previewCode = mainPage.content;
+        const previewFileName = mainPage.name;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
+            <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_50px_100px_-60px_rgba(15,23,42,0.55)]">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400">
+                    Export
+                  </p>
+                  <h3 className="mt-1 text-xl font-semibold text-slate-950">
+                    {currentExportProject.name}
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Preview the generated code and download the production Next.js package.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setExportProjectId(null)}
+                  className="rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-950"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                onClick={closeExport}
-                className="p-1.5 rounded hover:bg-slate-100"
-              >
-                <X className="w-4 h-4 text-slate-500" />
-              </button>
+
+              <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-6 py-4">
+                <span className="text-sm font-semibold text-slate-900 bg-slate-100 px-4 py-2 rounded-full border border-slate-200">
+                  Next.js 14 + Tailwind CSS (Production Setup)
+                </span>
+              </div>
+
+              <div className="flex flex-1 flex-col overflow-hidden px-6 py-5">
+                <div className="mb-3 flex items-center justify-between gap-4">
+                  <span className="truncate text-sm text-slate-500">
+                    {previewFileName} (Main Component)
+                  </span>
+                  <button
+                    onClick={handleDownloadZip}
+                    className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Production Zip
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950">
+                  <pre className="h-full overflow-auto p-5 text-[12px] leading-6 text-slate-100">
+                    <code>{previewCode}</code>
+                  </pre>
+                </div>
+              </div>
             </div>
-
-            <div className="px-4 py-3 border-b border-slate-200 flex flex-wrap gap-2 items-center">
-              <span className="text-xs font-medium text-slate-600">
-                Tech stack:
-              </span>
-              <button
-                onClick={() => setExportTech("react-tailwind")}
-                className={`text-xs px-2.5 py-1.5 rounded border ${
-                  exportTech === "react-tailwind"
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-slate-50 text-slate-700 border-slate-200"
-                }`}
-              >
-                React + Tailwind
-              </button>
-              <button
-                onClick={() => setExportTech("react-bootstrap")}
-                className={`text-xs px-2.5 py-1.5 rounded border ${
-                  exportTech === "react-bootstrap"
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-slate-50 text-slate-700 border-slate-200"
-                }`}
-              >
-                React + Bootstrap
-              </button>
-              <button
-                onClick={() => setExportTech("html-css")}
-                className={`text-xs px-2.5 py-1.5 rounded border ${
-                  exportTech === "html-css"
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-slate-50 text-slate-700 border-slate-200"
-                }`}
-              >
-                HTML + CSS
-              </button>
-            </div>
-
-            {(() => {
-              const { code, fileName } = generateExport(
-                currentExportProject,
-                exportTech
-              );
-              const handleDownload = () => {
-                const blob = new Blob([code], {
-                  type: "text/plain;charset=utf-8",
-                });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = fileName;
-                a.click();
-                URL.revokeObjectURL(url);
-              };
-
-              return (
-                <>
-                  <div className="flex-1 overflow-hidden px-4 pb-3 pt-2 flex flex-col">
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <span className="text-[11px] text-slate-500 truncate">
-                        {fileName}
-                      </span>
-                      <button
-                        onClick={handleDownload}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        Download
-                      </button>
-                    </div>
-                    <div className="border border-slate-200 rounded-lg overflow-hidden bg-slate-950 flex-1">
-                      <pre className="text-[11px] leading-relaxed text-slate-50 p-3 overflow-auto">
-                        <code>{code}</code>
-                      </pre>
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
