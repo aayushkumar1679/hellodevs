@@ -27,6 +27,7 @@ import {
   ComponentDefinition,
   ComponentCategory,
 } from "@/config/componentRegistry";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ComponentLibraryProps {
   categories?: ComponentCategory[];
@@ -139,12 +140,16 @@ export default function ComponentLibrary({
         )}
       </div>
 
-      <div className="flex max-h-24 flex-wrap gap-2 overflow-y-auto">
+      <motion.div 
+        layout
+        className="flex flex-wrap gap-2"
+      >
         {["all", ...availableCategories].map((category) => {
           const active = activeCategory === category;
           return (
-            <button
+            <motion.button
               key={category}
+              layout
               onClick={() =>
                 setActiveCategory(
                   category === "all"
@@ -152,66 +157,91 @@ export default function ComponentLibrary({
                     : (category as ComponentCategory)
                 )
               }
-              className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
+              className={`rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.1em] transition-all duration-300 ${
                 active
-                  ? "border-slate-950 bg-slate-950 text-white"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950"
+                  ? "border-slate-950 bg-slate-950 text-white shadow-lg scale-105"
+                  : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-950"
               }`}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.95 }}
             >
               {category === "all" ? "All" : category}
-            </button>
+            </motion.button>
           );
         })}
-      </div>
+      </motion.div>
 
-      <div className="space-y-4 overflow-y-auto pr-1">
-        {Object.entries(displayGroups).map(([group, components]) => (
-          <div key={group}>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              {group}
-            </p>
+      <div className="flex-1 overflow-y-auto pr-1 -mr-1 custom-scrollbar">
+        <div className="space-y-6">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {Object.entries(displayGroups).map(([group, components]) => (
+              <motion.div 
+                key={group}
+                layout
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="space-y-4"
+              >
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
+                  {group}
+                </p>
 
-            <div className="space-y-2">
-              {components.map((component) => (
-                <button
-                  key={component.type}
-                  onClick={() => handleAddComponent(component)}
-                  className="group flex w-full items-center gap-3 rounded-[22px] border border-slate-200 bg-white px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_18px_35px_-28px_rgba(15,23,42,0.45)]"
-                >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-amber-100 group-hover:text-amber-800">
-                    {COMPONENT_ICONS[component.type] ?? FALLBACK_ICON}
-                  </span>
+                <div className="space-y-3">
+                  {components.map((component) => (
+                    <motion.button
+                      key={component.type}
+                      layout
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      onClick={() => handleAddComponent(component)}
+                      className="group flex w-full items-center gap-4 rounded-[28px] border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition-all duration-300 hover:border-slate-400 hover:shadow-[0_20px_40px_-20px_rgba(15,23,42,0.2)]"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-slate-100 text-slate-600 transition-colors group-hover:bg-amber-100 group-hover:text-amber-700">
+                        {COMPONENT_ICONS[component.type] ?? FALLBACK_ICON}
+                      </span>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-slate-900">
-                        {component.label}
-                      </p>
-                      {component.isLayout && (
-                        <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
-                          Layout
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
-                      {component.description}
-                    </p>
-                  </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-[15px] font-black tracking-tight text-slate-950">
+                            {component.label}
+                          </p>
+                          {component.isLayout && (
+                            <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-sky-600 ring-1 ring-sky-200/50">
+                              Layout
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs leading-5 text-slate-500 font-medium">
+                          {component.description}
+                        </p>
+                      </div>
 
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500 transition group-hover:border-slate-950 group-hover:bg-slate-950 group-hover:text-white">
-                    <Plus size={14} />
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition-all group-hover:border-slate-950 group-hover:bg-slate-950 group-hover:text-white group-hover:rotate-90">
+                        <Plus size={16} />
+                      </span>
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
-        {filteredComponents.length === 0 && (
-          <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
-            No components match that search.
-          </p>
-        )}
+          {filteredComponents.length === 0 && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="rounded-2xl border border-dashed border-slate-300 px-4 py-12 text-center"
+            >
+              <Search className="mx-auto h-8 w-8 text-slate-200 mb-4" />
+              <p className="text-sm font-medium text-slate-500">
+                No components match your search.
+              </p>
+            </motion.div>
+          )}
+        </div>
       </div>
     </div>
   );

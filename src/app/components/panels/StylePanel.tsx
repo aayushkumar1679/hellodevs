@@ -21,6 +21,7 @@ import { useEditorStore } from "@/state/useEditorStore";
 import UnitInput from "../ui/UnitInput";
 import ColorInput from "../ui/ColorInput";
 import VisualSelect from "../ui/VisualSelect";
+import { motion, AnimatePresence } from "framer-motion";
 
 type BreakpointKey = "desktop" | "tablet" | "mobile";
 
@@ -42,30 +43,41 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-2 overflow-hidden rounded-[20px] border border-slate-200/60 bg-white/70 shadow-sm backdrop-blur-md transition-all hover:border-slate-300/80">
+    <div className="mb-2 overflow-hidden rounded-[24px] border border-slate-200/60 bg-white/70 shadow-sm backdrop-blur-md transition-all hover:border-slate-300/80">
       <button
         onClick={() => onToggle(id)}
-        className="flex w-full items-center justify-between px-4 py-3.5 text-left"
+        className="flex w-full items-center justify-between px-4 py-4 text-left transition-colors hover:bg-slate-50/50"
       >
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
+        <div className="flex items-center gap-3">
+          <div className={`flex h-8 w-8 items-center justify-center rounded-xl transition-all ${
+            open ? "bg-slate-950 text-white shadow-lg" : "bg-white text-slate-400 border border-slate-100 shadow-sm"
+          }`}>
             <Icon className="h-4 w-4" />
           </div>
-          <span className="text-xs font-bold uppercase tracking-widest text-slate-800">
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-950">
             {title}
           </span>
         </div>
         <ChevronDown
-          className={`h-4 w-4 text-slate-300 transition-transform duration-300 ${
+          className={`h-4 w-4 text-slate-300 transition-transform duration-500 ${
             open ? "rotate-180" : ""
           }`}
         />
       </button>
-      {open ? (
-        <div className="animate-in slide-in-from-top-1 space-y-5 border-t border-slate-100 bg-white/30 px-4 py-5 fade-in">
-          {children}
-        </div>
-      ) : null}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <div className="space-y-6 border-t border-slate-100/50 bg-white/40 px-5 py-6">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

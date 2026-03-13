@@ -477,87 +477,112 @@ export const COMPONENT_LIBRARY: ComponentDefinition[] = [
     },
   },
   {
-    type: "pricing-section",
-    label: "Pricing Section",
-    description: "A three-tier pricing section with headline.",
+    type: "pricing-card",
+    label: "Pricing Card",
+    description: "A single card with title, price, and features.",
     category: "commerce",
-    allowChildren: false,
-    tags: ["pricing", "plans", "section"],
+    allowChildren: true,
     blueprint: {
-      type: "section",
-      css: { padding: "88px 32px" },
+      type: "card",
+      css: {
+        padding: "32px",
+        borderRadius: "32px",
+        background: "#ffffff",
+        boxShadow: "0 30px 60px -40px rgba(15,23,42,0.25)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "24px",
+      },
       children: [
         {
-          type: "container",
+          type: "flex-column",
+          css: { gap: "8px" },
           children: [
             {
-              type: "flex-column",
-              css: { gap: "18px", margin: "0 0 32px", textAlign: "center" },
-              children: [
-                {
-                  type: "heading",
-                  props: { text: "Simple pricing for serious shipping" },
-                  css: { fontSize: "42px", fontWeight: "800" },
-                },
-                {
-                  type: "text",
-                  props: {
-                    text: "Start with one prompt and scale into a workflow your team can actually use.",
-                  },
-                  css: { fontSize: "18px", color: "#475569", maxWidth: "760px", margin: "0 auto" },
-                },
-              ],
+              type: "text",
+              props: { text: "STARTER" },
+              css: { fontSize: "12px", fontWeight: "700", letterSpacing: "0.1em", color: "#64748b" },
             },
             {
-              type: "grid",
-              css: { gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "24px" },
+              type: "heading",
+              props: { level: 2, text: "$29" },
+              css: { fontSize: "40px", fontWeight: "800" },
+            },
+          ],
+        },
+        {
+          type: "flex-column",
+          css: { gap: "12px" },
+          children: [
+            { type: "text", props: { text: "✓ feature one" }, css: { fontSize: "14px", color: "#475569" } },
+            { type: "text", props: { text: "✓ feature two" }, css: { fontSize: "14px", color: "#475569" } },
+            { type: "text", props: { text: "✓ feature three" }, css: { fontSize: "14px", color: "#475569" } },
+          ],
+        },
+        {
+          type: "button",
+          props: { text: "Choose Plan", variant: "primary" },
+          css: { width: "100%" },
+        },
+      ],
+    },
+  },
+  {
+    type: "product-card",
+    label: "Product Card",
+    description: "Image card with title and price.",
+    category: "commerce",
+    allowChildren: true,
+    blueprint: {
+      type: "card",
+      css: { padding: "0", overflow: "hidden" },
+      children: [
+        {
+          type: "image",
+          props: { src: "https://images.pexels.com/photos/761963/pexels-photo-761963.jpeg" },
+          css: { height: "220px", borderRadius: "0" },
+        },
+        {
+          type: "flex-column",
+          css: { padding: "20px" },
+          children: [
+            { type: "heading", props: { level: 3, text: "Product Name" }, css: { fontSize: "18px" } },
+            { type: "text", props: { text: "$99.00" }, css: { fontWeight: "700" } },
+            { type: "button", props: { text: "Add to Bag", variant: "secondary" }, css: { marginTop: "12px" } },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    type: "testimonial",
+    label: "Testimonial",
+    description: "A customer quote card.",
+    category: "marketing",
+    blueprint: {
+      type: "card",
+      css: { padding: "32px", background: "#f8fafc", border: "none" },
+      children: [
+        {
+          type: "text",
+          props: { text: "“The design quality is world class. We were able to launch weeks ahead of schedule.”" },
+          css: { fontSize: "18px", fontStyle: "italic", marginBottom: "20px" },
+        },
+        {
+          type: "flex-row",
+          css: { alignItems: "center", gap: "12px" },
+          children: [
+            {
+              type: "image",
+              props: { src: "https://i.pravatar.cc/150?u=1" },
+              css: { width: "40px", height: "40px", borderRadius: "50%" },
+            },
+            {
+              type: "flex-column",
+              css: { gap: "2px" },
               children: [
-                {
-                  type: "pricing-card",
-                  props: {
-                    title: "Starter",
-                    price: "$19",
-                    period: "mo",
-                    features: ["1 workspace", "Prompt generation", "HTML export"],
-                  },
-                  css: {
-                    padding: "28px",
-                    borderRadius: "28px",
-                    background: "#ffffff",
-                    boxShadow: "0 24px 50px -38px rgba(15,23,42,0.28)",
-                  },
-                },
-                {
-                  type: "pricing-card",
-                  props: {
-                    title: "Pro",
-                    price: "$49",
-                    period: "mo",
-                    features: ["Unlimited projects", "React export", "3D presets"],
-                  },
-                  css: {
-                    padding: "28px",
-                    borderRadius: "28px",
-                    background: "linear-gradient(180deg,#fff7ed 0%,#ffffff 100%)",
-                    boxShadow: "0 28px 60px -40px rgba(249,115,22,0.35)",
-                    transform: "translateY(-8px)",
-                  },
-                },
-                {
-                  type: "pricing-card",
-                  props: {
-                    title: "Team",
-                    price: "$99",
-                    period: "mo",
-                    features: ["Shared workspace", "Priority generation", "Collaboration-ready"],
-                  },
-                  css: {
-                    padding: "28px",
-                    borderRadius: "28px",
-                    background: "#ffffff",
-                    boxShadow: "0 24px 50px -38px rgba(15,23,42,0.28)",
-                  },
-                },
+                { type: "text", props: { text: "Sarah Jenkins" }, css: { fontWeight: "700", fontSize: "14px" } },
+                { type: "text", props: { text: "CEO at TechFlow" }, css: { fontSize: "12px", opacity: "0.6" } },
               ],
             },
           ],
@@ -566,111 +591,60 @@ export const COMPONENT_LIBRARY: ComponentDefinition[] = [
     },
   },
   {
-    type: "stats-strip",
-    label: "Stats Strip",
-    description: "A concise KPI strip for launch pages.",
-    category: "marketing",
-    allowChildren: false,
-    tags: ["stats", "numbers", "trust"],
+    type: "feature",
+    label: "Feature Item",
+    description: "A title and description pair for lists/grids.",
+    category: "content",
     blueprint: {
-      type: "section",
-      css: { padding: "32px 32px 0" },
+      type: "flex-column",
+      css: { gap: "8px" },
       children: [
-        {
-          type: "container",
-          children: [
-            {
-              type: "grid",
-              css: {
-                gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                gap: "18px",
-              },
-              children: [
-                {
-                  type: "card",
-                  css: { padding: "24px", borderRadius: "24px", background: "#ffffff" },
-                  children: [
-                    {
-                      type: "heading",
-                      props: { level: 3, text: "8s" },
-                      css: { fontSize: "32px", fontWeight: "800", marginBottom: "6px" },
-                    },
-                    {
-                      type: "text",
-                      props: { text: "Prompt to first draft" },
-                    },
-                  ],
-                },
-                {
-                  type: "card",
-                  css: { padding: "24px", borderRadius: "24px", background: "#ffffff" },
-                  children: [
-                    {
-                      type: "heading",
-                      props: { level: 3, text: "90%+" },
-                      css: { fontSize: "32px", fontWeight: "800", marginBottom: "6px" },
-                    },
-                    {
-                      type: "text",
-                      props: { text: "Export parity target" },
-                    },
-                  ],
-                },
-                {
-                  type: "card",
-                  css: { padding: "24px", borderRadius: "24px", background: "#ffffff" },
-                  children: [
-                    {
-                      type: "heading",
-                      props: { level: 3, text: "1 click" },
-                      css: { fontSize: "32px", fontWeight: "800", marginBottom: "6px" },
-                    },
-                    {
-                      type: "text",
-                      props: { text: "From design to export" },
-                    },
-                  ],
-                },
-                {
-                  type: "card",
-                  css: { padding: "24px", borderRadius: "24px", background: "#ffffff" },
-                  children: [
-                    {
-                      type: "heading",
-                      props: { level: 3, text: "3D" },
-                      css: { fontSize: "32px", fontWeight: "800", marginBottom: "6px" },
-                    },
-                    {
-                      type: "text",
-                      props: { text: "Depth controls built in" },
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
+        { type: "heading", props: { level: 3, text: "Feature title" }, css: { fontSize: "20px" } },
+        { type: "text", props: { text: "Description of this capability goes here." }, css: { fontSize: "15px" } },
       ],
     },
   },
   {
     type: "cta",
     label: "Call to Action",
-    description: "Centered CTA strip used for conversions.",
+    description: "Centered CTA section.",
     category: "marketing",
-    allowChildren: false,
-    tags: ["cta", "conversion"],
-    defaultProps: {
-      text: "Ready to turn your prompt into a polished website?",
-      cta: { text: "Start building", href: "#" },
-    },
-    defaultCss: {
-      padding: "40px 32px",
-      textAlign: "center",
-      background:
-        "linear-gradient(135deg, rgba(255,247,237,1) 0%, rgba(255,255,255,1) 55%, rgba(224,242,254,1) 100%)",
-      borderRadius: "32px",
-      boxShadow: "0 28px 60px -40px rgba(15,23,42,0.25)",
+    blueprint: {
+      type: "section",
+      css: {
+        background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+        color: "#ffffff",
+        padding: "80px 32px",
+        textAlign: "center",
+      },
+      children: [
+        {
+          type: "container",
+          children: [
+            {
+              type: "flex-column",
+              css: { alignItems: "center", gap: "24px" },
+              children: [
+                {
+                  type: "heading",
+                  props: { text: "Ready to ship your project?" },
+                  css: { color: "inherit", fontSize: "48px" },
+                },
+                {
+                  type: "text",
+                  props: { text: "Join 10,000+ creators building with Polyglot." },
+                  css: { color: "rgba(255,255,255,0.7)", fontSize: "18px" },
+                },
+                {
+                  type: "button",
+                  props: { text: "Get Started Free", variant: "primary" },
+                  css: { background: "#ffffff", color: "#0f172a", border: "none" },
+                },
+              ],
+            },
+          ],
+        },
+      ],
     },
   },
 

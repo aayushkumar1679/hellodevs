@@ -14,9 +14,6 @@ function createDefaultResponsiveCss(
 ): ResponsiveCss {
   return {
     base: {
-      display: "block",
-      padding: "10px",
-      margin: "0",
       ...initialCss,
     },
   };
@@ -138,8 +135,16 @@ export function mergeProjectDesignElements(
   Object.values(normalizedProject.components).forEach((component) => {
     merged[component.id] =
       elements[component.id] ??
-      normalizedProject.designElements[component.id] ??
-      createElementRecord(component.id, component.type);
+      normalizedProject.designElements[component.id];
+    
+    if (!merged[component.id]) {
+       const def = getComponentDefinition(component.type);
+       merged[component.id] = createElementRecord(
+         component.id, 
+         component.type, 
+         def?.defaultCss ?? {}
+       );
+    }
   });
 
   return merged;

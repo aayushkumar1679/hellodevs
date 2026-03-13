@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import NextImage from "next/image";
 
 export default function SampleLandingPage() {
   return (
@@ -57,11 +58,14 @@ export default function SampleLandingPage() {
 
             <div>
               <div className="rounded-xl bg-white p-6 shadow-lg">
-                <img
-                  src="https://images.pexels.com/photos/270360/pexels-photo-270360.jpeg"
-                  alt="hero"
-                  className="w-full h-64 object-cover rounded-md"
-                />
+                <div className="relative w-full h-64 overflow-hidden rounded-md">
+                  <NextImage
+                    src="https://images.pexels.com/photos/270360/pexels-photo-270360.jpeg"
+                    alt="hero"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
                 <div className="mt-4 text-sm text-slate-600">
                   Live editor demo — compose content, layouts and components in
                   one place.

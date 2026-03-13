@@ -107,8 +107,9 @@ interface CanvasState {
   setCurrentProject: (id: string) => void;
   fetchProject: (id: string) => Promise<Project | null>;
   fetchProjects: () => Promise<void>;
-  syncCurrentProjectDesignElements: (
-    designElements: Record<string, Element>
+   syncCurrentProjectDesignElements: (
+    designElements: Record<string, Element>,
+    pushToHistory?: boolean
   ) => void;
   undo: () => void;
   redo: () => void;
@@ -158,59 +159,6 @@ export const useCanvasStore = create<CanvasState>()(
        * originalAddComponent - fallback single-component adder used by addComponent
        * Implemented here (closure) so it can call set() and return new id synchronously.
        */
-      const originalAddComponent = (type: string, parentId?: string) => {
-        let newId = "";
-        set((state) => {
-          if (!state.currentProject) return state;
-
-          const prev = cloneProject(state.currentProject);
-
-          const id = `component-${Date.now()}-${Math.random()
-            .toString(36)
-            .slice(2, 9)}`;
-
-          // initialize props from registry defaultProps if present
-          const def = getComponentDef(type);
-
-          prev.components[id] = {
-            id,
-            type,
-            props: def?.defaultProps ? { ...def.defaultProps } : {},
-            children: [],
-          };
-
-          if (parentId && prev.components[parentId]) {
-            prev.components[parentId].children.push(id);
-          } else {
-            // insert into rootOrder
-            prev.rootOrder = prev.rootOrder ?? [];
-            prev.rootOrder.push(id);
-            prev.rootComponent = prev.rootComponent ?? id;
-          }
-
-          const project: Project = {
-            ...prev,
-            updatedAt: new Date().toISOString(),
-          };
-
-          newId = id;
-
-          const nextState = {
-            history: [...state.history, cloneProject(state.currentProject)],
-            future: [],
-            currentProject: project,
-            projects: {
-              ...state.projects,
-              [state.currentProjectId!]: project,
-            },
-          };
-          syncToServer(project);
-          return nextState;
-        });
-
-        return newId;
-      };
-
       return {
         projects: {},
         currentProjectId: null,
@@ -367,106 +315,94 @@ export const useCanvasStore = create<CanvasState>()(
         },
 
         /* ---------- Components ---------- */
-
         addComponent: (type, parentId) => {
           const def = getComponentDef(type);
-          const createdElements: Array<{
-            id: string;
-            type: string;
-            css: Record<string, unknown>;
-          }> = [];
+          const projectComponents: Record<string, CanvasComponent> = {};
+          // Temporary collection of design data BEFORE it becomes a full 'Element'
+          const designData: Record<string, { type: string; css: Record<string, unknown> }> = {};
+          
+          let rootId = "";
 
-          // If component type has a blueprint -> expand into multiple nodes
-          if (def?.blueprint) {
-            // We'll expand the blueprint in a single set() call to keep history coherent.
-            let rootId = "";
-            set((state) => {
-              if (!state.currentProject) return state;
+          const recursiveAdd = (node: BlueprintNode, pId?: string): string => {
+            const id = `component-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+            const d = getComponentDef(node.type);
 
-              const prev = cloneProject(state.currentProject);
+            const props = {
+              ...(d?.defaultProps || {}),
+              ...(node.props || {}),
+            };
 
-              // temporary add function used by buildFromBlueprint
-              const add = (node: BlueprintNode, p?: string) => {
-                const id = `component-${Date.now()}-${Math.random()
-                   .toString(36)
-                   .slice(2, 9)}`;
+            const css = {
+              ...(d?.defaultCss || {}),
+              ...(node.css || {}),
+            };
 
-                const d = getComponentDef(node.type);
+            projectComponents[id] = {
+              id,
+              type: node.type,
+              props,
+              children: [],
+            };
 
-                prev.components[id] = {
-                  id,
-                  type: node.type,
-                  props: {
-                    ...(d?.defaultProps ? { ...d.defaultProps } : {}),
-                    ...(node.props ?? {}),
-                  },
-                  children: [],
-                };
+            designData[id] = {
+              type: node.type,
+              css,
+            };
 
-                createdElements.push({
-                   id,
-                   type: node.type,
-                   css: {
-                     ...(d?.defaultCss || {}),
-                     ...(node.css ?? {}),
-                   },
-                });
-
-                if (p && prev.components[p]) {
-                  prev.components[p].children.push(id);
-                } else {
-                  prev.rootOrder = prev.rootOrder ?? [];
-                  prev.rootOrder.push(id);
-                  prev.rootComponent = prev.rootComponent ?? id;
-                }
-
-                return id;
-              };
-
-              // build from blueprint, starting at optional parentId
-              if (def.blueprint) {
-                rootId = buildFromBlueprint(def.blueprint, add, parentId);
-              } else {
-                // Should not happen as we checked def.blueprint above, but for TS safety
-                rootId = add({ type }, parentId);
-              }
-
-              // ensure rootComponent exists
-              prev.rootComponent = prev.rootComponent ?? rootId;
-              prev.rootOrder = prev.rootOrder ?? [];
-
-              const project: Project = {
-                ...prev,
-                updatedAt: new Date().toISOString(),
-              };
-
-              const nextState = {
-                history: [...state.history, cloneProject(state.currentProject)],
-                future: [],
-                currentProject: project,
-                projects: {
-                  ...state.projects,
-                  [state.currentProjectId!]: project,
-                },
-              };
-              syncToServer(project);
-              return nextState;
-            });
-
-            if (createdElements.length > 0) {
-              const designStore = useDesignStore.getState();
-              createdElements.forEach((item) => {
-                designStore.addElement(item.id, item.type, item.css);
-              });
+            if (pId && projectComponents[pId]) {
+              projectComponents[pId].children.push(id);
             }
 
-            return rootId;
-          }
+            if (node.children?.length) {
+              node.children.forEach((child) => recursiveAdd(child, id));
+            }
 
-          // Fallback: single component - delegate to originalAddComponent helper
-          const id = originalAddComponent(type, parentId);
-          useDesignStore.getState().addElement(id, type, def?.defaultCss || {});
-          return id;
+            return id;
+          };
+
+          const topLevelBlueprint: BlueprintNode = def?.blueprint || { type };
+          rootId = recursiveAdd(topLevelBlueprint);
+
+          set((state) => {
+            if (!state.currentProject) return state;
+
+            const prev = cloneProject(state.currentProject);
+            Object.assign(prev.components, projectComponents);
+            
+            if (parentId && prev.components[parentId]) {
+              prev.components[parentId].children.push(rootId);
+            } else {
+              prev.rootOrder = prev.rootOrder ?? [];
+              prev.rootOrder.push(rootId);
+              prev.rootComponent = prev.rootComponent ?? rootId;
+            }
+
+            const project: Project = {
+              ...prev,
+              updatedAt: new Date().toISOString(),
+            };
+
+            const nextState = {
+              history: [...state.history, state.currentProject],
+              future: [],
+              currentProject: project,
+              projects: {
+                ...state.projects,
+                [state.currentProjectId!]: project,
+              },
+            };
+            
+            syncToServer(project);
+            return nextState;
+          });
+
+          // Sync with DesignStore
+          const designStore = useDesignStore.getState();
+          Object.entries(designData).forEach(([id, data]) => {
+            designStore.addElement(id, data.type, data.css);
+          });
+
+          return rootId;
         },
 
         removeComponent: (id) => {
@@ -671,7 +607,8 @@ export const useCanvasStore = create<CanvasState>()(
           });
         },
 
-        syncCurrentProjectDesignElements: (designElements) => {
+         syncCurrentProjectDesignElements: (designElements, pushToHistory = false) => {
+          
           set((state) => {
             if (!state.currentProject || !state.currentProjectId) {
               return state;
@@ -686,7 +623,7 @@ export const useCanvasStore = create<CanvasState>()(
             );
             const serializedNext = JSON.stringify(mergedDesignElements);
 
-            if (serializedCurrent === serializedNext) {
+            if (serializedCurrent === serializedNext && !pushToHistory) {
               return state;
             }
 
@@ -699,6 +636,10 @@ export const useCanvasStore = create<CanvasState>()(
             syncToServer(project);
 
             return {
+              history: pushToHistory
+                ? [...state.history, state.currentProject]
+                : state.history,
+              future: pushToHistory ? [] : state.future,
               currentProject: project,
               projects: {
                 ...state.projects,
@@ -727,6 +668,9 @@ export const useCanvasStore = create<CanvasState>()(
                 [state.currentProjectId!]: cloneProject(prev),
               },
             };
+            if (prev.designElements) {
+              useDesignStore.getState().replaceElements(prev.designElements);
+            }
             syncToServer(prev);
             return nextState;
           });
@@ -749,6 +693,9 @@ export const useCanvasStore = create<CanvasState>()(
                 [state.currentProjectId!]: cloneProject(next),
               },
             };
+            if (next.designElements) {
+              useDesignStore.getState().replaceElements(next.designElements);
+            }
             syncToServer(next);
             return nextState;
           });

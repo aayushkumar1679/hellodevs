@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import { Sparkles, Mail, Chrome, ArrowRight, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
@@ -56,21 +57,41 @@ export default function SignInPage() {
       </div>
 
       {/* Main Container */}
-      <div className="relative z-10 w-full max-w-md px-6 py-12">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 w-full max-w-md px-6 py-12"
+      >
         {/* Logo Section */}
         <div className="mb-12 text-center">
-          <div className="relative mx-auto mb-8 flex h-20 w-20 items-center justify-center">
+          <motion.div 
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+            className="relative mx-auto mb-8 flex h-20 w-20 items-center justify-center"
+          >
             <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-tr from-amber-500 to-rose-500 blur-2xl opacity-40 animate-pulse" />
             <div className="relative flex h-20 w-20 items-center justify-center rounded-[2.5rem] border border-white/20 bg-white/10 shadow-2xl backdrop-blur-3xl">
               <Sparkles className="h-10 w-10 text-white" />
             </div>
-          </div>
-          <h1 className="text-5xl font-extrabold tracking-tighter text-white sm:text-6xl">
+          </motion.div>
+          <motion.h1 
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+            className="text-5xl font-extrabold tracking-tighter text-white sm:text-6xl"
+          >
             POLYGLOT
-          </h1>
-          <p className="mt-4 text-lg font-medium text-slate-400">
-            Build the future of the web, <span className="text-amber-500/80">deterministically.</span>
-          </p>
+          </motion.h1>
+          <motion.p 
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+            className="mt-4 text-lg font-medium text-slate-400"
+          >
+            Build the future of the web, <span className="text-amber-500/80 italic">deterministically.</span>
+          </motion.p>
         </div>
 
         {/* Auth Card */}
@@ -80,18 +101,23 @@ export default function SignInPage() {
           
           <div className="space-y-8">
             {/* Google Provider */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={handleGoogleSignIn}
               disabled={!!loading}
-              className="group/btn relative flex w-full items-center justify-center gap-4 overflow-hidden rounded-[28px] border border-white/10 bg-white px-6 py-5 text-base font-bold text-slate-950 transition-all duration-300 hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+              className="group/btn relative flex w-full items-center justify-center gap-4 overflow-hidden rounded-[28px] border border-white/10 bg-white px-6 py-5 text-base font-bold text-slate-950 transition-all duration-300 disabled:opacity-50"
             >
-              {loading === "google" ? (
-                <Loader2 className="h-6 w-6 animate-spin" />
-              ) : (
-                <Chrome className="h-6 w-6 fill-current transition-transform group-hover/btn:rotate-12" />
-              )}
-              Continue with Google
-            </button>
+              <div className="absolute inset-0 bg-gradient-to-tr from-slate-100 to-white opacity-0 transition-opacity group-hover/btn:opacity-100" />
+              <div className="relative flex items-center gap-4">
+                {loading === "google" ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  <Chrome className="h-6 w-6 fill-current transition-transform group-hover/btn:rotate-12" />
+                )}
+                Continue with Google
+              </div>
+            </motion.button>
 
             {/* Separator w/ Glass Effect */}
             <div className="flex items-center gap-4">
@@ -118,10 +144,12 @@ export default function SignInPage() {
                 />
               </div>
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.02, boxShadow: "0 0 40px -10px rgba(245,158,11,0.6)" }}
+                whileTap={{ scale: 0.98 }}
                 type="submit"
                 disabled={!!loading}
-                className="group/magic relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-[28px] bg-gradient-to-r from-amber-500 to-rose-500 py-5 text-base font-black text-slate-950 transition-all duration-300 hover:shadow-[0_0_40px_-10px_rgba(245,158,11,0.6)] active:scale-95 disabled:opacity-50"
+                className="group/magic relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-[28px] bg-gradient-to-r from-amber-500 to-rose-500 py-5 text-base font-black text-slate-950 transition-all duration-300 disabled:opacity-50"
               >
                 {loading === "email" ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -131,24 +159,29 @@ export default function SignInPage() {
                     <ArrowRight className="h-5 w-5 transition-transform group-hover/magic:translate-x-1.5" />
                   </>
                 )}
-              </button>
+              </motion.button>
             </form>
           </div>
         </div>
 
         {/* Advanced Footer */}
-        <div className="mt-12 text-center space-y-4">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1, duration: 1 }}
+          className="mt-12 text-center space-y-6"
+        >
           <p className="text-sm font-medium text-slate-500">
-            Trusted by the world&apos;s most innovative designers.
+            Trusted by innovators at
           </p>
-          <div className="flex justify-center gap-6 opacity-30 grayscale hover:grayscale-0 transition-all duration-500">
-             {/* Simple placeholders for "trust logos" if needed */}
-             <div className="h-6 w-20 bg-slate-400 rounded-lg" />
-             <div className="h-6 w-20 bg-slate-400 rounded-lg" />
-             <div className="h-6 w-20 bg-slate-400 rounded-lg" />
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 px-4 opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
+             <div className="text-lg font-black tracking-tighter text-white">VULCAN</div>
+             <div className="text-lg font-black tracking-tighter text-white">NEBULA</div>
+             <div className="text-lg font-black tracking-tighter text-white">ORION</div>
+             <div className="text-lg font-black tracking-tighter text-white">ZENITH</div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

@@ -11,11 +11,7 @@ import React, {
 } from "react";
 import { useDesignStore } from "@/state/useDesignStore";
 
-/* ---------------------------------------------
-  Types
----------------------------------------------- */
-
-interface CanvasElementProps {
+export interface CanvasElementProps {
   elementId: string;
   children?: React.ReactNode;
   className?: string;
@@ -24,6 +20,8 @@ interface CanvasElementProps {
   getSnapTargets?: () => { xs: number[]; ys: number[] } | null;
   /** optional: called with guide lines (client coords) while resizing/moving */
   onGuide?: (guides: Array<{ x?: number; y?: number }>) => void;
+  /** The HTML tag to render as (e.g. 'section', 'nav', 'div') */
+  as?: keyof React.JSX.IntrinsicElements;
 }
 
 type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
@@ -87,6 +85,7 @@ export default function CanvasElement({
   onRect,
   getSnapTargets,
   onGuide,
+  as,
 }: CanvasElementProps) {
   const elementRef = useRef<HTMLDivElement | null>(null);
 
@@ -343,8 +342,10 @@ export default function CanvasElement({
     };
   }, [onResizeMove, stopResize]);
 
+  const Component = (as || "div") as any;
+
   return (
-    <div
+    <Component
       ref={elementRef}
       onClick={handleClick}
       style={inlineStyle}
@@ -382,6 +383,6 @@ export default function CanvasElement({
         </div>
       )}
       {children}
-    </div>
+    </Component>
   );
 }

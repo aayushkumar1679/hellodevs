@@ -11,8 +11,8 @@ export async function GET(_req: Request, context: RouteContext) {
     where: { id },
   });
 
-  if (!project) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  if (!project || !project.isPublic) {
+    return NextResponse.json({ error: "Project not found or not public" }, { status: 404 });
   }
 
   return NextResponse.json({
@@ -24,8 +24,5 @@ export async function GET(_req: Request, context: RouteContext) {
     rootComponent: project.rootComponent,
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
-    generationPrompt: project.generationPrompt,
-    generationModel: project.generationModel,
-    generationSummary: project.generationSummary,
   });
 }

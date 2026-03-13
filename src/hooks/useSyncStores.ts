@@ -39,10 +39,13 @@ export function useSyncStores() {
     );
     const serializedProjectDesign = JSON.stringify(normalizedDesign);
 
-    if (
-      lastProjectIdRef.current !== currentProject.id ||
-      lastSerializedDesignRef.current !== serializedProjectDesign
-    ) {
+    // CRITICAL: We only force-replace elements in useDesignStore if the PROJECT ID changes
+    // or if the design store is empty (initial hydration).
+    // If we replace on every currentProject change, we fight with the design store's own state.
+    const isNewProject = lastProjectIdRef.current !== currentProject.id;
+    const isDesignEmpty = Object.keys(elements).length === 0;
+
+    if (isNewProject || isDesignEmpty) {
       lastProjectIdRef.current = currentProject.id;
       lastSerializedDesignRef.current = serializedProjectDesign;
       replaceElements(normalizedDesign);

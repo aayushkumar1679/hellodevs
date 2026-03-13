@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../auth/[...nextauth]/route"
 import { prisma } from "@/lib/prisma"
+import { projectSchema } from "@/lib/validations"
 import type { Project } from "@/state/useCanvasStore"
 
 export async function GET() {
@@ -30,12 +31,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const body = (await req.json()) as Partial<Project>
-    const { id, name, ...canvasState } = body
-
-    if (!name) {
-      return NextResponse.json({ error: "Project name is required" }, { status: 400 })
+    const json = await req.json()
+    const result = projectSchema.safeParse(json)
+    
+    if (!result.success) {
+      return NextResponse.json({ error: "Invalid request data", details: result.error.format() }, { status: 400 })
     }
+
+    const { id, name, ...canvasState } = result.data
 
     if (id) {
       const existing = await prisma.project.findUnique({
@@ -57,6 +60,7 @@ export async function POST(req: Request) {
       generationPrompt: null,
       generationModel: null,
       generationSummary: null,
+      isPublic: false,
     }
 
     const projectData = {
@@ -68,6 +72,7 @@ export async function POST(req: Request) {
       generationPrompt: canvasState.generationPrompt ?? defaultState.generationPrompt,
       generationModel: canvasState.generationModel ?? defaultState.generationModel,
       generationSummary: canvasState.generationSummary ?? defaultState.generationSummary,
+      isPublic: canvasState.isPublic ?? defaultState.isPublic,
     }
 
     const project = id

@@ -13,9 +13,8 @@ import {
   EyeOff,
   Box,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
-type DropPosition = "before" | "after" | null;
-type DropMode = "nest" | "reorder" | null;
 type LayerMeta = {
   locked?: boolean;
   hidden?: boolean;
@@ -33,36 +32,19 @@ export default function LayersPanel() {
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
   const [draggedId, setDraggedId] = React.useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = React.useState<string | null>(null);
-  const [dropMode, setDropMode] = React.useState<DropMode>(null);
-  const [dropPosition, setDropPosition] = React.useState<DropPosition>(null);
 
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editValue, setEditValue] = React.useState<string>("");
 
-  const [openMenuId, setOpenMenuId] = React.useState<string | null>(null);
-  const menuNodeRef = React.useRef<HTMLElement | null>(null);
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setOpenMenuId(null);
         setEditingId(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  React.useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
-      const node = menuNodeRef.current;
-      if (!node) return;
-      if (!node.contains(e.target as Node)) {
-        setOpenMenuId(null);
-      }
-    };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
   if (!currentProject || Object.keys(currentProject.components).length === 0) {
@@ -85,17 +67,15 @@ export default function LayersPanel() {
     e?.stopPropagation();
     setExpandedIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   };
 
-  const getParentId = (childId: string): string | null => {
-    const parentEntry = Object.entries(currentProject.components).find(
-      ([, c]) => (c.children || []).includes(childId)
-    );
-    return parentEntry ? parentEntry[0] : null;
-  };
 
   const getRootOrder = (): string[] => {
     const comps = currentProject.components;
@@ -136,17 +116,6 @@ export default function LayersPanel() {
     updateComponent(id, { props: { ...props, meta: newMeta } });
   };
 
-  const startEditing = (id: string) => {
-    const comp = currentProject.components[id];
-    const props = comp.props ?? {};
-    const currentLabel =
-      (typeof props.label === "string" && props.label) ||
-      (typeof props.text === "string" && props.text) ||
-      comp.type;
-    setEditingId(id);
-    setEditValue(currentLabel);
-    setOpenMenuId(null);
-  };
 
   const commitRename = (id: string) => {
     if (!id) return;
@@ -171,7 +140,6 @@ export default function LayersPanel() {
     e.preventDefault();
     if (!draggedId || draggedId === targetId || isDescendant(draggedId, targetId)) return;
     setDropTargetId(targetId);
-    setDropMode("nest");
   };
 
   const onDrop = (targetId: string) => {
@@ -180,7 +148,6 @@ export default function LayersPanel() {
     }
     setDraggedId(null);
     setDropTargetId(null);
-    setDropMode(null);
   };
 
   /* ---------------- Render Component ---------------- */
@@ -206,10 +173,13 @@ export default function LayersPanel() {
 
     return (
       <div key={c.id}>
-        <div
+        <motion.div
+          layout
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
           draggable={!locked}
-          onDragStart={(e) => onDragStart(c.id, e)}
-          onDragOver={(e) => onDragOver(e, c.id)}
+          onDragStart={(e: any) => onDragStart(c.id, e)}
+          onDragOver={(e: any) => onDragOver(e, c.id)}
           onDrop={() => onDrop(c.id)}
           onClick={() => !locked && selectElement(c.id)}
           className={`group flex items-center gap-2 px-1 py-1.5 transition-all cursor-pointer border-b border-slate-50/50 
@@ -225,14 +195,16 @@ export default function LayersPanel() {
                 onClick={(e) => toggleExpanded(c.id, e)}
                 className={`p-1 rounded-md transition-colors hover:bg-slate-200/50 ${isSelected ? "text-sky-600" : "text-slate-400"}`}
               >
-                {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                <div className={`transition-transform duration-300 ${isExpanded ? "rotate-90" : ""}`}>
+                  <ChevronRight size={12} />
+                </div>
               </button>
             ) : (
               <div className="w-1.5 h-1.5 rounded-full bg-slate-200/50" />
             )}
           </div>
 
-          <div className={`p-1.5 rounded-lg border ${isSelected ? "bg-white border-sky-200 text-sky-600" : "bg-slate-100/50 border-slate-200 text-slate-500"}`}>
+          <div className={`p-1.5 rounded-lg border transition-all duration-300 ${isSelected ? "bg-white border-sky-200 text-sky-600 shadow-sm" : "bg-slate-100/50 border-slate-200 text-slate-500"}`}>
              <Box size={14} />
           </div>
 
@@ -248,10 +220,10 @@ export default function LayersPanel() {
               />
             ) : (
               <div className="flex flex-col">
-                <span className={`truncate text-xs font-bold leading-tight ${isSelected ? "text-sky-900" : "text-slate-700"} ${hidden ? "opacity-40 italic" : ""}`}>
+                <span className={`truncate text-xs font-black leading-tight tracking-tight ${isSelected ? "text-sky-950" : "text-slate-800"} ${hidden ? "opacity-30 italic" : ""}`}>
                   {label}
                 </span>
-                <span className="text-[10px] text-slate-400 capitalize">{c.type}</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{c.type}</span>
               </div>
             )}
           </div>
@@ -260,27 +232,34 @@ export default function LayersPanel() {
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-2">
             <button 
               onClick={(e) => { e.stopPropagation(); toggleHidden(c.id); }}
-              className={`p-1.5 rounded-md hover:bg-slate-200/50 ${hidden ? "text-slate-300" : "text-slate-500"}`}
+              className={`p-1 rounded-md hover:bg-slate-200/50 ${hidden ? "text-slate-300" : "text-slate-500"}`}
             >
               {hidden ? <EyeOff size={13} /> : <Eye size={13} />}
             </button>
             <button 
               onClick={(e) => { e.stopPropagation(); toggleLock(c.id); }}
-              className={`p-1.5 rounded-md hover:bg-slate-200/50 ${locked ? "text-amber-500" : "text-slate-500"}`}
+              className={`p-1 rounded-md hover:bg-slate-200/50 ${locked ? "text-amber-500" : "text-slate-500"}`}
             >
               {locked ? <Lock size={13} /> : <Unlock size={13} />}
             </button>
           </div>
-        </div>
+        </motion.div>
 
-        {isExpanded && c.children.length > 0 && (
-          <div className="border-l border-slate-100 ml-4">
-            {c.children.map((cid: string) => {
-              const child = currentProject.components[cid];
-              return child ? renderComponent(child, level + 1) : null;
-            })}
-          </div>
-        )}
+        <AnimatePresence>
+          {isExpanded && c.children.length > 0 && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="border-l border-slate-100 ml-4 overflow-hidden"
+            >
+              {c.children.map((cid: string) => {
+                const child = currentProject.components[cid];
+                return child ? renderComponent(child, level + 1) : null;
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   };

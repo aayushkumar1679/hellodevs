@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import NextImage from "next/image";
 
 type CardProps = {
   title?: string;
@@ -18,7 +19,14 @@ export const Card = ({
   return (
     <div className="bg-white border rounded-lg overflow-hidden hover:shadow-lg transition">
       {image && (
-        <img src={image} alt={title} className="w-full h-48 object-cover" />
+        <div className="relative w-full h-48">
+          <NextImage 
+            src={image} 
+            alt={title} 
+            fill 
+            className="object-cover"
+          />
+        </div>
       )}
       <div className="p-4">
         {badge && (

@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   Download,
@@ -20,6 +21,7 @@ import { useCanvasStore, type Project as CanvasProject } from "@/state/useCanvas
 import { generateNextJsProject } from "@/utils/exporter";
 import { useSession, signOut } from "next-auth/react";
 import { User as UserIcon, LogOut } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ProjectCard {
   id: string;
@@ -93,185 +95,205 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_35%,#f8fafc_100%)] text-slate-950">
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-[0_24px_40px_-24px_rgba(15,23,42,0.9)]">
-              <Sparkles className="h-4 w-4" />
+    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_35%,#f8fafc_100%)] text-slate-950 selection:bg-sky-100 selection:text-sky-950">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/75 backdrop-blur-2xl transition-all">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-5">
+          <div className="flex items-center gap-4 group cursor-pointer">
+            <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-slate-950 text-white shadow-[0_20px_40px_-15px_rgba(15,23,42,0.8)] transition-transform group-hover:scale-105 group-hover:rotate-6">
+              <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">
+              <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-slate-400">
                 Polyglot
               </p>
-              <h1 className="text-sm font-semibold text-slate-950">
-                AI + visual web builder
+              <h1 className="text-sm font-bold text-slate-950">
+                World-Class AI Studio
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
             {session ? (
               <div className="relative">
                 <button
                   onClick={() => setShowUserMenu((v) => !v)}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition hover:border-slate-300"
+                  className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition hover:border-slate-400 hover:shadow-md"
                 >
                   {session.user?.image ? (
-                    <img
+                    <Image
                       src={session.user.image}
-                      alt="User"
-                      className="h-8 w-8 rounded-full"
+                      alt="User Profile"
+                      width={36}
+                      height={36}
+                      className="h-9 w-9 rounded-full ring-2 ring-slate-100"
                     />
                   ) : (
-                    <UserIcon size={18} className="text-slate-500" />
+                    <UserIcon size={20} className="text-slate-500" />
                   )}
                 </button>
 
-                {showUserMenu && (
-                  <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-[28px] border border-slate-200 bg-white p-2 shadow-[0_24px_60px_-30px_rgba(15,23,42,0.35)]">
-                    <div className="px-4 py-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
-                        Account
-                      </p>
-                      <p className="mt-1 truncate text-sm font-semibold text-slate-950">
-                        {session.user?.name || "User"}
-                      </p>
-                      <p className="truncate text-[11px] text-slate-500">
-                        {session.user?.email}
-                      </p>
-                    </div>
-                    <div className="h-px bg-slate-100 mx-2" />
-                    <button
-                      onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-                      className="flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50"
+                <AnimatePresence>
+                  {showUserMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className="absolute right-0 z-50 mt-3 w-64 overflow-hidden rounded-[32px] border border-slate-200 bg-white p-3 shadow-[0_32px_80px_-24px_rgba(15,23,42,0.4)]"
                     >
-                      <LogOut size={16} />
-                      Log out
-                    </button>
-                  </div>
-                )}
+                      <div className="px-4 py-4">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                          Account
+                        </p>
+                        <p className="mt-1 truncate text-sm font-bold text-slate-950">
+                          {session.user?.name || "Member"}
+                        </p>
+                        <p className="truncate text-xs text-slate-500">
+                          {session.user?.email}
+                        </p>
+                      </div>
+                      <div className="h-px bg-slate-100 mx-1 mb-1" />
+                      <button
+                        onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+                        className="flex w-full items-center gap-3 rounded-[20px] px-4 py-3 text-left text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                      >
+                        <LogOut size={16} />
+                        Sign out
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
               <Link
                 href="/auth/signin"
-                className="text-sm font-semibold text-slate-600 transition hover:text-slate-950"
+                className="text-sm font-bold text-slate-600 transition hover:text-slate-950"
               >
-                Sign in
+                Log in
               </Link>
             )}
 
             <Link
               href="/builder/new"
-              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-950 bg-slate-950 px-6 py-3 text-sm font-bold text-white shadow-[0_15px_30px_-12px_rgba(15,23,42,0.45)] transition hover:bg-slate-800 hover:scale-[1.02] active:scale-95"
             >
               <Plus className="h-4 w-4" />
-              New project
+              New Project
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl space-y-10 px-6 py-10">
-        <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-[40px] border border-slate-200 bg-white/88 p-8 shadow-[0_40px_90px_-50px_rgba(15,23,42,0.45)] backdrop-blur-xl">
-            <p className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-700">
-              <Sparkles className="h-3.5 w-3.5" />
-              World-class building flow
+      <main className="mx-auto max-w-7xl space-y-12 px-8 py-14">
+        <section className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="relative group overflow-hidden rounded-[48px] border border-slate-200 bg-white/70 p-10 shadow-[0_50px_100px_-50px_rgba(15,23,42,0.5)] backdrop-blur-2xl transition-all hover:shadow-[0_60px_120px_-50px_rgba(15,23,42,0.6)]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.06),transparent_40%)]" />
+            <p className="relative inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.25em] text-amber-700">
+              <Sparkles className="h-4 w-4" />
+              Next-Gen Design Studio
             </p>
-            <h2 className="mt-5 max-w-3xl text-5xl font-semibold leading-tight tracking-tight text-slate-950">
-              Prompt, sculpt, and export launch-ready websites in one studio.
+            <h2 className="relative mt-8 max-w-3xl text-6xl font-black leading-[1.1] tracking-tighter text-slate-950 lg:text-7xl">
+              Design like a pro, <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-indigo-600">at AI speed.</span>
             </h2>
-            <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
-              Polyglot combines OpenAI-assisted page generation, a visual canvas,
-              and deterministic export so ideas turn into polished frontends fast.
+            <p className="relative mt-8 max-w-2xl text-lg leading-9 text-slate-600 font-medium">
+              Combine OpenAI-assisted generations, a high-fidelity visual canvas,
+              and direct production exports into a single deterministic workflow.
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="relative mt-10 flex flex-wrap gap-4">
               <Link
                 href="/builder/new"
-                className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="group/btn inline-flex items-center gap-2 rounded-full bg-slate-950 px-8 py-4 text-[15px] font-bold text-white shadow-[0_25px_50px_-15px_rgba(15,23,42,0.6)] transition-all hover:bg-slate-800 hover:scale-[1.02] active:scale-95"
               >
-                Open the studio
-                <ArrowRight className="h-4 w-4" />
+                Launch Studio
+                <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover/btn:translate-x-1" />
               </Link>
               <a
                 href="#projects"
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-8 py-4 text-[15px] font-bold text-slate-700 shadow-sm transition-all hover:border-slate-400 hover:bg-slate-50 hover:shadow-md active:scale-95"
               >
-                Browse projects
+                Recent Works
               </a>
             </div>
 
-            <div className="mt-10 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[28px] border border-slate-200 bg-slate-50 px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+            <div className="relative mt-12 grid gap-4 sm:grid-cols-3">
+              <div className="rounded-[32px] border border-slate-100 bg-slate-50/70 p-5 shadow-inner transition-transform hover:scale-[1.02]">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
                   Projects
                 </p>
-                <p className="mt-2 text-3xl font-semibold text-slate-950">
-                  {stats.projects}
-                </p>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <p className="text-4xl font-black text-slate-950 tracking-tighter">
+                    {stats.projects}
+                  </p>
+                  <p className="text-xs font-bold text-slate-400">active</p>
+                </div>
               </div>
-              <div className="rounded-[28px] border border-slate-200 bg-slate-50 px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+              <div className="rounded-[32px] border border-slate-100 bg-slate-50/70 p-5 shadow-inner transition-transform hover:scale-[1.02]">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
                   Layers
                 </p>
-                <p className="mt-2 text-3xl font-semibold text-slate-950">
-                  {stats.layers}
-                </p>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <p className="text-4xl font-black text-slate-950 tracking-tighter">
+                    {stats.layers}
+                  </p>
+                  <p className="text-xs font-bold text-slate-400">synced</p>
+                </div>
               </div>
-              <div className="rounded-[28px] border border-slate-200 bg-slate-50 px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  Last update
+              <div className="rounded-[32px] border border-slate-100 bg-slate-50/70 p-5 shadow-inner transition-transform hover:scale-[1.02]">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
+                  Reliability
                 </p>
-                <p className="mt-2 text-base font-semibold text-slate-950">
-                  {new Date(stats.lastUpdated).toLocaleDateString()}
-                </p>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <p className="text-3xl font-black text-slate-950 tracking-tighter">
+                    100%
+                  </p>
+                  <p className="text-xs font-bold text-slate-400">export</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-[40px] border border-slate-200 bg-[radial-gradient(circle_at_top,#fef3c7,transparent_35%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-8 shadow-[0_40px_90px_-50px_rgba(15,23,42,0.45)]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.16),transparent_34%)]" />
+          <div className="relative overflow-hidden rounded-[48px] border border-slate-200 bg-[radial-gradient(circle_at_top,#fff7ed,transparent_55%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-10 shadow-[0_50px_100px_-50px_rgba(15,23,42,0.4)] transition-all hover:shadow-[0_60px_120px_-50px_rgba(15,23,42,0.5)]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.12),transparent_40%)]" />
             <div className="relative">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">
-                3D-ready visual system
+              <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-slate-400">
+                Studio Elements
               </p>
-              <div className="mt-6 space-y-4">
+              <div className="mt-8 space-y-5">
                 {[0, 1, 2].map((index) => (
                   <div
                     key={index}
-                    className="rounded-[32px] border border-white/80 bg-white/90 p-5 shadow-[0_32px_50px_-35px_rgba(15,23,42,0.45)]"
+                    className="group/card rounded-[32px] border border-white/80 bg-white/95 p-6 shadow-[0_45px_100px_-50px_rgba(15,23,42,0.4)] transition-all duration-500 hover:-translate-y-2 hover:translate-x-1"
                     style={{
-                      transform: `perspective(1100px) rotateX(15deg) rotateY(${
-                        index === 0 ? -8 : index === 1 ? 5 : -4
-                      }deg) translateZ(${index * 8}px)`,
+                      transform: `perspective(1200px) rotateX(12deg) rotateY(${
+                        index === 0 ? -10 : index === 1 ? 8 : -6
+                      }deg) translateZ(${index * 12}px)`,
                     }}
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-950">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-base font-black text-slate-950 tracking-tight">
                           {index === 0
-                            ? "Prompt-generated hero"
+                            ? "AI Section Prompt"
                             : index === 1
-                            ? "Glassmorphism card"
-                            : "Export package"}
+                            ? "3D Glass Layer"
+                            : "Clean Export Zip"}
                         </p>
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="mt-1.5 text-sm font-medium text-slate-500 leading-relaxed">
                           {index === 0
-                            ? "OpenAI creates structured sections."
+                            ? "Structured landing sections in seconds."
                             : index === 1
-                            ? "Use depth presets in the inspector."
-                            : "React and HTML exports stay deterministic."}
+                            ? "Premium depth with simple presets."
+                            : "Next.js 14 production code packages."}
                         </p>
                       </div>
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-white">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[22px] bg-slate-950 text-white shadow-lg transition-transform group-hover/card:scale-110">
                         {index === 2 ? (
-                          <Download className="h-4 w-4" />
+                          <Download className="h-5 w-5" />
                         ) : index === 1 ? (
-                          <Layers3 className="h-4 w-4" />
+                          <Layers3 className="h-5 w-5" />
                         ) : (
-                          <Sparkles className="h-4 w-4" />
+                          <Sparkles className="h-5 w-5" />
                         )}
                       </div>
                     </div>
@@ -282,149 +304,181 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="projects" className="space-y-5">
-          <div className="flex flex-col gap-4 rounded-[32px] border border-slate-200 bg-white/85 px-6 py-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.25)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
+        <section id="projects" className="space-y-6">
+          <div className="flex flex-col gap-6 rounded-[40px] border border-slate-200 bg-white/75 px-10 py-8 shadow-[0_32px_80px_-48px_rgba(15,23,42,0.25)] backdrop-blur-2xl md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">
-                Workspace
+              <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-slate-400">
+                Your Studio
               </p>
-              <h3 className="mt-1 text-xl font-semibold text-slate-950">
-                Recent projects
+              <h3 className="mt-2 text-2xl font-black tracking-tight text-slate-950">
+                Workspace
               </h3>
             </div>
 
-            <div className="flex w-full items-center gap-3 md:max-w-md">
-              <div className="flex flex-1 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
-                <Search className="h-4 w-4 text-slate-400" />
+            <div className="flex w-full items-center gap-4 md:max-w-md">
+              <div className="group flex flex-1 items-center gap-3 rounded-full border border-slate-200 bg-white px-5 py-3.5 shadow-sm transition-all focus-within:border-slate-400 focus-within:shadow-md">
+                <Search className="h-5 w-5 text-slate-400 transition-colors group-focus-within:text-slate-950" />
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search projects"
-                  className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+                  placeholder="Search projects..."
+                  className="w-full bg-transparent text-[15px] font-medium text-slate-700 outline-none placeholder:text-slate-400"
                 />
               </div>
 
               <Link
                 href="/builder/new"
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
+                className="inline-flex h-[54px] items-center gap-2 rounded-full border border-slate-200 bg-white px-6 text-[15px] font-bold text-slate-700 shadow-sm transition-all hover:border-slate-400 hover:text-slate-950 active:scale-95"
               >
-                <FolderOpen className="h-4 w-4" />
+                <Plus className="h-4.5 w-4.5" />
                 Create
               </Link>
             </div>
           </div>
 
           {filteredProjects.length === 0 ? (
-            <div className="rounded-[36px] border border-dashed border-slate-300 bg-white/80 px-8 py-16 text-center shadow-inner">
-              <p className="text-xl font-semibold text-slate-950">
-                {projects.length === 0 ? "No projects yet" : "No matches found"}
-              </p>
-              <p className="mt-3 text-base text-slate-500">
-                {projects.length === 0
-                  ? "Create a project and use the AI panel to generate your first page."
-                  : "Try a different search query or create a fresh project."}
-              </p>
-              <Link
-                href="/builder/new"
-                className="mt-6 inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative overflow-hidden rounded-[48px] border border-dashed border-slate-300 bg-white/40 px-10 py-32 text-center shadow-inner backdrop-blur-sm"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.03),transparent_70%)]" />
+              <motion.div 
+                animate={{ 
+                  y: [0, -12, 0],
+                  rotate: [0, 5, -5, 0]
+                }}
+                transition={{ 
+                  duration: 6, 
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="relative mx-auto flex h-24 w-24 items-center justify-center rounded-[32px] bg-white shadow-[0_20px_40px_-15px_rgba(15,23,42,0.1)] transition-transform"
               >
-                <Plus className="h-4 w-4" />
-                Create project
-              </Link>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {filteredProjects.map((project, index) => (
-                <article
-                  key={project.id}
-                  className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_24px_60px_-40px_rgba(15,23,42,0.3)] transition hover:-translate-y-1 hover:border-slate-300"
+                <FolderOpen className="h-10 w-10 text-slate-300" />
+              </motion.div>
+              <h3 className="relative mt-10 text-3xl font-black tracking-tight text-slate-950">
+                {projects.length === 0 ? "A clean slate for your vision" : "No matches found in the studio"}
+              </h3>
+              <p className="relative mx-auto mt-5 max-w-sm text-[17px] leading-relaxed text-slate-500 font-medium">
+                {projects.length === 0
+                  ? "Start by architecting a new project. Our AI tools are ready to transform your prompts into high-fidelity layouts."
+                  : "We couldn’t find any projects matching your search. Try adjusting your query or launch a fresh project."}
+              </p>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="relative mt-12 inline-block"
+              >
+                <Link
+                  href="/builder/new"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-950 bg-slate-950 px-10 py-5 text-[15px] font-bold text-white shadow-[0_25px_50px_-15px_rgba(15,23,42,0.5)] transition-all hover:bg-slate-800"
                 >
-                  <div className="relative h-36 overflow-hidden bg-[linear-gradient(135deg,#f8fafc_0%,#e0f2fe_45%,#fef3c7_100%)]">
-                    <div
-                      className="absolute left-6 top-6 h-24 w-32 rounded-[28px] border border-white/80 bg-white/90"
+                  <Plus className="h-5 w-5" />
+                  Launch New Project
+                </Link>
+              </motion.div>
+            </motion.div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {filteredProjects.map((project, index) => (
+                <motion.article
+                  key={project.id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  className="group relative flex flex-col overflow-hidden rounded-[40px] border border-slate-200/60 bg-white/70 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.1)] backdrop-blur-md transition-all hover:-translate-y-2 hover:border-slate-400 hover:shadow-[0_48px_100px_-50px_rgba(15,23,42,0.4)]"
+                >
+                  <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-sky-400/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                  
+                  <div className="relative h-48 overflow-hidden bg-[linear-gradient(135deg,#f8fafc_0%,#e0f2fe_45%,#ede9fe_100%)]">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.4),transparent_60%)]" />
+                    <motion.div
+                      whileHover={{ scale: 1.04, rotate: index % 2 === 0 ? -1 : 1 }}
+                      className="absolute left-10 top-10 h-32 w-48 rounded-[36px] border border-white/90 bg-white/95 shadow-2xl transition-transform duration-700"
                       style={{
-                        transform: `perspective(1000px) rotateX(18deg) rotateY(${
-                          index % 2 === 0 ? -10 : 8
+                        transform: `perspective(1200px) rotateX(20deg) rotateY(${
+                          index % 2 === 0 ? -12 : 10
                         }deg)`,
                       }}
-                    />
-                    <div
-                      className="absolute bottom-6 right-6 h-20 w-28 rounded-[24px] border border-white/80 bg-white/80"
-                      style={{
-                        transform: `perspective(900px) rotateX(12deg) rotateY(${
-                          index % 2 === 0 ? 8 : -8
-                        }deg)`,
-                      }}
-                    />
+                    >
+                       <div className="flex h-full flex-col p-5">
+                         <div className="h-2.5 w-1/2 rounded-full bg-slate-100" />
+                         <div className="mt-3 h-2 w-full rounded-full bg-slate-50" />
+                         <div className="mt-2 h-2 w-4/5 rounded-full bg-slate-50" />
+                         <div className="mt-auto flex justify-between">
+                            <div className="h-6 w-6 rounded-lg bg-sky-50" />
+                            <div className="h-6 w-6 rounded-lg bg-indigo-50" />
+                         </div>
+                       </div>
+                    </motion.div>
                   </div>
 
-                  <div className="space-y-4 p-5">
-                    <div>
-                      <div className="flex items-center justify-between gap-3">
-                        <h4 className="text-lg font-semibold text-slate-950">
+                  <div className="flex flex-1 flex-col p-7">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <h4 className="truncate text-2xl font-black tracking-[0.01em] text-slate-950 transition-colors group-hover:text-sky-600">
                           {project.name}
                         </h4>
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                          {project.componentCount} layers
-                        </span>
+                        <p className="mt-2 text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">
+                          Updated {new Date(project.updatedAt || project.createdAt).toLocaleDateString()}
+                        </p>
                       </div>
-                      <p className="mt-2 text-sm text-slate-500">
-                        Updated{" "}
-                        {new Date(
-                          project.updatedAt || project.createdAt
-                        ).toLocaleDateString()}
-                      </p>
+                      <span className="flex-shrink-0 rounded-full bg-slate-900 px-3.5 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-lg">
+                        {project.componentCount} Layers
+                      </span>
                     </div>
 
-                    <div className="grid grid-cols-5 gap-2">
+                    <div className="mt-8 flex items-center gap-3">
                       <Link
                         href={`/builder/${project.id}`}
-                        className="col-span-2 inline-flex items-center justify-center gap-2 rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                        className="flex-1 inline-flex h-13 items-center justify-center rounded-full border border-slate-950 bg-slate-950 text-[14px] font-bold text-white shadow-[0_15px_30px_-10px_rgba(15,23,42,0.4)] transition-all hover:bg-slate-800 hover:scale-[1.02] active:scale-95"
                       >
-                        Open
+                        Open Studio
                       </Link>
                       <Link
                         href={`/builder/${project.id}/preview`}
-                        className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2.5 text-slate-600 transition hover:border-slate-300 hover:text-slate-950"
-                        title="Preview"
+                        className="flex h-13 w-13 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-all hover:border-slate-400 hover:text-slate-950 hover:shadow-md active:scale-90"
+                        title="Live Preview"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-5 w-5" />
                       </Link>
                       <button
                         onClick={() => handleCopyLink(project.id)}
-                        className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2.5 text-slate-600 transition hover:border-slate-300 hover:text-slate-950"
-                        title="Copy preview link"
+                        className="flex h-13 w-13 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-all hover:border-slate-400 hover:text-slate-950 hover:shadow-md active:scale-90"
+                        title="Copy Share Link"
                       >
                         {copiedId === project.id ? (
-                          <Check className="h-4 w-4 text-emerald-600" />
+                          <Check className="h-5 w-5 text-emerald-600" />
                         ) : (
-                          <Copy className="h-4 w-4" />
+                          <Copy className="h-5 w-5" />
                         )}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setExportProjectId(project.id);
-                        }}
-                        className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2.5 text-slate-600 transition hover:border-slate-300 hover:text-slate-950"
-                        title="Export"
-                      >
-                        <Download className="h-4 w-4" />
                       </button>
                     </div>
 
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Delete "${project.name}"?`)) {
-                          deleteProject(project.id);
-                        }
-                      }}
-                      className="inline-flex items-center gap-2 text-sm font-medium text-rose-600 transition hover:text-rose-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete project
-                    </button>
+                    <div className="mt-8 flex items-center justify-between border-t border-slate-100 pt-6">
+                      <button
+                        onClick={() => setExportProjectId(project.id)}
+                        className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.15em] text-slate-400 transition-colors hover:text-slate-950"
+                      >
+                        <Download className="h-4 w-4" />
+                        Production Export
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Permanently delete "${project.name}"?`)) {
+                            deleteProject(project.id);
+                          }
+                        }}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-300 transition-all hover:bg-rose-50 hover:text-rose-600"
+                        title="Delete project"
+                      >
+                        <Trash2 className="h-4.5 w-4.5" />
+                      </button>
+                    </div>
                   </div>
-                </article>
+                </motion.article>
               ))}
             </div>
           )}

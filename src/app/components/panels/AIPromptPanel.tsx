@@ -19,6 +19,7 @@ import {
   DEFAULT_OPENAI_MODEL,
   OPENAI_MODEL_OPTIONS,
 } from "@/config/openaiModels";
+import { motion, AnimatePresence } from "framer-motion";
 
 const PROMPT_IDEAS = [
   "A light-themed AI product landing page with a floating 3D hero illustration, strong typography, customer logos, pricing, and a final call-to-action.",
@@ -102,7 +103,11 @@ export default function AIPromptPanel() {
     <div className="flex flex-col h-full bg-slate-50/30 backdrop-blur-md">
       <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6">
         {/* Header Section */}
-        <div className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_40px_-20px_rgba(15,23,42,0.1)] transition-all hover:shadow-[0_30px_60px_-30px_rgba(15,23,42,0.2)]">
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_20px_40px_-20px_rgba(15,23,42,0.1)] transition-all hover:shadow-[0_30px_60px_-30px_rgba(15,23,42,0.2)]"
+        >
           <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-amber-500/5 blur-2xl" />
           <div className="relative">
             <div className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-white shadow-lg">
@@ -116,7 +121,7 @@ export default function AIPromptPanel() {
               Describe your vision. Polyglot transforms ideas into <span className="text-slate-950 font-semibold underline decoration-amber-500/30 decoration-2">deterministic Next.js layouts.</span>
             </p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Model Selection */}
         <div className="space-y-3">
@@ -127,14 +132,17 @@ export default function AIPromptPanel() {
             {OPENAI_MODEL_OPTIONS.map((option) => {
               const active = model === option.id;
               return (
-                <button
+                <motion.button
                   key={option.id}
+                  layout
                   onClick={() => setModel(option.id)}
                   className={`group relative flex w-full items-center gap-4 rounded-[24px] border px-4 py-4 text-left transition-all duration-300 ${
                     active
                       ? "border-slate-950 bg-slate-950 text-white shadow-xl scale-[1.02]"
                       : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
                   }`}
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.98 }}
                 >
                   <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl transition-colors ${
                     active ? "bg-white/10" : "bg-slate-100 group-hover:bg-slate-200"
@@ -148,11 +156,14 @@ export default function AIPromptPanel() {
                     </p>
                   </div>
                   {active && (
-                    <div className="ml-auto">
+                    <motion.div 
+                      layoutId="active-model-dot"
+                      className="ml-auto"
+                    >
                       <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                    </div>
+                    </motion.div>
                   )}
-                </button>
+                </motion.button>
               );
             })}
           </div>
@@ -202,18 +213,32 @@ export default function AIPromptPanel() {
         </div>
 
         {/* Feedback Messages */}
-        {summary && (
-          <div className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 text-sm text-emerald-800 animate-in fade-in slide-in-from-top-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-            <p className="leading-relaxed">{summary}</p>
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          {summary && (
+            <motion.div 
+              key="summary"
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 text-sm text-emerald-800"
+            >
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+              <p className="leading-relaxed">{summary}</p>
+            </motion.div>
+          )}
 
-        {error && (
-          <div className="rounded-2xl border border-rose-100 bg-rose-50/50 p-4 text-sm text-rose-700">
-             {error}
-          </div>
-        )}
+          {error && (
+            <motion.div 
+              key="error"
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              className="rounded-2xl border border-rose-100 bg-rose-50/50 p-4 text-sm text-rose-700"
+            >
+               {error}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Action Footer */}

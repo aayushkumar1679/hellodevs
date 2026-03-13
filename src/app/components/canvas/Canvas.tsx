@@ -5,7 +5,7 @@ import React, { useRef, useState, useCallback, useEffect } from "react";
 import { useCanvasStore } from "@/state/useCanvasStore";
 import { useDesignStore } from "@/state/useDesignStore";
 import { useEditorStore } from "@/state/useEditorStore";
-import CanvasElement from "./CanvasElement";
+import CanvasElement, { CanvasElementProps } from "./CanvasElement";
 import ComponentWrapper from "./ComponentWrapper";
 import { useSyncStores } from "@/hooks/useSyncStores";
 import { getProjectRootIds } from "@/utils/projectModel";
@@ -762,6 +762,30 @@ export default function Canvas() {
       return null;
     }
 
+    // Determine the semantic tag for this component type
+    let asTag: CanvasElementProps["as"] = "div";
+    switch (component.type) {
+      case "section":
+        asTag = "section";
+        break;
+      case "navbar":
+        asTag = "nav";
+        break;
+      case "card":
+      case "product-card":
+      case "pricing-card":
+        asTag = "article";
+        break;
+      case "form":
+        asTag = "form";
+        break;
+      case "footer":
+        asTag = "footer";
+        break;
+      default:
+        asTag = "div";
+    }
+
     return (
       <CanvasElement
         key={component.id}
@@ -769,6 +793,7 @@ export default function Canvas() {
         onRect={(rect) => registerRect(component.id, rect)}
         getSnapTargets={getSnapTargets}
         onGuide={onElementGuide}
+        as={asTag}
       >
         <ComponentWrapper component={component} />
         {component.children.map((childId) => renderCanvasNode(childId))}
@@ -874,27 +899,34 @@ export default function Canvas() {
               <>
                 {groupBoxLocal && (
                   <div
-                    className="absolute pointer-events-auto z-50"
+                    className="absolute pointer-events-auto z-50 animate-in fade-in zoom-in-95 duration-200"
                     style={{
                       left: groupBoxLocal.x,
                       top: groupBoxLocal.y,
                       width: groupBoxLocal.w,
                       height: groupBoxLocal.h,
                       boxSizing: "border-box",
-                      border: "1px dashed rgba(14,165,233,0.95)",
-                      background: "transparent",
+                      border: "2px solid #0ea5e9",
+                      boxShadow: "0 0 0 1px rgba(255,255,255,0.8), 0 0 20px rgba(14,165,233,0.3), inset 0 0 12px rgba(14,165,233,0.1)",
+                      background: "rgba(14,165,233,0.02)",
                     }}
                   >
+                    {/* Perspective lines corner helpers */}
+                    <div className="absolute -left-1 -top-1 h-3 w-3 border-l-2 border-t-2 border-sky-500" />
+                    <div className="absolute -right-1 -top-1 h-3 w-3 border-r-2 border-t-2 border-sky-500" />
+                    <div className="absolute -left-1 -bottom-1 h-3 w-3 border-l-2 border-b-2 border-sky-500" />
+                    <div className="absolute -right-1 -bottom-1 h-3 w-3 border-r-2 border-b-2 border-sky-500" />
+
                     {(
                       [
-                        ["nw", "top-0 left-0 cursor-nw-resize"],
-                        ["n", "top-0 left-1/2 -translate-x-1/2 cursor-n-resize"],
-                        ["ne", "top-0 right-0 cursor-ne-resize"],
-                        ["e", "top-1/2 right-0 -translate-y-1/2 cursor-e-resize"],
-                        ["se", "bottom-0 right-0 cursor-se-resize"],
-                        ["s", "bottom-0 left-1/2 -translate-x-1/2 cursor-s-resize"],
-                        ["sw", "bottom-0 left-0 cursor-sw-resize"],
-                        ["w", "top-1/2 left-0 -translate-y-1/2 cursor-w-resize"],
+                        ["nw", "top-0 left-0 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize"],
+                        ["n", "top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-n-resize"],
+                        ["ne", "top-0 right-0 translate-x-1/2 -translate-y-1/2 cursor-ne-resize"],
+                        ["e", "top-1/2 right-0 translate-x-1/2 -translate-y-1/2 cursor-e-resize"],
+                        ["se", "bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-se-resize"],
+                        ["s", "bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 cursor-s-resize"],
+                        ["sw", "bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-sw-resize"],
+                        ["w", "top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 cursor-w-resize"],
                       ] as [string, string][]
                     ).map(([dir, cls]) => (
                       <div
@@ -902,8 +934,7 @@ export default function Canvas() {
                         role="button"
                         data-resize-handle="true"
                         onMouseDown={(e) => startGroupResize(e, dir)}
-                        className={`absolute h-3 w-3 rounded-sm border border-sky-500 bg-white ${cls}`}
-                        style={{ transform: undefined }}
+                        className={`absolute h-3.5 w-3.5 rounded-full border-2 border-sky-500 bg-white shadow-xl transition-transform hover:scale-150 active:scale-95 ${cls}`}
                       />
                     ))}
                   </div>

@@ -65,6 +65,7 @@ model Project {
   generationPrompt  String?
   generationModel   String?
   generationSummary String?
+  isPublic          Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

@@ -5,7 +5,6 @@ import { X } from "lucide-react";
 import StylePanel from "../panels/StylePanel";
 import SettingsPanel from "../panels/SettingsPanel";
 import InteractionsPanel from "../panels/InteractionsPanel";
-import ElementInspector from "../panels/ElementInspector";
 import { useDesignStore } from "@/state/useDesignStore";
 
 interface RightPanelProps {
@@ -28,86 +27,77 @@ export default function RightPanel({ isOpen, onClose }: RightPanelProps) {
   ];
 
   return (
-    <aside
-      className="flex h-full w-[22rem] flex-shrink-0 flex-col border-l border-slate-200 bg-white/88 shadow-[-24px_0_60px_-48px_rgba(15,23,42,0.35)] backdrop-blur-xl"
-      role="complementary"
-      aria-label="Inspector"
-    >
-      <div className="border-b border-slate-200 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400">
-              Inspector
-            </p>
-            <p className="mt-1 text-sm font-semibold text-slate-950">
-              Refine the selected layer
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close inspector"
-            className="rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-950"
-            title="Close panel"
-          >
-            <X size={16} />
-          </button>
+    <aside className="fixed right-0 top-[73px] bottom-0 flex w-[320px] flex-col border-l border-slate-200/80 bg-white/70 backdrop-blur-3xl z-40 transition-all">
+      <div className="flex items-center justify-between border-b border-slate-100 p-2 pr-4">
+        <div className="flex flex-1 p-0">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 rounded-[14px] py-2 text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${
+                activeTab === tab.id
+                  ? "bg-slate-950 text-white shadow-lg"
+                  : "text-slate-400 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-
-        <div role="tablist" aria-label="Inspector tabs" className="mt-4 flex gap-2">
-          {tabs.map((tab) => {
-            const active = tab.id === activeTab;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setActiveTab(tab.id)}
-                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
-                  active
-                    ? "bg-slate-950 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-950"
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        <button
+          onClick={onClose}
+          className="ml-2 flex h-8 w-8 items-center justify-center rounded-full hover:bg-slate-100 transition-colors"
+          title="Close Panel"
+        >
+          <X size={14} className="text-slate-500" />
+        </button>
       </div>
 
-      {selectedElements.length === 0 && activeTab === "style" && (
-        <div className="border-b border-slate-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-          Select an element on the canvas to unlock styling controls.
-        </div>
-      )}
-
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-0 custom-scrollbar">
         {activeTab === "style" && (
-          <>
-            <div className="max-h-[220px] flex-shrink-0 overflow-auto border-b border-slate-200 bg-slate-50/60 px-3 py-3">
-              <ElementInspector />
-            </div>
-
-            <div className="flex-1 overflow-auto">
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 p-6 space-y-6">
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">
+                  Properties
+                </p>
+                <div className="h-px flex-1 bg-slate-100 ml-3" />
+              </div>
               <StylePanel />
-            </div>
-          </>
+            </section>
+          </div>
         )}
 
         {activeTab === "settings" && (
-          <div className="flex-1 overflow-auto px-3 py-3">
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 p-6">
+             <div className="flex items-center justify-between mb-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">
+                  Settings
+                </p>
+                <div className="h-px flex-1 bg-slate-100 ml-3" />
+              </div>
             <SettingsPanel />
           </div>
         )}
 
         {activeTab === "interactions" && (
-          <div className="flex-1 overflow-auto px-3 py-3">
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 p-6">
+             <div className="flex items-center justify-between mb-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">
+                  Motion
+                </p>
+                <div className="h-px flex-1 bg-slate-100 ml-3" />
+              </div>
             <InteractionsPanel />
           </div>
         )}
       </div>
+
+      {!selectedElements.length && activeTab === "style" && (
+        <div className="absolute inset-x-0 bottom-0 bg-amber-50/90 border-t border-amber-100 px-6 py-4 text-[11px] font-medium text-amber-700 backdrop-blur-sm">
+          Select an element on the canvas to edit its properties.
+        </div>
+      )}
     </aside>
   );
 }

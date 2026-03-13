@@ -27,17 +27,18 @@ export default function CanvasPreviewPage() {
     const loadProject = async () => {
       setIsLoading(true);
 
-      if (projects[params.id]) {
-        setCurrentProject(params.id);
+      try {
+        if (projects[params.id]) {
+          setCurrentProject(params.id);
+        }
+
+        await fetchProject(params.id);
+      } catch (error) {
+        console.error("Failed to load preview project", error);
+      } finally {
         if (mounted) {
           setIsLoading(false);
         }
-        return;
-      }
-
-      await fetchProject(params.id);
-      if (mounted) {
-        setIsLoading(false);
       }
     };
 

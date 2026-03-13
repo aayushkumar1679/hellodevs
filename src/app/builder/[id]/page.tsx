@@ -11,6 +11,8 @@ import Canvas from "@/app/components/canvas/Canvas";
 import ComponentLibrary from "@/app/components/panels/ComponentLibrary";
 import LayersPanel from "@/app/components/panels/LayersPanel";
 import AIPromptPanel from "@/app/components/panels/AIPromptPanel";
+import HistoryPanel from "@/app/components/panels/HistoryPanel";
+import AssetsPanel from "@/app/components/panels/AssetsPanel";
 import { useCanvasStore } from "@/state/useCanvasStore";
 import { useDesignStore } from "@/state/useDesignStore";
 
@@ -29,18 +31,29 @@ export default function BuilderPage() {
     const loadProject = async () => {
       setIsLoading(true);
 
-      const existingProject = useCanvasStore.getState().projects[projectId];
-      if (existingProject) {
-        setCurrentProject(projectId);
+      try {
+        // Try to load from local cache first for immediate UI response
+        const existingProject = useCanvasStore.getState().projects[projectId];
+        if (existingProject) {
+          setCurrentProject(projectId);
+          // If we have cache, we could set isLoading to false earlier, 
+          // but better to wait for the fresh fetch to avoid "flash of old data"
+        }
+
+        const project = await fetchProject(projectId);
+        
+        if (!project && mounted) {
+          // If fetch fails and no cache, we have a real problem
+          if (!existingProject) {
+             setIsLoading(false);
+          }
+        }
+      } catch (error) {
+        console.error("Critical error loading project:", error);
+      } finally {
         if (mounted) {
           setIsLoading(false);
         }
-        return;
-      }
-
-      await fetchProject(projectId);
-      if (mounted) {
-        setIsLoading(false);
       }
     };
 
@@ -135,8 +148,8 @@ export default function BuilderPage() {
 
       <div className="flex flex-1 overflow-hidden">
         <LeftSidebar
-          activePanel={activeLeftPanel}
-          onPanelChange={setActiveLeftPanel}
+          activeLeftPanel={activeLeftPanel}
+          setActiveLeftPanel={setActiveLeftPanel}
         />
 
         {activeLeftPanel && (
@@ -144,46 +157,8 @@ export default function BuilderPage() {
             {activeLeftPanel === "ai" && <AIPromptPanel />}
             {activeLeftPanel === "components" && <ComponentLibrary />}
             {activeLeftPanel === "layers" && <LayersPanel />}
-            {activeLeftPanel === "assets" && (
-              <div className="space-y-4 p-6">
-                <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Assets
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-950">
-                    A richer asset manager is coming next.
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    For now, generate image-driven sections with AI, then tune their
-                    styling and motion from the inspector.
-                  </p>
-                </div>
-                <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50/80 p-4 text-xs leading-6 text-slate-500">
-                  Tip: use the share link after a preview pass to review layouts on
-                  real devices before export.
-                </div>
-              </div>
-            )}
-            {activeLeftPanel === "history" && (
-              <div className="space-y-4 p-6">
-                <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    History
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-950">
-                    Full timeline snapshots are on deck.
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Undo and redo already work in the header while we wire a richer
-                    visual history of your edits and generations.
-                  </p>
-                </div>
-                <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50/80 p-4 text-xs leading-6 text-slate-500">
-                  Keep big explorations safe by duplicating a project from the home
-                  dashboard before major design pivots.
-                </div>
-              </div>
-            )}
+            {activeLeftPanel === "assets" && <AssetsPanel />}
+            {activeLeftPanel === "history" && <HistoryPanel />}
           </div>
         )}
 

@@ -3,6 +3,7 @@
 import React from "react";
 import type { Project } from "@/state/useCanvasStore";
 import type { Breakpoint, Element } from "@/state/useDesignStore";
+import PrimitiveRenderer from "@/components/project/PrimitiveRenderer";
 import {
   getBreakpointCss,
   getProjectRootIds,
@@ -180,154 +181,22 @@ export function renderProjectNodeToReact(
           {children}
         </form>
       );
-    case "heading": {
-      const tag = `h${Math.min(Math.max(Number(props.level ?? 2), 1), 6)}`;
-      return React.createElement(tag, { key: componentId, style }, props.text ?? "Heading");
-    }
-    case "text":
+    case "footer":
       return (
-        <p key={componentId} style={style}>
-          {props.text ?? "Text"}
-        </p>
-      );
-    case "button":
-      return (
-        <button key={componentId} type="button" style={style}>
-          {props.text ?? "Button"}
-        </button>
-      );
-    case "image":
-      return (
-        <img
-          key={componentId}
-          src={String(props.src ?? "https://images.pexels.com/photos/34088/pexels-photo.jpg")}
-          alt={String(props.alt ?? "Image")}
-          style={style}
-        />
-      );
-    case "input":
-      return (
-        <input
-          key={componentId}
-          readOnly
-          placeholder={String(props.placeholder ?? "Enter text")}
-          style={style}
-        />
-      );
-    case "textarea":
-      return (
-        <textarea
-          key={componentId}
-          readOnly
-          placeholder={String(props.placeholder ?? "Write something")}
-          style={style}
-        />
-      );
-    case "badge":
-      return (
-        <span key={componentId} style={style}>
-          {props.text ?? "Badge"}
-        </span>
-      );
-    case "alert":
-      return (
-        <div key={componentId} role="alert" style={style}>
-          {props.text ?? "Alert"}
-        </div>
-      );
-    case "divider":
-      return <hr key={componentId} style={style} />;
-    case "spacer":
-      return <div key={componentId} aria-hidden="true" style={style} />;
-    case "navbar":
-      return (
-        <nav key={componentId} style={style}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "16px",
-            }}
-          >
-            <a href={String(props.brand?.href ?? "#")}>{String(props.brand?.text ?? "Polyglot")}</a>
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              {(Array.isArray(props.links) ? props.links : []).map((link, index) => {
-                const item = link as { href?: string; label?: string };
-                return (
-                  <a key={`${componentId}-link-${index}`} href={String(item.href ?? "#")}>
-                    {String(item.label ?? "Link")}
-                  </a>
-                );
-              })}
-              {props.cta?.text ? (
-                <a href={String(props.cta.href ?? "#")}>{String(props.cta.text)}</a>
-              ) : null}
-            </div>
-          </div>
+        <footer key={componentId} style={style}>
           {children}
-        </nav>
-      );
-    case "feature":
-      return (
-        <div key={componentId} style={style}>
-          <h3>{String(props.title ?? "Feature title")}</h3>
-          <p>{String(props.text ?? "Feature description")}</p>
-        </div>
-      );
-    case "testimonial":
-      return (
-        <blockquote key={componentId} style={style}>
-          <p>{String(props.quote ?? "Customer quote")}</p>
-          <footer>
-            {String(props.author ?? "Customer")}
-            {props.role ? `, ${String(props.role)}` : ""}
-          </footer>
-        </blockquote>
-      );
-    case "pricing-card":
-      return (
-        <article key={componentId} style={style}>
-          <h3>{String(props.title ?? "Plan")}</h3>
-          <p>
-            {String(props.price ?? "$0")}
-            {props.period ? ` / ${String(props.period)}` : ""}
-          </p>
-          <ul>
-            {(Array.isArray(props.features) ? props.features : []).map((feature, index) => (
-              <li key={`${componentId}-feature-${index}`}>{String(feature)}</li>
-            ))}
-          </ul>
-          {props.cta?.text ? (
-            <button type="button">{String(props.cta.text)}</button>
-          ) : null}
-        </article>
-      );
-    case "product-card":
-      return (
-        <article key={componentId} style={style}>
-          <img
-            src={String(props.image ?? "https://images.pexels.com/photos/761963/pexels-photo-761963.jpeg")}
-            alt={String(props.title ?? "Product")}
-          />
-          <h3>{String(props.title ?? "Product")}</h3>
-          <p>{String(props.price ?? "$0")}</p>
-          {props.cta?.text ? <button type="button">{String(props.cta.text)}</button> : null}
-        </article>
-      );
-    case "cta":
-      return (
-        <section key={componentId} style={style}>
-          <h2>{String(props.text ?? "Ready to build?")}</h2>
-          {props.cta?.text ? <button type="button">{String(props.cta.text)}</button> : null}
-          {children}
-        </section>
+        </footer>
       );
     default:
       return (
-        <div key={componentId} style={style}>
+        <PrimitiveRenderer
+          key={componentId}
+          type={component.type}
+          props={props}
+          style={style}
+        >
           {children}
-        </div>
+        </PrimitiveRenderer>
       );
   }
 }

@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createElementRecord } from "@/utils/projectModel";
+import { useCanvasStore } from "./useCanvasStore";
+import debounce from "lodash.debounce";
 
 /* ---------------------------------------------
  Types
@@ -257,3 +259,27 @@ export const useDesignStore = create<DesignState>()(
     }
   )
 );
+
+// Debounced helper to trigger history snapshot in canvas store
+const triggerHistorySnapshot = debounce(() => {
+  const designState = useDesignStore.getState();
+  useCanvasStore
+    .getState()
+    .syncCurrentProjectDesignElements(designState.elements, true);
+}, 1000);
+
+// Helper to sync without history (fast updates)
+const syncDesignToCanvas = () => {
+  const designState = useDesignStore.getState();
+  useCanvasStore
+    .getState()
+    .syncCurrentProjectDesignElements(designState.elements, false);
+};
+
+// Hook into state changes to sync with canvas store
+useDesignStore.subscribe((state, prevState) => {
+  if (state.elements !== prevState.elements) {
+    syncDesignToCanvas();
+    triggerHistorySnapshot();
+  }
+});
