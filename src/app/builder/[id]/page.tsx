@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
+import { ArrowRight, PanelRightOpen, Sparkles, Wand2 } from "lucide-react";
 import BuilderHeader from "@/app/components/layout/BuilderHeader";
 import LeftSidebar from "@/app/components/layout/LeftSidebar";
 import RightPanel from "@/app/components/layout/RightPanel";
@@ -15,17 +17,41 @@ import { useDesignStore } from "@/state/useDesignStore";
 export default function BuilderPage() {
   const params = useParams();
   const projectId = params.id as string;
-  const { setCurrentProject, undo, redo } = useCanvasStore();
+  const { currentProjectId, setCurrentProject, fetchProject, undo, redo } = useCanvasStore();
   const { deselectAll } = useDesignStore();
   const [activeLeftPanel, setActiveLeftPanel] = useState<string | null>("ai");
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
+    const loadProject = async () => {
+      setIsLoading(true);
+
+      const existingProject = useCanvasStore.getState().projects[projectId];
+      if (existingProject) {
+        setCurrentProject(projectId);
+        if (mounted) {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      await fetchProject(projectId);
+      if (mounted) {
+        setIsLoading(false);
+      }
+    };
+
     if (projectId) {
-      setCurrentProject(projectId);
-      useCanvasStore.getState().fetchProjects();
+      void loadProject();
     }
-  }, [projectId, setCurrentProject]);
+
+    return () => {
+      mounted = false;
+    };
+  }, [fetchProject, projectId, setCurrentProject]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -51,6 +77,58 @@ export default function BuilderPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undo, redo, deselectAll]);
 
+  if (isLoading && currentProjectId !== projectId) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-6">
+        <div className="max-w-md rounded-[32px] border border-white/80 bg-white/92 p-8 text-center shadow-[0_35px_90px_-45px_rgba(15,23,42,0.35)]">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-950 text-white">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <p className="mt-5 text-lg font-semibold text-slate-950">
+            Opening your studio
+          </p>
+          <p className="mt-2 text-sm leading-7 text-slate-500">
+            We’re syncing the latest project structure, styles, and preview state.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isLoading && currentProjectId !== projectId) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-6">
+        <div className="max-w-lg rounded-[36px] border border-white/80 bg-white/92 p-8 text-center shadow-[0_40px_100px_-52px_rgba(15,23,42,0.35)]">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-amber-100 text-amber-700">
+            <Wand2 className="h-6 w-6" />
+          </div>
+          <p className="mt-5 text-xl font-semibold text-slate-950">
+            This project could not be opened
+          </p>
+          <p className="mt-2 text-sm leading-7 text-slate-500">
+            The link may be outdated, the project may have been removed, or your
+            session no longer has access to it.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
+            >
+              Back to workspace
+            </Link>
+            <Link
+              href="/builder/new"
+              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              Start a new project
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen flex-col bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-950">
       <BuilderHeader />
@@ -67,15 +145,43 @@ export default function BuilderPage() {
             {activeLeftPanel === "components" && <ComponentLibrary />}
             {activeLeftPanel === "layers" && <LayersPanel />}
             {activeLeftPanel === "assets" && (
-              <div className="p-6 text-sm text-slate-500">
-                Asset management is next in the roadmap. Use the AI panel to
-                generate image sections and the inspector to tune visuals.
+              <div className="space-y-4 p-6">
+                <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                    Assets
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-slate-950">
+                    A richer asset manager is coming next.
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    For now, generate image-driven sections with AI, then tune their
+                    styling and motion from the inspector.
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50/80 p-4 text-xs leading-6 text-slate-500">
+                  Tip: use the share link after a preview pass to review layouts on
+                  real devices before export.
+                </div>
               </div>
             )}
             {activeLeftPanel === "history" && (
-              <div className="p-6 text-sm text-slate-500">
-                Version history is still coming. Undo and redo are live in the
-                header while we build the full timeline experience.
+              <div className="space-y-4 p-6">
+                <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                    History
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-slate-950">
+                    Full timeline snapshots are on deck.
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    Undo and redo already work in the header while we wire a richer
+                    visual history of your edits and generations.
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50/80 p-4 text-xs leading-6 text-slate-500">
+                  Keep big explorations safe by duplicating a project from the home
+                  dashboard before major design pivots.
+                </div>
               </div>
             )}
           </div>
@@ -91,6 +197,17 @@ export default function BuilderPage() {
             isOpen={isRightPanelOpen}
             onClose={() => setIsRightPanelOpen(false)}
           />
+        )}
+
+        {!isRightPanelOpen && (
+          <button
+            type="button"
+            onClick={() => setIsRightPanelOpen(true)}
+            className="absolute right-5 top-5 z-20 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/92 px-4 py-2 text-xs font-semibold text-slate-700 shadow-[0_20px_40px_-30px_rgba(15,23,42,0.4)] backdrop-blur-xl transition hover:border-slate-300 hover:text-slate-950"
+          >
+            <PanelRightOpen className="h-4 w-4" />
+            Open inspector
+          </button>
         )}
       </div>
     </div>

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useCanvasStore } from "@/state/useCanvasStore";
 import { useDesignStore } from "@/state/useDesignStore";
-import { COMPONENT_LIBRARY } from "@/config/componentRegistry";
+import { mergeProjectDesignElements } from "@/utils/projectModel";
 
 /**
  * Hook that syncs canvas components to design store on mount
@@ -17,29 +17,53 @@ import { COMPONENT_LIBRARY } from "@/config/componentRegistry";
  */
 export function useSyncStores() {
   const currentProject = useCanvasStore((state) => state.currentProject);
-  const addElement = useDesignStore((state) => state.addElement);
+  const replaceElements = useDesignStore((state) => state.replaceElements);
+  const elements = useDesignStore((state) => state.elements);
+  const syncCurrentProjectDesignElements = useCanvasStore(
+    (state) => state.syncCurrentProjectDesignElements
+  );
+  const lastProjectIdRef = useRef<string | null>(null);
+  const lastSerializedDesignRef = useRef("");
 
   useEffect(() => {
-    const designState = useDesignStore.getState();
+    if (!currentProject) {
+      replaceElements({});
+      lastProjectIdRef.current = null;
+      lastSerializedDesignRef.current = "";
+      return;
+    }
 
+    const normalizedDesign = mergeProjectDesignElements(
+      currentProject,
+      currentProject.designElements
+    );
+    const serializedProjectDesign = JSON.stringify(normalizedDesign);
+
+    if (
+      lastProjectIdRef.current !== currentProject.id ||
+      lastSerializedDesignRef.current !== serializedProjectDesign
+    ) {
+      lastProjectIdRef.current = currentProject.id;
+      lastSerializedDesignRef.current = serializedProjectDesign;
+      replaceElements(normalizedDesign);
+    }
+  }, [currentProject, replaceElements]);
+
+  useEffect(() => {
     if (!currentProject) {
       return;
     }
 
-    Object.values(currentProject.components).forEach((component) => {
-      if (!designState.elements[component.id]) {
-        const definition = COMPONENT_LIBRARY.find(
-          (item) => item.type === component.type
-        );
+    const normalizedElements = mergeProjectDesignElements(currentProject, elements);
+    const serializedElements = JSON.stringify(normalizedElements);
 
-        addElement(
-          component.id,
-          component.type,
-          definition?.defaultCss ? { ...definition.defaultCss } : {}
-        );
-      }
-    });
-  }, [addElement, currentProject]);
+    if (serializedElements === lastSerializedDesignRef.current) {
+      return;
+    }
+
+    lastSerializedDesignRef.current = serializedElements;
+    syncCurrentProjectDesignElements(normalizedElements);
+  }, [currentProject, elements, syncCurrentProjectDesignElements]);
 }
 
 export default useSyncStores;

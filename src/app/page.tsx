@@ -17,8 +17,6 @@ import {
   Check,
 } from "lucide-react";
 import { useCanvasStore, type Project as CanvasProject } from "@/state/useCanvasStore";
-import { useDesignStore } from "@/state/useDesignStore";
-import { generateExport, type TechStack } from "@/utils/exportGenerators";
 import { generateNextJsProject } from "@/utils/exporter";
 import { useSession, signOut } from "next-auth/react";
 import { User as UserIcon, LogOut } from "lucide-react";
@@ -33,12 +31,10 @@ interface ProjectCard {
 
 export default function HomePage() {
   const { projects: projectsRecord, deleteProject, fetchProjects } = useCanvasStore();
-  const designElements = useDesignStore((state) => state.elements);
 
   const { data: session } = useSession();
   const [search, setSearch] = useState("");
   const [exportProjectId, setExportProjectId] = useState<string | null>(null);
-  const [exportTech, setExportTech] = useState<TechStack>("react-tailwind");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -90,7 +86,7 @@ export default function HomePage() {
 
   const handleCopyLink = async (projectId: string) => {
     await navigator.clipboard.writeText(
-      `${window.location.origin}/builder/${projectId}/preview`
+      `${window.location.origin}/share/${projectId}`
     );
     setCopiedId(projectId);
     window.setTimeout(() => setCopiedId(null), 1800);
@@ -408,7 +404,6 @@ export default function HomePage() {
                       <button
                         onClick={() => {
                           setExportProjectId(project.id);
-                          setExportTech("react-tailwind");
                         }}
                         className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2.5 text-slate-600 transition hover:border-slate-300 hover:text-slate-950"
                         title="Export"
@@ -461,7 +456,10 @@ export default function HomePage() {
           }
         };
 
-        const files = generateNextJsProject(currentExportProject as any, designElements);
+        const files = generateNextJsProject(
+          currentExportProject,
+          currentExportProject.designElements
+        );
         const mainPage = files.find(f => f.name === "src/app/page.tsx") || files[0];
         const previewCode = mainPage.content;
         const previewFileName = mainPage.name;

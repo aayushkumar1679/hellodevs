@@ -21,11 +21,10 @@ import { useSession, signOut } from "next-auth/react";
 import { useCanvasStore } from "@/state/useCanvasStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import { useDesignStore } from "@/state/useDesignStore";
-import { generateExport, type TechStack } from "@/utils/exportGenerators";
+import type { TechStack } from "@/utils/exportGenerators";
 
 export default function BuilderHeader() {
   const { undo, redo, currentProject } = useCanvasStore();
-  const elements = useDesignStore((state) => state.elements);
   const setDesignBreakpoint = useDesignStore((state) => state.setActiveBreakpoint);
 
   const {

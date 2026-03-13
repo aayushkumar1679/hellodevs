@@ -3,80 +3,60 @@
 import React from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import ProjectSurface from "@/components/project/ProjectSurface";
 import { useCanvasStore } from "@/state/useCanvasStore";
-import { useDesignStore } from "@/state/useDesignStore";
-
-function PreviewNode({
-  componentId,
-}: {
-  componentId: string;
-}) {
-  const project = useCanvasStore((state) => state.currentProject);
-  const elements = useDesignStore((state) => state.elements);
-
-  const component = project?.components[componentId];
-  if (!component) return null;
-
-  const css = elements[componentId]?.cssProperties?.base || {};
-  const props = component.props || {};
-  const children = component.children.map((childId) => (
-    <PreviewNode key={childId} componentId={childId} />
-  ));
-
-  switch (component.type) {
-    case "section":
-      return <section style={css}>{children}</section>;
-    case "container":
-    case "flex-row":
-    case "flex-column":
-    case "grid":
-    case "card":
-    case "form":
-      return <div style={css}>{children}</div>;
-    case "heading": {
-      const tag = `h${Math.min(Math.max(Number(props.level || 2), 1), 6)}`;
-      return React.createElement(tag, { style: css }, props.text || "Heading");
-    }
-    case "text":
-      return <p style={css}>{props.text || "Text"}</p>;
-    case "button":
-      return <button style={css}>{props.text || "Button"}</button>;
-    case "image":
-      return (
-        <img
-          style={css}
-          src={props.src || "https://images.pexels.com/photos/34088/pexels-photo.jpg"}
-          alt={props.alt || "Image"}
-        />
-      );
-    case "input":
-      return <input style={css} placeholder={props.placeholder || "Enter text"} />;
-    case "textarea":
-      return (
-        <textarea
-          style={css}
-          placeholder={props.placeholder || "Write something"}
-        />
-      );
-    case "badge":
-      return <span style={css}>{props.text || "Badge"}</span>;
-    case "alert":
-      return <div style={css}>{props.text || "Alert"}</div>;
-    default:
-      return <div style={css}>{children}</div>;
-  }
-}
+import { getProjectRootIds } from "@/utils/projectModel";
 
 export default function CanvasPreviewPage() {
   const params = useParams() as { id: string };
-  const { projects, setCurrentProject } = useCanvasStore();
-  const project = projects[params.id];
+  const {
+    projects,
+    currentProject,
+    currentProjectId,
+    setCurrentProject,
+    fetchProject,
+  } = useCanvasStore();
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  const project =
+    currentProjectId === params.id ? currentProject : projects[params.id] ?? null;
 
   React.useEffect(() => {
-    if (params.id) {
-      setCurrentProject(params.id);
-    }
-  }, [params.id, setCurrentProject]);
+    let mounted = true;
+
+    const loadProject = async () => {
+      setIsLoading(true);
+
+      if (projects[params.id]) {
+        setCurrentProject(params.id);
+        if (mounted) {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      await fetchProject(params.id);
+      if (mounted) {
+        setIsLoading(false);
+      }
+    };
+
+    void loadProject();
+
+    return () => {
+      mounted = false;
+    };
+  }, [fetchProject, params.id, projects, setCurrentProject]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="rounded-[24px] border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
+          Loading preview...
+        </div>
+      </div>
+    );
+  }
 
   if (!project) {
     return (
@@ -88,9 +68,7 @@ export default function CanvasPreviewPage() {
     );
   }
 
-  const roots = project.rootOrder?.length
-    ? project.rootOrder
-    : Object.values(project.components).map((component) => component.id);
+  const hasContent = getProjectRootIds(project).length > 0;
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-4 py-8">
@@ -114,12 +92,12 @@ export default function CanvasPreviewPage() {
         </div>
 
         <div className="overflow-hidden rounded-[36px] border border-slate-200 bg-white p-6 shadow-[0_32px_80px_-50px_rgba(15,23,42,0.45)]">
-          {roots.length > 0 ? (
-            <div className="space-y-4">
-              {roots.map((rootId) => (
-                <PreviewNode key={rootId} componentId={rootId} />
-              ))}
-            </div>
+          {hasContent ? (
+            <ProjectSurface
+              project={project}
+              designElements={project.designElements}
+              className="space-y-4"
+            />
           ) : (
             <div className="flex min-h-[60vh] items-center justify-center text-center text-slate-500">
               No components added yet.

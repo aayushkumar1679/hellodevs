@@ -13,8 +13,8 @@ export type ComponentCategory =
 
 export type BlueprintNode = {
   type: string;
-  props?: Record<string, any>;
-  css?: Record<string, any>;
+  props?: Record<string, unknown>;
+  css?: Record<string, unknown>;
   children?: BlueprintNode[];
 };
 
@@ -23,8 +23,8 @@ export interface ComponentDefinition {
   label: string;
   description: string;
   category: ComponentCategory;
-  defaultProps?: Record<string, any>;
-  defaultCss?: Record<string, any>;
+  defaultProps?: Record<string, unknown>;
+  defaultCss?: Record<string, unknown>;
   allowChildren?: boolean;
   isLayout?: boolean;
   tags?: string[];

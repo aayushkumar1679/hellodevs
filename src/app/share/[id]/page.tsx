@@ -4,20 +4,69 @@ import React, { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, Code2 } from "lucide-react";
-import { useCanvasStore } from "@/state/useCanvasStore";
-import { useDesignStore } from "@/state/useDesignStore";
+import type { Project } from "@/state/useCanvasStore";
+import ProjectSurface from "@/components/project/ProjectSurface";
 import { generateExport } from "@/utils/exportGenerators";
+import { normalizeProject } from "@/utils/projectModel";
 
 export default function SharePage() {
   const params = useParams() as { id: string };
-  const project = useCanvasStore((state) => state.projects[params.id]);
-  const designElements = useDesignStore((state) => state.elements);
+  const [project, setProject] = useState<Project | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [showCode, setShowCode] = useState(false);
+
+  React.useEffect(() => {
+    let mounted = true;
+
+    const loadProject = async () => {
+      setIsLoading(true);
+
+      try {
+        const response = await fetch(`/api/share/${params.id}`);
+        if (!response.ok) {
+          if (mounted) {
+            setProject(null);
+          }
+          return;
+        }
+
+        const data = (await response.json()) as Project;
+        if (mounted) {
+          setProject(normalizeProject(data));
+        }
+      } catch (error) {
+        console.error("Failed to load shared project", error);
+        if (mounted) {
+          setProject(null);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadProject();
+
+    return () => {
+      mounted = false;
+    };
+  }, [params.id]);
 
   const exportedCode = useMemo(() => {
     if (!project) return "";
-    return generateExport(project, "react-tailwind", designElements).code;
-  }, [designElements, project]);
+    return generateExport(project, "react-tailwind", project.designElements).code;
+  }, [project]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="rounded-[24px] border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
+          Loading shared project...
+        </div>
+      </div>
+    );
+  }
 
   if (!project) {
     return (
@@ -55,18 +104,22 @@ export default function SharePage() {
               className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
               <Eye className="h-4 w-4" />
-              Open live preview
+              Builder preview
             </Link>
           </div>
         </div>
       </header>
 
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-6 lg:flex-row">
-        <div className={`${showCode ? "lg:w-[58%]" : "w-full"} overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_24px_60px_-40px_rgba(15,23,42,0.3)]`}>
-          <iframe
-            title={`${project.name} preview`}
-            src={`/builder/${project.id}/preview`}
-            className="h-[78vh] w-full border-0"
+        <div
+          className={`${
+            showCode ? "lg:w-[58%]" : "w-full"
+          } overflow-hidden rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.3)]`}
+        >
+          <ProjectSurface
+            project={project}
+            designElements={project.designElements}
+            className="space-y-4"
           />
         </div>
 

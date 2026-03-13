@@ -71,3 +71,50 @@ select {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 116, 139, 0.75);
 }
+
+@keyframes polyglot-float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+@keyframes polyglot-pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.92;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes polyglot-rise-in {
+  0% {
+    opacity: 0;
+    transform: translateY(28px) scale(0.98);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes polyglot-orbit {
+  0%,
+  100% {
+    transform: perspective(1400px) rotateX(12deg) rotateY(-10deg);
+  }
+
+  50% {
+    transform: perspective(1400px) rotateX(16deg) rotateY(12deg);
+  }
+}

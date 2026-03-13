@@ -1,18 +1,6 @@
 "use client";
 
 import React from "react";
-import { 
-  AlignLeft, 
-  AlignCenter, 
-  AlignRight, 
-  AlignJustify,
-  ArrowDown,
-  ArrowRight,
-  WrapText,
-  LayoutGrid,
-  ChevronLast,
-  ChevronFirst,
-} from "lucide-react";
 
 interface VisualOption {
   value: string;

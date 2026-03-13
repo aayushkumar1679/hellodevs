@@ -5,8 +5,8 @@ import type { BlueprintNode } from "@/config/componentRegistry";
 
 export interface GeneratedComponentNode {
   type: string;
-  props?: Record<string, any>;
-  css?: Record<string, any>;
+  props?: Record<string, unknown>;
+  css?: Record<string, unknown>;
   children?: GeneratedComponentNode[];
 }
 

@@ -1,12 +1,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createElementRecord } from "@/utils/projectModel";
 
 /* ---------------------------------------------
  Types
 ---------------------------------------------- */
 
 export type Breakpoint = "desktop" | "tablet" | "mobile";
-export type CSSProperties = Record<string, any>;
+export type CSSProperties = Record<string, unknown>;
 
 export interface ResponsiveCss {
   [key: string]: CSSProperties | undefined;
@@ -32,7 +33,7 @@ interface DesignState {
   addElement: (
     id: string,
     type: string,
-    initialCss?: Record<string, any>
+    initialCss?: Record<string, unknown>
   ) => void;
   replaceElements: (elements: Record<string, Element>) => void;
 
@@ -46,16 +47,20 @@ interface DesignState {
   setActiveBreakpoint: (bp: Breakpoint) => void;
 
   /* css updates */
-  updateCSSProperty: (elementId: string, property: string, value: any) => void;
+  updateCSSProperty: (
+    elementId: string,
+    property: string,
+    value: unknown
+  ) => void;
 
   updateCSSPropertiesBulk: (
     elementIds: string[],
     property: string,
-    value: any
+    value: unknown
   ) => void;
 
   /* resolver */
-  getResolvedCss: (elementId: string) => Record<string, any>;
+  getResolvedCss: (elementId: string) => Record<string, unknown>;
 }
 
 /* ---------------------------------------------
@@ -82,18 +87,7 @@ export const useDesignStore = create<DesignState>()(
           return {
             elements: {
               ...state.elements,
-              [id]: {
-                id,
-                type,
-                cssProperties: {
-                  base: {
-                    display: "block",
-                    padding: "10px",
-                    margin: "0",
-                    ...initialCss,
-                  },
-                },
-              },
+              [id]: createElementRecord(id, type, initialCss),
             },
           };
         }),
@@ -121,7 +115,8 @@ export const useDesignStore = create<DesignState>()(
 
       removeElement: (id) =>
         set((state) => {
-          const { [id]: _, ...rest } = state.elements;
+          const rest = { ...state.elements };
+          delete rest[id];
           return {
             elements: rest,
             selectedElements: state.selectedElements.filter((sid) => sid !== id),

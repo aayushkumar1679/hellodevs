@@ -37,16 +37,25 @@ const SNAP_THRESHOLD = 8;
 
 const snapToGrid = (v: number) => Math.round(v / GRID) * GRID;
 
-function resolveBackground(css: Record<string, any>) {
+function resolveBackground(css: Record<string, unknown>) {
   if (css.background) return css.background;
 
-  if (css.backgroundGradient) {
+  if (
+    css.backgroundGradient &&
+    typeof css.backgroundGradient === "object" &&
+    !Array.isArray(css.backgroundGradient)
+  ) {
     const g = css.backgroundGradient;
-    if (g.type === "solid") return g.colors?.[0];
-    if (g.type === "linear")
-      return `linear-gradient(${g.angle ?? 90}deg, ${g.colors.join(", ")})`;
-    if (g.type === "radial")
-      return `radial-gradient(circle, ${g.colors.join(", ")})`;
+    if ("type" in g && "colors" in g && Array.isArray(g.colors)) {
+      if (g.type === "solid") return g.colors[0];
+      if (g.type === "linear") {
+        const angle = "angle" in g ? g.angle : 90;
+        return `linear-gradient(${angle ?? 90}deg, ${g.colors.join(", ")})`;
+      }
+      if (g.type === "radial") {
+        return `radial-gradient(circle, ${g.colors.join(", ")})`;
+      }
+    }
   }
 
   return css.backgroundColor;
@@ -90,7 +99,10 @@ export default function CanvasElement({
   const [isResizing, setIsResizing] = useState(false);
 
   const isSelected = selectedElements.includes(elementId);
-  const css = element ? getResolvedCss(elementId) : {};
+  const css = useMemo(
+    () => (element ? getResolvedCss(elementId) : ({} as Record<string, unknown>)),
+    [element, elementId, getResolvedCss]
+  );
 
   useLayoutEffect(() => {
     if (!elementRef.current || !onRect) return;
@@ -117,36 +129,7 @@ export default function CanvasElement({
     canvasRectLeft?: number;
   } | null>(null);
 
-  const startResize = (e: React.MouseEvent, dir: ResizeDir) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-
-    const el = elementRef.current;
-    if (!el) return;
-
-    const rect = el.getBoundingClientRect();
-    const numericLeft = css && css.left ? parseFloat(String(css.left)) || rect.left : rect.left;
-    const numericTop = css && css.top ? parseFloat(String(css.top)) || rect.top : rect.top;
-
-    resizeRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startW: rect.width,
-      startH: rect.height,
-      startLeft: numericLeft,
-      startTop: numericTop,
-      dir,
-      aspect: rect.width / Math.max(1, rect.height),
-    };
-
-    el.setAttribute("data-resizing", "true");
-    setIsResizing(true);
-    window.addEventListener("mousemove", onResizeMove);
-    window.addEventListener("mouseup", stopResize);
-  };
-
-  const onResizeMove = (ev: MouseEvent) => {
+  const onResizeMove = useCallback((ev: MouseEvent) => {
     ev.preventDefault();
     const state = resizeRef.current;
     if (!state || !elementRef.current) return;
@@ -210,9 +193,18 @@ export default function CanvasElement({
     const guidesToEmit: Array<{ x?: number; y?: number }> = [];
 
     if (snapTargets) {
-      const { best: bestLeft, dist: distLeft } = findClosest(snapTargets.xs, Math.round(snappedLeft));
-      const { best: bestRight, dist: distRight } = findClosest(snapTargets.xs, Math.round(snappedLeft + snappedW));
-      const { best: bestCenterX, dist: distCenterX } = findClosest(snapTargets.xs, Math.round(snappedLeft + snappedW / 2));
+      const { best: bestLeft, dist: distLeft } = findClosest(
+        snapTargets.xs,
+        Math.round(snappedLeft)
+      );
+      const { best: bestRight, dist: distRight } = findClosest(
+        snapTargets.xs,
+        Math.round(snappedLeft + snappedW)
+      );
+      const { best: bestCenterX, dist: distCenterX } = findClosest(
+        snapTargets.xs,
+        Math.round(snappedLeft + snappedW / 2)
+      );
 
       if (bestLeft !== null && distLeft <= SNAP_THRESHOLD) {
         snappedLeft = bestLeft;
@@ -226,9 +218,18 @@ export default function CanvasElement({
         guidesToEmit.push({ x: bestCenterX });
       }
 
-      const { best: bestTop, dist: distTop } = findClosest(snapTargets.ys, Math.round(snappedTop));
-      const { best: bestBottom, dist: distBottom } = findClosest(snapTargets.ys, Math.round(snappedTop + snappedH));
-      const { best: bestCenterY, dist: distCenterY } = findClosest(snapTargets.ys, Math.round(snappedTop + snappedH / 2));
+      const { best: bestTop, dist: distTop } = findClosest(
+        snapTargets.ys,
+        Math.round(snappedTop)
+      );
+      const { best: bestBottom, dist: distBottom } = findClosest(
+        snapTargets.ys,
+        Math.round(snappedTop + snappedH)
+      );
+      const { best: bestCenterY, dist: distCenterY } = findClosest(
+        snapTargets.ys,
+        Math.round(snappedTop + snappedH / 2)
+      );
 
       if (bestTop !== null && distTop <= SNAP_THRESHOLD) {
         snappedTop = bestTop;
@@ -256,17 +257,46 @@ export default function CanvasElement({
     if (onRect) {
       onRect(new DOMRect(snappedLeft, snappedTop, snappedW, snappedH));
     }
-  };
+  }, [elementId, getSnapTargets, onGuide, onRect, updateCSSProperty]);
 
-  const stopResize = () => {
+  const stopResize = useCallback(function handleStopResize() {
     const el = elementRef.current;
     if (el) el.removeAttribute("data-resizing");
     setIsResizing(false);
     resizeRef.current = null;
     if (onGuide) onGuide([]);
     window.removeEventListener("mousemove", onResizeMove);
-    window.removeEventListener("mouseup", stopResize);
-  };
+    window.removeEventListener("mouseup", handleStopResize);
+  }, [onGuide, onResizeMove]);
+
+  const startResize = useCallback((e: React.MouseEvent, dir: ResizeDir) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const el = elementRef.current;
+    if (!el) return;
+
+    const rect = el.getBoundingClientRect();
+    const numericLeft = css && css.left ? parseFloat(String(css.left)) || rect.left : rect.left;
+    const numericTop = css && css.top ? parseFloat(String(css.top)) || rect.top : rect.top;
+
+    resizeRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startW: rect.width,
+      startH: rect.height,
+      startLeft: numericLeft,
+      startTop: numericTop,
+      dir,
+      aspect: rect.width / Math.max(1, rect.height),
+    };
+
+    el.setAttribute("data-resizing", "true");
+    setIsResizing(true);
+    window.addEventListener("mousemove", onResizeMove);
+    window.addEventListener("mouseup", stopResize);
+  }, [css, onResizeMove, stopResize]);
 
   const inlineStyle = useMemo<React.CSSProperties>(() => {
     const style: React.CSSProperties = {
@@ -280,7 +310,8 @@ export default function CanvasElement({
 
     Object.entries(css).forEach(([key, val]) => {
       if (key === "background" || key === "backgroundColor" || key === "backgroundGradient") return;
-      (style as any)[key] = val;
+      const styleRecord = style as Record<string, unknown>;
+      styleRecord[key] = val;
     });
 
     const bg = resolveBackground(css);
@@ -310,7 +341,7 @@ export default function CanvasElement({
       window.removeEventListener("mousemove", onResizeMove);
       window.removeEventListener("mouseup", stopResize);
     };
-  }, []);
+  }, [onResizeMove, stopResize]);
 
   return (
     <div

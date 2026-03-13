@@ -22,9 +22,15 @@ export default function ElementInspector() {
 
   const getElementInfo = (id: string) => {
     const component = currentProject?.components[id];
+    const textProp = component?.props?.text;
+    const label =
+      typeof textProp === "string" || typeof textProp === "number"
+        ? String(textProp)
+        : component?.type || "Element";
+
     return {
       type: component?.type || "Unknown",
-      label: component?.props?.text || component?.type || "Element",
+      label,
     };
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useTransition } from "react";
+import React, { useState, useTransition } from "react";
 import {
   Sparkles,
   Wand2,
@@ -32,22 +32,17 @@ export default function AIPromptPanel() {
     (state) => state.hydrateCurrentProject
   );
 
-  const [prompt, setPrompt] = useState(PROMPT_IDEAS[0]);
-  const [model, setModel] = useState(DEFAULT_OPENAI_MODEL);
+  const [prompt, setPrompt] = useState(
+    currentProject?.generationPrompt || PROMPT_IDEAS[0]
+  );
+  const [model, setModel] = useState(
+    currentProject?.generationModel || DEFAULT_OPENAI_MODEL
+  );
   const [error, setError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<string | null>(null);
+  const [summary, setSummary] = useState<string | null>(
+    currentProject?.generationSummary || null
+  );
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    setPrompt(currentProject?.generationPrompt || PROMPT_IDEAS[0]);
-    setModel(currentProject?.generationModel || DEFAULT_OPENAI_MODEL);
-    setSummary(currentProject?.generationSummary || null);
-  }, [
-    currentProject?.generationModel,
-    currentProject?.generationPrompt,
-    currentProject?.generationSummary,
-    currentProject?.id,
-  ]);
 
   const handleGenerate = () => {
     if (!currentProject) return;

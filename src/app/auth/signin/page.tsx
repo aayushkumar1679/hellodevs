@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
-import { Sparkles, Mail, Github, Chrome, ArrowRight, Loader2 } from "lucide-react";
+import { Sparkles, Mail, Chrome, ArrowRight, Loader2 } from "lucide-react";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
@@ -139,7 +139,7 @@ export default function SignInPage() {
         {/* Advanced Footer */}
         <div className="mt-12 text-center space-y-4">
           <p className="text-sm font-medium text-slate-500">
-            Trusted by the world's most innovative designers.
+            Trusted by the world&apos;s most innovative designers.
           </p>
           <div className="flex justify-center gap-6 opacity-30 grayscale hover:grayscale-0 transition-all duration-500">
              {/* Simple placeholders for "trust logos" if needed */}

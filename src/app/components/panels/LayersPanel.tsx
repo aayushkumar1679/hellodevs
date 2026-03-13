@@ -6,27 +6,24 @@ import { useDesignStore } from "@/state/useDesignStore";
 import {
   ChevronRight,
   ChevronDown,
-  Trash2,
-  GripVertical,
   Layers,
-  LogOut,
   Lock,
   Unlock,
   Eye,
   EyeOff,
-  MoreHorizontal,
-  Pen,
   Box,
 } from "lucide-react";
 
 type DropPosition = "before" | "after" | null;
 type DropMode = "nest" | "reorder" | null;
+type LayerMeta = {
+  locked?: boolean;
+  hidden?: boolean;
+};
 
 export default function LayersPanel() {
   const {
     currentProject,
-    removeComponent,
-    reorderChildren,
     moveComponent,
     updateComponent,
   } = useCanvasStore();
@@ -79,6 +76,11 @@ export default function LayersPanel() {
 
   /* ---------------- Helpers ---------------- */
 
+  const getMeta = (props: Record<string, unknown>): LayerMeta => {
+    const meta = props.meta;
+    return meta && typeof meta === "object" ? (meta as LayerMeta) : {};
+  };
+
   const toggleExpanded = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setExpandedIds((prev) => {
@@ -118,7 +120,7 @@ export default function LayersPanel() {
   const toggleLock = (id: string) => {
     const comp = currentProject.components[id];
     const props = comp.props ?? {};
-    const meta = (props.meta as any) ?? {};
+    const meta = getMeta(props);
     const newMeta = { ...meta, locked: !meta.locked };
     updateComponent(id, { props: { ...props, meta: newMeta } });
     if (newMeta.locked && selectedElements.includes(id)) {
@@ -129,7 +131,7 @@ export default function LayersPanel() {
   const toggleHidden = (id: string) => {
     const comp = currentProject.components[id];
     const props = comp.props ?? {};
-    const meta = (props.meta as any) ?? {};
+    const meta = getMeta(props);
     const newMeta = { ...meta, hidden: !meta.hidden };
     updateComponent(id, { props: { ...props, meta: newMeta } });
   };
@@ -137,7 +139,10 @@ export default function LayersPanel() {
   const startEditing = (id: string) => {
     const comp = currentProject.components[id];
     const props = comp.props ?? {};
-    const currentLabel = (props.label as string) ?? props.text ?? comp.type;
+    const currentLabel =
+      (typeof props.label === "string" && props.label) ||
+      (typeof props.text === "string" && props.text) ||
+      comp.type;
     setEditingId(id);
     setEditValue(currentLabel);
     setOpenMenuId(null);
@@ -155,7 +160,7 @@ export default function LayersPanel() {
 
   const onDragStart = (id: string, e: React.DragEvent) => {
     const comp = currentProject.components[id];
-    if (comp.props?.meta?.locked) {
+    if (getMeta(comp.props ?? {}).locked) {
       e.preventDefault();
       return;
     }
@@ -180,17 +185,24 @@ export default function LayersPanel() {
 
   /* ---------------- Render Component ---------------- */
 
-  const renderComponent = (c: any, level = 0) => {
+  const renderComponent = (
+    c: (typeof currentProject.components)[string],
+    level = 0
+  ) => {
     const isExpanded = expandedIds.has(c.id);
     const isSelected = selectedElements.includes(c.id);
     const isDrop = dropTargetId === c.id;
     const pad = 12 + level * 16;
 
     const props = c.props ?? {};
-    const meta = (props.meta as any) ?? {};
+    const meta = getMeta(props);
     const locked = !!meta.locked;
     const hidden = !!meta.hidden;
-    const label = props.label ?? props.text ?? c.type;
+    const labelSource = props.label ?? props.text;
+    const label =
+      typeof labelSource === "string" || typeof labelSource === "number"
+        ? String(labelSource)
+        : c.type;
 
     return (
       <div key={c.id}>

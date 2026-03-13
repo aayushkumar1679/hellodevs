@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React from "react";
@@ -7,15 +8,9 @@ interface ComponentRendererProps {
   component: {
     id: string;
     type: string;
-    props?: Record<string, any>;
+    props?: Record<string, unknown>;
   };
 }
-
-/* --------------------------------------------------
-  Base render-safe style
-  These styles ensure the component fits its container
-  without overriding visual properties like color/bg.
--------------------------------------------------- */
 
 const baseStyle: React.CSSProperties = {
   boxSizing: "border-box",
@@ -33,23 +28,14 @@ const baseStyle: React.CSSProperties = {
   justifyContent: "inherit",
 };
 
-/* --------------------------------------------------
-  Component Renderer
--------------------------------------------------- */
-
 export default function ComponentRenderer({
   component,
 }: ComponentRendererProps) {
-  const definition = COMPONENT_LIBRARY.find((c) => c.type === component.type);
-
+  const definition = COMPONENT_LIBRARY.find((item) => item.type === component.type);
   const props = {
     ...definition?.defaultProps,
     ...component.props,
   };
-
-  /* ===============================
-     Layout Components
-     =============================== */
 
   if (
     component.type === "section" ||
@@ -58,15 +44,12 @@ export default function ComponentRenderer({
     component.type === "flex-column" ||
     component.type === "grid" ||
     component.type === "card" ||
-    component.type === "form"
+    component.type === "form" ||
+    component.type === "divider" ||
+    component.type === "spacer"
   ) {
-    // These are layout shells; they rely entirely on CanvasElement styles
-    return null; 
+    return null;
   }
-
-  /* ===============================
-     Content Components
-     =============================== */
 
   switch (component.type) {
     case "heading": {
@@ -76,23 +59,18 @@ export default function ComponentRenderer({
         {
           style: {
             ...baseStyle,
-            fontWeight: "inherit", // Inherit from container
-          } as React.CSSProperties,
+            fontWeight: "inherit",
+          },
         },
-        props.text ?? "Heading"
+        String(props.text ?? "Heading")
       );
     }
-
     case "text":
-      return (
-        <p style={baseStyle}>
-          {props.text ?? "Text"}
-        </p>
-      );
-
+      return <p style={baseStyle}>{String(props.text ?? "Text")}</p>;
     case "button":
       return (
         <button
+          type="button"
           style={{
             ...baseStyle,
             display: "inline-flex",
@@ -100,15 +78,18 @@ export default function ComponentRenderer({
             justifyContent: "center",
             cursor: "pointer",
             userSelect: "none",
-            borderRadius: "inherit", // Respect container's border radius
-            padding: "inherit",      // Respect container's padding
+            borderRadius: "inherit",
+            padding: "inherit",
           }}
         >
-          {props.text ?? "Button"}
+          {String(props.text ?? "Button")}
         </button>
       );
+    case "navbar": {
+      const links = (Array.isArray(props.links) ? props.links : []) as Array<{
+        label?: string;
+      }>;
 
-    case "navbar":
       return (
         <div
           style={{
@@ -118,57 +99,84 @@ export default function ComponentRenderer({
             justifyContent: "space-between",
           }}
         >
-          <strong>{props.brand?.text ?? "Polyglot"}</strong>
+          <strong>{String(props.brand && typeof props.brand === "object" && "text" in props.brand ? props.brand.text : "Polyglot")}</strong>
           <div style={{ display: "flex", gap: "inherit", opacity: 0.8, fontSize: "0.9em" }}>
-            {(props.links ?? []).slice(0, 3).map((link: any, index: number) => (
-              <span key={`${link?.label ?? "link"}-${index}`}>
-                {link?.label ?? "Link"}
+            {links.slice(0, 3).map((link, index) => (
+              <span key={`${component.id}-link-${index}`}>
+                {String(link.label ?? "Link")}
               </span>
             ))}
           </div>
         </div>
       );
-
-    case "hero":
+    }
+    case "feature":
       return (
-        <div style={{ ...baseStyle, display: "flex", flexDirection: "column" }}>
-          <h1 style={{ margin: 0, fontSize: "2.5em", lineHeight: 1.1, fontWeight: 700 }}>
-            {props.title ?? "Build better, faster."}
-          </h1>
-          <p style={{ margin: "1rem 0", fontSize: "1.1em", opacity: 0.8 }}>
-            {props.subtitle ?? "A premium product page generated from your prompt."}
+        <div style={{ ...baseStyle, display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <strong>{String(props.title ?? "Feature title")}</strong>
+          <p style={{ margin: 0 }}>{String(props.text ?? "Feature description")}</p>
+        </div>
+      );
+    case "testimonial":
+      return (
+        <div style={{ ...baseStyle, display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <p style={{ margin: 0 }}>{String(props.quote ?? "Customer quote")}</p>
+          <small style={{ opacity: 0.7 }}>
+            {String(props.author ?? "Customer")}
+            {props.role ? `, ${String(props.role)}` : ""}
+          </small>
+        </div>
+      );
+    case "pricing-card":
+      return (
+        <div style={{ ...baseStyle, display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <strong>{String(props.title ?? "Plan")}</strong>
+          <p style={{ margin: 0 }}>
+            {String(props.price ?? "$0")}
+            {props.period ? ` / ${String(props.period)}` : ""}
           </p>
         </div>
       );
-
-    case "cta":
+    case "product-card":
       return (
-        <div style={{ ...baseStyle, textAlign: "center" }}>
-          <h2 style={{ fontSize: "1.5em", marginBottom: "1rem" }}>{props.text ?? "Ready to build?"}</h2>
-          <button
-            style={{
-              padding: "0.75rem 1.5rem",
-              borderRadius: "99px",
-              background: "currentColor", // Interesting default
-              color: "white", // Simplified
-              filter: "invert(1)",
-              border: "none",
-              fontWeight: 600,
-            }}
-          >
-            {props.cta?.text ?? "Start free"}
-          </button>
+        <div style={{ ...baseStyle, display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <strong>{String(props.title ?? "Product")}</strong>
+          <p style={{ margin: 0 }}>{String(props.price ?? "$0")}</p>
         </div>
       );
-
+    case "cta":
+      return (
+        <div style={{ ...baseStyle, display: "flex", flexDirection: "column", gap: "1rem", textAlign: "center" }}>
+          <h2 style={{ margin: 0 }}>{String(props.text ?? "Ready to build?")}</h2>
+          {props.cta && typeof props.cta === "object" && "text" in props.cta ? (
+            <button
+              type="button"
+              style={{
+                alignSelf: "center",
+                padding: "0.75rem 1.5rem",
+                borderRadius: "999px",
+                background: "currentColor",
+                color: "white",
+                filter: "invert(1)",
+                fontWeight: 600,
+              }}
+            >
+              {String(props.cta.text)}
+            </button>
+          ) : null}
+        </div>
+      );
     case "image":
       return props.src ? (
         <img
-          src={props.src}
-          alt={props.alt || ""}
+          src={String(props.src)}
+          alt={String(props.alt ?? "")}
           style={{
             ...baseStyle,
-            objectFit: props.objectFit ?? "cover",
+            objectFit:
+              (typeof props.objectFit === "string"
+                ? props.objectFit
+                : "cover") as React.CSSProperties["objectFit"],
             display: "block",
             borderRadius: "inherit",
           }}
@@ -190,7 +198,6 @@ export default function ComponentRenderer({
           Image
         </div>
       );
-
     case "badge":
       return (
         <span
@@ -203,14 +210,14 @@ export default function ComponentRenderer({
             background: "rgba(0,0,0,0.1)",
           }}
         >
-          {props.text ?? "Badge"}
+          {String(props.text ?? "Badge")}
         </span>
       );
-
     case "input":
       return (
         <input
-          placeholder={props.placeholder}
+          readOnly
+          placeholder={String(props.placeholder ?? "")}
           style={{
             ...baseStyle,
             padding: "0.5rem",
@@ -220,11 +227,11 @@ export default function ComponentRenderer({
           }}
         />
       );
-
     case "textarea":
       return (
         <textarea
-          placeholder={props.placeholder}
+          readOnly
+          placeholder={String(props.placeholder ?? "")}
           style={{
             ...baseStyle,
             height: "100%",
@@ -236,7 +243,12 @@ export default function ComponentRenderer({
           }}
         />
       );
-
+    case "alert":
+      return (
+        <div style={{ ...baseStyle, fontStyle: "italic" }}>
+          {String(props.text ?? "Alert")}
+        </div>
+      );
     default:
       return (
         <div style={{ fontSize: 12, color: "#999", fontStyle: "italic" }}>

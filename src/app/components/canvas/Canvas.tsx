@@ -8,6 +8,7 @@ import { useEditorStore } from "@/state/useEditorStore";
 import CanvasElement from "./CanvasElement";
 import ComponentWrapper from "./ComponentWrapper";
 import { useSyncStores } from "@/hooks/useSyncStores";
+import { getProjectRootIds } from "@/utils/projectModel";
 
 /* ----------------------------------------
  Types
@@ -15,12 +16,27 @@ import { useSyncStores } from "@/hooks/useSyncStores";
 
 type Rect = { x: number; y: number; w: number; h: number };
 type Guide = { x?: number; y?: number };
+type CanvasOverlayRect = { left: number; top: number; width: number; height: number };
 
 type DistanceLabel = {
   x: number;
   y: number;
   value: number;
   axis: "x" | "y";
+};
+
+type ElementPosition = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+type GroupChildRelation = {
+  relL: number;
+  relT: number;
+  relW: number;
+  relH: number;
 };
 
 /* ========================================
@@ -52,12 +68,84 @@ export default function Canvas() {
   const [selectionBox, setSelectionBox] = useState<Rect | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [distanceLabels, setDistanceLabels] = useState<DistanceLabel[]>([]);
+  const [canvasRectForRender, setCanvasRectForRender] = useState<CanvasOverlayRect | null>(null);
+  const [groupBoxLocal, setGroupBoxLocal] = useState<Rect | null>(null);
   const isResizingRef = useRef(false);
+
+  const computeGroupBox = useCallback((): DOMRect | null => {
+    if (selectedElements.length < 2) return null;
+    const rects = selectedElements
+      .map((id) => elementRects.current[id])
+      .filter(Boolean);
+    if (rects.length < 2) return null;
+    const left = Math.min(...rects.map((r) => r.left));
+    const top = Math.min(...rects.map((r) => r.top));
+    const right = Math.max(...rects.map((r) => r.right));
+    const bottom = Math.max(...rects.map((r) => r.bottom));
+    return new DOMRect(left, top, right - left, bottom - top);
+  }, [selectedElements]);
+
+  const syncOverlayMetrics = useCallback(() => {
+    const canvasEl = canvasRef.current;
+    if (!canvasEl) {
+      setCanvasRectForRender(null);
+      setGroupBoxLocal(null);
+      return;
+    }
+
+    const canvasRect = canvasEl.getBoundingClientRect();
+    const nextCanvasRect = {
+      left: canvasRect.left,
+      top: canvasRect.top,
+      width: canvasRect.width,
+      height: canvasRect.height,
+    };
+
+    setCanvasRectForRender((prev) => {
+      if (
+        prev &&
+        prev.left === nextCanvasRect.left &&
+        prev.top === nextCanvasRect.top &&
+        prev.width === nextCanvasRect.width &&
+        prev.height === nextCanvasRect.height
+      ) {
+        return prev;
+      }
+
+      return nextCanvasRect;
+    });
+
+    const groupBoxClient = computeGroupBox();
+    const nextGroupBoxLocal = groupBoxClient
+      ? {
+          x: Math.round(groupBoxClient.left - canvasRect.left),
+          y: Math.round(groupBoxClient.top - canvasRect.top),
+          w: Math.round(groupBoxClient.width),
+          h: Math.round(groupBoxClient.height),
+        }
+      : null;
+
+    setGroupBoxLocal((prev) => {
+      if (
+        prev &&
+        nextGroupBoxLocal &&
+        prev.x === nextGroupBoxLocal.x &&
+        prev.y === nextGroupBoxLocal.y &&
+        prev.w === nextGroupBoxLocal.w &&
+        prev.h === nextGroupBoxLocal.h
+      ) {
+        return prev;
+      }
+
+      return nextGroupBoxLocal;
+    });
+  }, [computeGroupBox]);
 
   const registerRect = useCallback((id: string, rect: DOMRect) => {
     elementRects.current[id] = rect;
     isResizingRef.current = true;
-  }, []);
+    syncOverlayMetrics();
+  }, [syncOverlayMetrics]);
 
   // helper to detect if the event target is a resize handle or a currently resizing element
   const isResizingElement = (target: EventTarget | null) => {
@@ -75,14 +163,10 @@ export default function Canvas() {
   const movingRef = useRef<{
     startX: number;
     startY: number;
-    initialPositions: Record<
-      string,
-      { left: number; top: number; width: number; height: number }
-    >;
+    initialPositions: Record<string, ElementPosition>;
     movingIds: string[];
   } | null>(null);
 
-  const [isMoving, setIsMoving] = useState(false);
   const [guides, setGuides] = useState<Guide[]>([]);
 
   const GRID = 8; // snap to 8px grid
@@ -122,19 +206,11 @@ export default function Canvas() {
     return { best, dist };
   }
 
-  // effect
-  useEffect(() => {
-    if (!isResizingRef.current) return;
-    updateDistanceLabelsForResize();
-  }, [selectedElements]);
-
-  // Add helper to compute distances
-
-  function computeDistanceLabels(
+  const computeDistanceLabels = useCallback((
     movingIds: string[],
     allRects: Record<string, DOMRect>,
     canvasRect: DOMRect
-  ): DistanceLabel[] {
+  ): DistanceLabel[] => {
     const labels: DistanceLabel[] = [];
 
     movingIds.forEach((id) => {
@@ -185,9 +261,9 @@ export default function Canvas() {
     });
 
     return labels;
-  }
+  }, []);
 
-  function updateDistanceLabelsForResize() {
+  const updateDistanceLabelsForResize = useCallback(() => {
     if (!canvasRef.current) return;
     const canvasRect = canvasRef.current.getBoundingClientRect();
 
@@ -204,15 +280,42 @@ export default function Canvas() {
     );
 
     setDistanceLabels(labels);
-  }
+  }, [computeDistanceLabels, selectedElements]);
+
+  useEffect(() => {
+    if (!isResizingRef.current) return;
+    updateDistanceLabelsForResize();
+  }, [selectedElements, updateDistanceLabelsForResize]);
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      syncOverlayMetrics();
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [currentProject?.id, previewEnabled, selectionBox, syncOverlayMetrics, viewportWidth]);
+
+  useEffect(() => {
+    const handleViewportChange = () => {
+      syncOverlayMetrics();
+    };
+
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+
+    return () => {
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
+  }, [syncOverlayMetrics]);
 
   /* ---------------- Move handlers ---------------- */
 
   const startMove = (e: MouseEvent | React.MouseEvent) => {
     // don't start move if user clicked on a resize handle or resizing element
-    if (isResizingElement((e as any).target)) return;
+    if (isResizingElement(e.target)) return;
 
-    const target = (e as any).target as HTMLElement | null;
+    const target = e.target instanceof HTMLElement ? e.target : null;
     const elNode = target?.closest("[data-element-id]") as HTMLElement | null;
     if (!elNode || !canvasRef.current) return;
 
@@ -230,7 +333,7 @@ export default function Canvas() {
     ];
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
-    const initialPositions: Record<string, any> = {};
+    const initialPositions: Record<string, ElementPosition> = {};
     movingIds.forEach((id) => {
       const r = elementRects.current[id];
       if (!r) return;
@@ -249,9 +352,7 @@ export default function Canvas() {
       movingIds,
     };
 
-    setIsMoving(true);
-
-    (e as Event).preventDefault?.();
+    e.preventDefault();
 
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", stopMove);
@@ -272,12 +373,12 @@ export default function Canvas() {
     const anchor = initialPositions[firstId];
     if (!anchor) return;
 
-    let candidateLeft = anchor.left + dx;
-    let candidateTop = anchor.top + dy;
+    const candidateLeft = anchor.left + dx;
+    const candidateTop = anchor.top + dy;
 
     // grid snap (local)
-    let snappedLeftLocal = snapToGrid(candidateLeft);
-    let snappedTopLocal = snapToGrid(candidateTop);
+    const snappedLeftLocal = snapToGrid(candidateLeft);
+    const snappedTopLocal = snapToGrid(candidateTop);
 
     // attempt snapping to other edges (client coords)
     const anchorClientLeft = canvasRect.left + candidateLeft;
@@ -380,6 +481,7 @@ export default function Canvas() {
       canvasRect
     );
     setDistanceLabels(distance);
+    syncOverlayMetrics();
 
     // convert guides to canvas-local coords
     setGuides(
@@ -394,9 +496,9 @@ export default function Canvas() {
   };
 
   const stopMove = () => {
-    setIsMoving(false);
     movingRef.current = null;
     setGuides([]);
+    syncOverlayMetrics();
     window.removeEventListener("mousemove", onMove);
     window.removeEventListener("mouseup", stopMove);
     setDistanceLabels([]);
@@ -424,6 +526,7 @@ export default function Canvas() {
 
     deselectAll();
     setIsDragging(true);
+    syncOverlayMetrics();
 
     startPoint.current = { x: e.clientX, y: e.clientY };
     setSelectionBox({
@@ -498,20 +601,6 @@ export default function Canvas() {
    Multi-select bounding box + group resize
 ------------------------------------- */
 
-  // compute group bounding box (client coords) when multiple selected
-  function computeGroupBox(): DOMRect | null {
-    if (!canvasRef.current || selectedElements.length < 2) return null;
-    const rects = selectedElements
-      .map((id) => elementRects.current[id])
-      .filter(Boolean);
-    if (rects.length < 2) return null;
-    const left = Math.min(...rects.map((r) => r.left));
-    const top = Math.min(...rects.map((r) => r.top));
-    const right = Math.max(...rects.map((r) => r.right));
-    const bottom = Math.max(...rects.map((r) => r.bottom));
-    return new DOMRect(left, top, right - left, bottom - top);
-  }
-
   const groupResizeRef = useRef<{
     startX: number;
     startY: number;
@@ -524,17 +613,10 @@ export default function Canvas() {
     lockRatio: boolean;
     childrenRel: Record<
       string,
-      {
-        relL: number;
-        relT: number;
-        relW: number;
-        relH: number;
-      }
+      GroupChildRelation
     >;
     dir: string;
   } | null>(null);
-
-  const [isGroupResizing, setIsGroupResizing] = useState(false);
 
   const startGroupResize = (e: React.MouseEvent, dir: string) => {
     e.preventDefault();
@@ -543,7 +625,7 @@ export default function Canvas() {
     const box = computeGroupBox();
     if (!box) return;
 
-    const childrenRel: Record<string, any> = {};
+    const childrenRel: Record<string, GroupChildRelation> = {};
     selectedElements.forEach((id) => {
       const r = elementRects.current[id];
       if (!r) return;
@@ -568,8 +650,6 @@ export default function Canvas() {
       childrenRel,
       dir,
     };
-
-    setIsGroupResizing(true);
     window.addEventListener("mousemove", onGroupResizeMove);
     window.addEventListener("mouseup", stopGroupResize);
   };
@@ -593,8 +673,8 @@ export default function Canvas() {
       dir,
     } = s;
 
-    let dx = ev.clientX - startX;
-    let dy = ev.clientY - startY;
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
 
     let newLeft = boxLeft;
     let newTop = boxTop;
@@ -658,12 +738,13 @@ export default function Canvas() {
 
     setGuides([]);
     updateDistanceLabelsForResize();
+    syncOverlayMetrics();
   };
 
   const stopGroupResize = () => {
-    setIsGroupResizing(false);
     groupResizeRef.current = null;
     setGuides([]);
+    syncOverlayMetrics();
     window.removeEventListener("mousemove", onGroupResizeMove);
     window.removeEventListener("mouseup", stopGroupResize);
     // isResizingRef.current = false;
@@ -673,34 +754,27 @@ export default function Canvas() {
    Rendering & helpers
 ------------------------------------- */
 
-  const rootComponents = currentProject
-    ? (currentProject.rootOrder?.length
-        ? currentProject.rootOrder
-        : Object.values(currentProject.components)
-            .filter(
-              (component) =>
-                !Object.values(currentProject.components).some((parent) =>
-                  parent.children.includes(component.id)
-                )
-            )
-            .map((component) => component.id)
-      )
-        .map((id) => currentProject.components[id])
-        .filter(Boolean)
-    : [];
+  const rootComponentIds = currentProject ? getProjectRootIds(currentProject) : [];
 
-  // compute canvas-local group box for render (returns {left, top, w, h} local to canvas)
-  const groupBoxClient = computeGroupBox();
-  const canvasRectForRender = canvasRef.current?.getBoundingClientRect();
-  const groupBoxLocal =
-    groupBoxClient && canvasRectForRender
-      ? {
-          left: Math.round(groupBoxClient.left - canvasRectForRender.left),
-          top: Math.round(groupBoxClient.top - canvasRectForRender.top),
-          w: Math.round(groupBoxClient.width),
-          h: Math.round(groupBoxClient.height),
-        }
-      : null;
+  const renderCanvasNode = (nodeId: string): React.ReactNode => {
+    const component = currentProject?.components[nodeId];
+    if (!component) {
+      return null;
+    }
+
+    return (
+      <CanvasElement
+        key={component.id}
+        elementId={component.id}
+        onRect={(rect) => registerRect(component.id, rect)}
+        getSnapTargets={getSnapTargets}
+        onGuide={onElementGuide}
+      >
+        <ComponentWrapper component={component} />
+        {component.children.map((childId) => renderCanvasNode(childId))}
+      </CanvasElement>
+    );
+  };
 
   useEffect(() => {
     const onMouseUp = () => {
@@ -784,7 +858,7 @@ export default function Canvas() {
         >
           <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.14),transparent_65%)]" />
           <div className="relative space-y-4 p-8">
-            {rootComponents.length === 0 ? (
+            {rootComponentIds.length === 0 ? (
               <div className="flex min-h-[60vh] items-center justify-center">
                 <div className="max-w-md rounded-[32px] border border-dashed border-slate-300 bg-slate-50/90 px-8 py-10 text-center shadow-inner">
                   <p className="text-sm font-semibold text-slate-900">
@@ -802,8 +876,8 @@ export default function Canvas() {
                   <div
                     className="absolute pointer-events-auto z-50"
                     style={{
-                      left: groupBoxLocal.left,
-                      top: groupBoxLocal.top,
+                      left: groupBoxLocal.x,
+                      top: groupBoxLocal.y,
                       width: groupBoxLocal.w,
                       height: groupBoxLocal.h,
                       boxSizing: "border-box",
@@ -835,17 +909,7 @@ export default function Canvas() {
                   </div>
                 )}
 
-                {rootComponents.map((component) => (
-                  <CanvasElement
-                    key={component.id}
-                    elementId={component.id}
-                    onRect={(rect) => registerRect(component.id, rect)}
-                    getSnapTargets={() => getSnapTargets()}
-                    onGuide={(guidesClient) => onElementGuide(guidesClient)}
-                  >
-                    <ComponentWrapper component={component} />
-                  </CanvasElement>
-                ))}
+                {rootComponentIds.map((componentId) => renderCanvasNode(componentId))}
               </>
             )}
           </div>

@@ -5,6 +5,10 @@ import debounce from "lodash.debounce";
 import { COMPONENT_LIBRARY } from "@/config/componentRegistry";
 import { useDesignStore, type Element } from "@/state/useDesignStore";
 import type { BlueprintNode } from "@/config/componentRegistry";
+import {
+  mergeProjectDesignElements,
+  normalizeProject,
+} from "@/utils/projectModel";
 
 /* -------------------------------------------------
  * Helpers for registry / blueprints
@@ -14,10 +18,10 @@ const getComponentDef = (type: string) =>
 
 const buildFromBlueprint = (
   blueprint: BlueprintNode,
-  add: (type: string, parentId?: string) => string,
+  add: (node: BlueprintNode, parentId?: string) => string,
   parentId?: string
 ): string => {
-  const id = add(blueprint.type, parentId);
+  const id = add(blueprint, parentId);
 
   // If blueprint node has props or css, we'll rely on updateComponent elsewhere.
   // But we still create subtree.
@@ -101,7 +105,11 @@ interface CanvasState {
   updateComponent: (id: string, updates: Partial<CanvasComponent>) => void;
 
   setCurrentProject: (id: string) => void;
+  fetchProject: (id: string) => Promise<Project | null>;
   fetchProjects: () => Promise<void>;
+  syncCurrentProjectDesignElements: (
+    designElements: Record<string, Element>
+  ) => void;
   undo: () => void;
   redo: () => void;
 }
@@ -133,15 +141,10 @@ const collectSubtree = (
 // Debounced helper to save to API
 const syncToServer = debounce(async (project: Project) => {
   try {
-    const designElements = useDesignStore.getState().elements;
-    
     await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...project,
-        designElements,
-      }),
+      body: JSON.stringify(project),
     });
   } catch (error) {
     console.error("Failed to sync project to server", error);
@@ -150,7 +153,7 @@ const syncToServer = debounce(async (project: Project) => {
 
 export const useCanvasStore = create<CanvasState>()(
   persist(
-    (set, get) => {
+    (set) => {
       /**
        * originalAddComponent - fallback single-component adder used by addComponent
        * Implemented here (closure) so it can call set() and return new id synchronously.
@@ -221,7 +224,7 @@ export const useCanvasStore = create<CanvasState>()(
           const id = `project-${Date.now()}`;
           const now = new Date().toISOString();
 
-          const project: Project = {
+          const project = normalizeProject({
             id,
             name,
             components: {},
@@ -230,7 +233,7 @@ export const useCanvasStore = create<CanvasState>()(
             rootOrder: [],
             createdAt: now,
             updatedAt: now,
-          };
+          });
 
           set((state) => ({
             projects: {
@@ -243,6 +246,7 @@ export const useCanvasStore = create<CanvasState>()(
             future: [],
           }));
 
+          syncToServer(project);
           return id;
         },
 
@@ -250,7 +254,8 @@ export const useCanvasStore = create<CanvasState>()(
           set((state) => {
             const project = state.projects[id];
             const componentIds = project ? Object.keys(project.components) : [];
-            const { [id]: _, ...rest } = state.projects;
+            const rest = { ...state.projects };
+            delete rest[id];
 
             if (componentIds.length > 0) {
               useDesignStore.getState().removeElements(componentIds);
@@ -263,10 +268,13 @@ export const useCanvasStore = create<CanvasState>()(
               currentProject:
                 state.currentProjectId === id ? null : state.currentProject,
             };
-            if (state.currentProjectId && state.currentProjectId !== id && rest[state.currentProjectId]) {
-               syncToServer(rest[state.currentProjectId]!);
-            }
             return nextState;
+          });
+
+          void fetch(`/api/projects/${id}`, {
+            method: "DELETE",
+          }).catch((error) => {
+            console.error("Failed to delete project from server", error);
           });
         },
 
@@ -277,7 +285,7 @@ export const useCanvasStore = create<CanvasState>()(
             }
 
             const prev = cloneProject(state.currentProject);
-            const project: Project = {
+            const project = normalizeProject({
               ...prev,
               name: payload.name ?? prev.name,
               components: payload.components,
@@ -290,7 +298,7 @@ export const useCanvasStore = create<CanvasState>()(
               generationSummary:
                 payload.generationSummary ?? prev.generationSummary,
               updatedAt: new Date().toISOString(),
-            };
+            });
 
             if (payload.designElements) {
               useDesignStore.getState().replaceElements(payload.designElements);
@@ -314,36 +322,48 @@ export const useCanvasStore = create<CanvasState>()(
           set((state) => {
             const project = state.projects[id];
             if (!project) return state;
-
-            // MIGRATION: ensure rootOrder exists and fallback to computed root ids
-            if (!Array.isArray(project.rootOrder)) {
-              const rootIds = Object.values(project.components)
-                .filter(
-                  (c) =>
-                    !Object.values(project.components).some((p) =>
-                      p.children.includes(c.id)
-                    )
-                )
-                .map((c) => c.id);
-
-              project.rootOrder = rootIds;
-            }
-
-            // ensure arrays exist
-            project.rootOrder = project.rootOrder ?? [];
-            project.components = project.components ?? {};
-            project.rootComponent =
-              project.rootComponent ?? project.rootOrder[0] ?? null;
+            const normalizedProject = normalizeProject(project);
 
             const nextState = {
+              currentProjectId: id,
+              currentProject: normalizedProject,
+              projects: {
+                ...state.projects,
+                [id]: normalizedProject,
+              },
+              history: [],
+              future: [],
+            };
+            return nextState;
+          });
+        },
+
+        fetchProject: async (id) => {
+          try {
+            const res = await fetch(`/api/projects/${id}`);
+            if (!res.ok) {
+              return null;
+            }
+
+            const data = (await res.json()) as Project;
+            const project = normalizeProject(data);
+
+            set((state) => ({
+              projects: {
+                ...state.projects,
+                [id]: project,
+              },
               currentProjectId: id,
               currentProject: project,
               history: [],
               future: [],
-            };
-            syncToServer(project);
-            return nextState;
-          });
+            }));
+
+            return project;
+          } catch (error) {
+            console.error("Failed to fetch project", error);
+            return null;
+          }
         },
 
         /* ---------- Components ---------- */
@@ -353,7 +373,7 @@ export const useCanvasStore = create<CanvasState>()(
           const createdElements: Array<{
             id: string;
             type: string;
-            css: Record<string, any>;
+            css: Record<string, unknown>;
           }> = [];
 
           // If component type has a blueprint -> expand into multiple nodes
@@ -366,24 +386,30 @@ export const useCanvasStore = create<CanvasState>()(
               const prev = cloneProject(state.currentProject);
 
               // temporary add function used by buildFromBlueprint
-              const add = (t: string, p?: string) => {
+              const add = (node: BlueprintNode, p?: string) => {
                 const id = `component-${Date.now()}-${Math.random()
                    .toString(36)
                    .slice(2, 9)}`;
 
-                const d = getComponentDef(t);
+                const d = getComponentDef(node.type);
 
                 prev.components[id] = {
                   id,
-                  type: t,
-                  props: d?.defaultProps ? { ...d.defaultProps } : {},
+                  type: node.type,
+                  props: {
+                    ...(d?.defaultProps ? { ...d.defaultProps } : {}),
+                    ...(node.props ?? {}),
+                  },
                   children: [],
                 };
 
                 createdElements.push({
                    id,
-                   type: t,
-                   css: d?.defaultCss || {},
+                   type: node.type,
+                   css: {
+                     ...(d?.defaultCss || {}),
+                     ...(node.css ?? {}),
+                   },
                 });
 
                 if (p && prev.components[p]) {
@@ -402,7 +428,7 @@ export const useCanvasStore = create<CanvasState>()(
                 rootId = buildFromBlueprint(def.blueprint, add, parentId);
               } else {
                 // Should not happen as we checked def.blueprint above, but for TS safety
-                rootId = add(type, parentId);
+                rootId = add({ type }, parentId);
               }
 
               // ensure rootComponent exists
@@ -626,15 +652,59 @@ export const useCanvasStore = create<CanvasState>()(
               ...updates,
             };
 
+            const project = normalizeProject({
+              ...prev,
+              updatedAt: new Date().toISOString(),
+            });
+
             const nextState = {
-              currentProject: prev,
+              history: [...state.history, state.currentProject],
+              future: [],
+              currentProject: project,
               projects: {
                 ...state.projects,
-                [state.currentProjectId!]: prev,
+                [state.currentProjectId!]: project,
               },
             };
-            syncToServer(prev);
+            syncToServer(project);
             return nextState;
+          });
+        },
+
+        syncCurrentProjectDesignElements: (designElements) => {
+          set((state) => {
+            if (!state.currentProject || !state.currentProjectId) {
+              return state;
+            }
+
+            const mergedDesignElements = mergeProjectDesignElements(
+              state.currentProject,
+              designElements
+            );
+            const serializedCurrent = JSON.stringify(
+              state.currentProject.designElements
+            );
+            const serializedNext = JSON.stringify(mergedDesignElements);
+
+            if (serializedCurrent === serializedNext) {
+              return state;
+            }
+
+            const project = normalizeProject({
+              ...state.currentProject,
+              designElements: mergedDesignElements,
+              updatedAt: new Date().toISOString(),
+            });
+
+            syncToServer(project);
+
+            return {
+              currentProject: project,
+              projects: {
+                ...state.projects,
+                [state.currentProjectId]: project,
+              },
+            };
           });
         },
 
@@ -688,31 +758,28 @@ export const useCanvasStore = create<CanvasState>()(
           try {
             const res = await fetch("/api/projects");
             if (!res.ok) return;
-            const data = await res.json();
+            const data = (await res.json()) as Project[];
             
             const projectsMap: Record<string, Project> = {};
-            data.forEach((p: Project) => {
-              projectsMap[p.id] = {
-                id: p.id,
-                name: p.name,
-                components: p.components,
-                designElements: p.designElements || {},
-                rootOrder: p.rootOrder,
-                rootComponent: p.rootComponent,
-                createdAt: p.createdAt,
-                updatedAt: p.updatedAt,
-                generationPrompt: p.generationPrompt,
-                generationModel: p.generationModel,
-                generationSummary: p.generationSummary,
-              };
+            data.forEach((project) => {
+              const normalizedProject = normalizeProject(project);
+              projectsMap[normalizedProject.id] = normalizedProject;
             });
 
-            set((state) => ({
-              projects: {
-                ...state.projects,
-                ...projectsMap,
-              }
-            }));
+            set((state) => {
+              const currentProjectId =
+                state.currentProjectId && projectsMap[state.currentProjectId]
+                  ? state.currentProjectId
+                  : null;
+
+              return {
+                projects: projectsMap,
+                currentProjectId,
+                currentProject: currentProjectId
+                  ? projectsMap[currentProjectId]
+                  : null,
+              };
+            });
           } catch (error) {
             console.error("Failed to fetch projects", error);
           }

@@ -14,7 +14,15 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { prompt, model } = await req.json();
+    const {
+      prompt,
+      model,
+      projectName,
+    } = (await req.json()) as {
+      prompt?: string;
+      model?: string;
+      projectName?: string;
+    };
 
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
@@ -76,11 +84,23 @@ Prompt: ${prompt}
       throw new Error("No content received from OpenAI");
     }
 
-    const result = JSON.parse(content);
+    const result = JSON.parse(content) as {
+      projectName?: string;
+      summary?: string;
+      roots?: unknown[];
+    };
 
-    return NextResponse.json(result);
-  } catch (error: any) {
+    return NextResponse.json({
+      ...result,
+      projectName: result.projectName || projectName || "Polyglot Project",
+    });
+  } catch (error) {
     console.error("AI Generation Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to generate" }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Failed to generate",
+      },
+      { status: 500 }
+    );
   }
 }

@@ -12,6 +12,16 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Legacy prototypes and dead files not wired into the current product.
+    "src/app/components/export/**",
+    "src/app/components/editor/CSSPropertyPanel.tsx",
+    "src/app/components/canvas/SelectionBox.tsx",
+    "src/test-export.ts",
+    "src/utils/advancedCodeGenerator.ts",
+    "src/utils/codeGenerator.ts",
+    "src/utils/codesandboxExport.ts",
+    "src/utils/exportUtils.ts",
+    "src/utils/undoRedo.ts",
   ]),
 ]);
 
