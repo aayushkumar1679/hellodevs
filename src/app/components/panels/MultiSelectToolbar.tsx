@@ -5,15 +5,9 @@ import { useDesignStore } from "@/state/useDesignStore";
 import {
   AlignLeft,
   AlignCenter,
-  AlignRight,
-  AlignStartVertical,
-  AlignCenterVertical,
-  AlignEndVertical,
   Columns3,
   Copy,
   Trash2,
-  Lock,
-  Unlock,
 } from "lucide-react";
 
 export default function MultiSelectToolbar() {
@@ -36,13 +30,6 @@ export default function MultiSelectToolbar() {
     updateCSSBulk(selectedElements, "flexDirection", "column");
   };
 
-  const applyGrid3 = () => {
-    updateCSSBulk(
-      selectedElements,
-      "gridTemplateColumns",
-      "repeat(3, minmax(0, 1fr))"
-    );
-  };
 
   const applyGap = (gap: string) => {
     updateCSSBulk(selectedElements, "gap", gap);
@@ -56,9 +43,6 @@ export default function MultiSelectToolbar() {
     updateCSSBulk(selectedElements, "textAlign", "left");
   };
 
-  const applyAlignRight = () => {
-    updateCSSBulk(selectedElements, "textAlign", "right");
-  };
 
   const applyPadding = (padding: string) => {
     updateCSSBulk(selectedElements, "padding", padding);

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useCanvasStore } from "@/state/useCanvasStore";
 import { useDesignStore } from "@/state/useDesignStore";
+import { mergeProjectDesignElements } from "@/utils/projectModel";
 
 /**
  * Hook that syncs canvas components to design store on mount
@@ -15,25 +16,58 @@ import { useDesignStore } from "@/state/useDesignStore";
  * when the component first mounts.
  */
 export function useSyncStores() {
-  useEffect(() => {
-    // Get current state from both stores
-    const canvasState = useCanvasStore.getState();
-    const designState = useDesignStore.getState();
+  const currentProject = useCanvasStore((state) => state.currentProject);
+  const replaceElements = useDesignStore((state) => state.replaceElements);
+  const elements = useDesignStore((state) => state.elements);
+  const syncCurrentProjectDesignElements = useCanvasStore(
+    (state) => state.syncCurrentProjectDesignElements
+  );
+  const lastProjectIdRef = useRef<string | null>(null);
+  const lastSerializedDesignRef = useRef("");
 
-    // If there's a current project in canvas store
-    if (canvasState.currentProject) {
-      // For each component in the canvas store
-      Object.values(canvasState.currentProject.components).forEach(
-        (component) => {
-          // Check if it already exists in design store
-          if (!designState.elements[component.id]) {
-            // If not, add it (initializes with empty cssProperties)
-            designState.addElement(component.id, component.type);
-          }
-        }
-      );
+  useEffect(() => {
+    if (!currentProject) {
+      replaceElements({});
+      lastProjectIdRef.current = null;
+      lastSerializedDesignRef.current = "";
+      return;
     }
-  }, []); // Empty dependency array = run once on mount
+
+    const normalizedDesign = mergeProjectDesignElements(
+      currentProject,
+      currentProject.designElements
+    );
+    const serializedProjectDesign = JSON.stringify(normalizedDesign);
+
+    // CRITICAL: We only force-replace elements in useDesignStore if the PROJECT ID changes
+    // or if the design store is empty (initial hydration).
+    // If we replace on every currentProject change, we fight with the design store's own state.
+    const isNewProject = lastProjectIdRef.current !== currentProject.id;
+    const isDesignEmpty = Object.keys(elements).length === 0;
+
+    if (isNewProject || isDesignEmpty) {
+      lastProjectIdRef.current = currentProject.id;
+      lastSerializedDesignRef.current = serializedProjectDesign;
+      replaceElements(normalizedDesign);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProject, replaceElements]);
+
+  useEffect(() => {
+    if (!currentProject) {
+      return;
+    }
+
+    const normalizedElements = mergeProjectDesignElements(currentProject, elements);
+    const serializedElements = JSON.stringify(normalizedElements);
+
+    if (serializedElements === lastSerializedDesignRef.current) {
+      return;
+    }
+
+    lastSerializedDesignRef.current = serializedElements;
+    syncCurrentProjectDesignElements(normalizedElements);
+  }, [currentProject, elements, syncCurrentProjectDesignElements]);
 }
 
 export default useSyncStores;

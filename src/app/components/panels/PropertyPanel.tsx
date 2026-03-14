@@ -2,216 +2,69 @@
 
 import React from "react";
 import { useCanvasStore } from "@/state/useCanvasStore";
+import { useDesignStore } from "@/state/useDesignStore";
 
 export default function PropertyPanel() {
-  const { componentTree, selectedComponentId, updateComponent } =
-    useCanvasStore();
+  const currentProject = useCanvasStore((state) => state.currentProject);
+  const updateComponent = useCanvasStore((state) => state.updateComponent);
+  const selectedElements = useDesignStore((state) => state.selectedElements);
 
-  const selectedComponent = componentTree.find(
-    (c) => c.id === selectedComponentId
-  );
+  const selectedComponentId = selectedElements[0];
+  const selectedComponent =
+    selectedComponentId && currentProject
+      ? currentProject.components[selectedComponentId]
+      : null;
 
   if (!selectedComponent) {
     return (
-      <div className="p-4 text-gray-400 text-sm">
-        Select a component to edit properties
+      <div className="p-4 text-sm text-slate-500">
+        Select a component to edit its content properties.
       </div>
     );
   }
 
-  const handlePropChange = (key: string, value: any) => {
-    updateComponent(selectedComponent.id, { [key]: value });
+  const updateProp = (key: string, value: string) => {
+    updateComponent(selectedComponent.id, {
+      props: {
+        ...selectedComponent.props,
+        [key]: value,
+      },
+    });
   };
 
   return (
     <div className="space-y-4 p-4">
       <div>
-        <h3 className="font-bold text-sm mb-2">
-          Component: {selectedComponent.type}
+        <h3 className="text-sm font-semibold text-slate-950">
+          {selectedComponent.type}
         </h3>
-        <p className="text-xs text-gray-500">ID: {selectedComponent.id}</p>
+        <p className="mt-1 text-xs text-slate-500">{selectedComponent.id}</p>
       </div>
 
-      {selectedComponent.type === "Navbar" && (
-        <>
-          <div>
-            <label className="block text-sm font-medium mb-1">Logo</label>
-            <input
-              type="text"
-              value={selectedComponent.props?.logo || ""}
-              onChange={(e) => handlePropChange("logo", e.target.value)}
-              className="w-full border rounded px-2 py-1 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Variant</label>
-            <select
-              value={selectedComponent.props?.variant || "light"}
-              onChange={(e) => handlePropChange("variant", e.target.value)}
-              className="w-full border rounded px-2 py-1 text-sm"
-            >
-              <option>light</option>
-              <option>dark</option>
-            </select>
-          </div>
-        </>
+      {"text" in (selectedComponent.props || {}) && (
+        <div>
+          <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Text
+          </label>
+          <textarea
+            value={String(selectedComponent.props?.text || "")}
+            onChange={(event) => updateProp("text", event.target.value)}
+            className="min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-400"
+          />
+        </div>
       )}
 
-      {selectedComponent.type === "Hero" && (
-        <>
-          <div>
-            <label className="block text-sm font-medium mb-1">Title</label>
-            <input
-              type="text"
-              value={selectedComponent.props?.title || ""}
-              onChange={(e) => handlePropChange("title", e.target.value)}
-              className="w-full border rounded px-2 py-1 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Subtitle</label>
-            <input
-              type="text"
-              value={selectedComponent.props?.subtitle || ""}
-              onChange={(e) => handlePropChange("subtitle", e.target.value)}
-              className="w-full border rounded px-2 py-1 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Button Text
-            </label>
-            <input
-              type="text"
-              value={selectedComponent.props?.buttonText || ""}
-              onChange={(e) => handlePropChange("buttonText", e.target.value)}
-              className="w-full border rounded px-2 py-1 text-sm"
-            />
-          </div>
-        </>
-      )}
-
-      {selectedComponent.type === "Card" && (
-        <>
-          <div>
-            <label className="block text-sm font-medium mb-1">Title</label>
-            <input
-              type="text"
-              value={selectedComponent.props?.title || ""}
-              onChange={(e) => handlePropChange("title", e.target.value)}
-              className="w-full border rounded px-2 py-1 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Description
-            </label>
-            <textarea
-              value={selectedComponent.props?.description || ""}
-              onChange={(e) => handlePropChange("description", e.target.value)}
-              className="w-full border rounded px-2 py-1 text-sm"
-              rows={3}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Badge</label>
-            <input
-              type="text"
-              value={selectedComponent.props?.badge || ""}
-              onChange={(e) => handlePropChange("badge", e.target.value)}
-              className="w-full border rounded px-2 py-1 text-sm"
-              placeholder="Optional"
-            />
-          </div>
-        </>
-      )}
-
-      {selectedComponent.type === "Button" && (
-        <>
-          <div>
-            <label className="block text-sm font-medium mb-1">Text</label>
-            <input
-              type="text"
-              value={selectedComponent.props?.text || ""}
-              onChange={(e) => handlePropChange("text", e.target.value)}
-              className="w-full border rounded px-2 py-1 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Variant</label>
-            <select
-              value={selectedComponent.props?.variant || "primary"}
-              onChange={(e) => handlePropChange("variant", e.target.value)}
-              className="w-full border rounded px-2 py-1 text-sm"
-            >
-              <option>primary</option>
-              <option>secondary</option>
-              <option>outline</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Size</label>
-            <select
-              value={selectedComponent.props?.size || "md"}
-              onChange={(e) => handlePropChange("size", e.target.value)}
-              className="w-full border rounded px-2 py-1 text-sm"
-            >
-              <option>sm</option>
-              <option>md</option>
-              <option>lg</option>
-            </select>
-          </div>
-        </>
-      )}
-
-      {selectedComponent.type === "Features" && (
-        <>
-          <div>
-            <label className="block text-sm font-medium mb-1">Title</label>
-            <input
-              type="text"
-              value={selectedComponent.props?.title || ""}
-              onChange={(e) => handlePropChange("title", e.target.value)}
-              className="w-full border rounded px-2 py-1 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Columns</label>
-            <input
-              type="number"
-              value={selectedComponent.props?.columns || 3}
-              onChange={(e) =>
-                handlePropChange("columns", parseInt(e.target.value))
-              }
-              className="w-full border rounded px-2 py-1 text-sm"
-              min="1"
-              max="4"
-            />
-          </div>
-        </>
-      )}
-
-      {selectedComponent.type === "CTA" && (
-        <>
-          <div>
-            <label className="block text-sm font-medium mb-1">Title</label>
-            <input
-              type="text"
-              value={selectedComponent.props?.title || ""}
-              onChange={(e) => handlePropChange("title", e.target.value)}
-              className="w-full border rounded px-2 py-1 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Subtitle</label>
-            <input
-              type="text"
-              value={selectedComponent.props?.subtitle || ""}
-              onChange={(e) => handlePropChange("subtitle", e.target.value)}
-              className="w-full border rounded px-2 py-1 text-sm"
-            />
-          </div>
-        </>
+      {"title" in (selectedComponent.props || {}) && (
+        <div>
+          <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Title
+          </label>
+          <input
+            value={String(selectedComponent.props?.title || "")}
+            onChange={(event) => updateProp("title", event.target.value)}
+            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-400"
+          />
+        </div>
       )}
     </div>
   );

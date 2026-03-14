@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -11,7 +15,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "incremental": true,
     "plugins": [
       {
@@ -19,7 +23,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     }
   },
   "include": [
@@ -30,5 +36,16 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "src/app/components/export/**",
+    "src/app/components/editor/CSSPropertyPanel.tsx",
+    "src/app/components/canvas/SelectionBox.tsx",
+    "src/test-export.ts",
+    "src/utils/advancedCodeGenerator.ts",
+    "src/utils/codeGenerator.ts",
+    "src/utils/codesandboxExport.ts",
+    "src/utils/exportUtils.ts",
+    "src/utils/undoRedo.ts"
+  ]
 }

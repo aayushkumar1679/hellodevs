@@ -1,41 +1,45 @@
-<<<<<<< HEAD
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Polyglot
 
-## Getting Started
+Polyglot is an AI-assisted visual web builder built with Next.js, React, Prisma, NextAuth, and Zustand.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **AI Studio**: Generate and refine web components using natural language.
+- **Visual Editor**: Drag-and-drop builder with real-time CSS editing.
+- **Deep Persistence**: Fully synced project state between canvas and design stores.
+- **Export & Share**: Generate clean Next.js/Tailwind code packages or share live previews.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Local Development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Set up environment variables:
+   Copy `.env.example` to `.env` and fill in:
+   - `DATABASE_URL`: Prisma-compatible DB string.
+   - `NEXTAUTH_SECRET`: Random secret for authentication.
+   - `OPENAI_API_KEY`: For AI generation features.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-## Learn More
+4. Database checks:
+   ```bash
+   npx ts-node scripts/db-check.ts
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+## Key Paths
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Dashboard**: `src/app/page.tsx`
+- **Builder**: `src/app/builder/[id]/page.tsx`
+- **Preview**: `src/app/builder/[id]/preview/page.tsx`
+- **Public Share**: `src/app/share/[id]/page.tsx`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Quality Gates
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-=======
-# hellodevs
-all in one 
->>>>>>> 7352c8df22010186c5ee3e2feea2e745799aff19
+- `npm run lint`: ESLint check.
+- `npx vitest`: Core state and logic tests.
+- `npm run build`: Production build verification.

@@ -1,0 +1,439 @@
+import type { Project } from "@/state/useCanvasStore";
+import type { Element } from "@/state/useDesignStore";
+
+import { getProjectRootIds } from "@/utils/projectModel";
+
+type DesignElements = Record<string, Element>;
+
+interface FileRecord {
+  name: string;
+  content: string;
+}
+
+// Sanitize a component type name into a valid PascalCase React component name
+function toPascalCase(str: string) {
+  return str
+    .split(/[-_\s]+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join("")
+    .replace(/[^a-zA-Z0-9]/g, "");
+}
+
+function sanitizeComponentName(name: string) {
+  const clean = name.replace(/[^a-zA-Z0-9]/g, "");
+  return /^[A-Za-z]/.test(clean) ? clean : `Project${clean || "Page"}`;
+}
+
+// Generate a single component's JSX body (for decomposed multi-file export)
+function generateComponentBody(
+  componentId: string,
+  project: Project,
+  designElements: DesignElements,
+  level = 2
+): string {
+  const component = project.components[componentId];
+  if (!component) return "";
+
+  const element = designElements[componentId];
+  const css: Record<string, unknown> = element?.cssProperties?.base ?? {};
+
+  const styleStr =
+    Object.keys(css).length > 0
+      ? ` style={${JSON.stringify(css as Record<string, string>)}}`
+      : "";
+
+  const childrenJsx = component.children
+    .map((cid) => generateComponentBody(cid, project, designElements, level + 1))
+    .join("\n");
+
+  const indent = "  ".repeat(level);
+  const childIndent = "  ".repeat(level + 1);
+
+  switch (component.type) {
+    case "section":
+      return `${indent}<section${styleStr}>\n${childrenJsx}\n${indent}</section>`;
+    case "container":
+    case "flex-row":
+    case "flex-column":
+    case "grid":
+      return `${indent}<div${styleStr}>\n${childrenJsx}\n${indent}</div>`;
+    case "card":
+    case "product-card":
+    case "pricing-card":
+      return `${indent}<article${styleStr}>\n${childrenJsx}\n${indent}</article>`;
+    case "form":
+      return `${indent}<form${styleStr}>\n${childrenJsx}\n${indent}</form>`;
+    case "footer":
+      return `${indent}<footer${styleStr}>\n${childrenJsx}\n${indent}</footer>`;
+    case "heading": {
+      const lvl = Math.min(Math.max(Number(component.props?.level ?? 2), 1), 6);
+      const text = String(component.props?.text ?? "Heading");
+      return `${indent}<h${lvl}${styleStr}>${text}</h${lvl}>`;
+    }
+    case "text": {
+      const text = String(component.props?.text ?? "");
+      return `${indent}<p${styleStr}>${text}</p>`;
+    }
+    case "button": {
+      const text = String(component.props?.text ?? "Button");
+      return `${indent}<button type="button"${styleStr}>${text}</button>`;
+    }
+    case "badge": {
+      const text = String(component.props?.text ?? "Badge");
+      return `${indent}<span${styleStr}>${text}</span>`;
+    }
+    case "image": {
+      const src = String(component.props?.src ?? "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200");
+      const alt = String(component.props?.alt ?? "Image");
+      return `${indent}<img src="${src}" alt="${alt}"${styleStr} />`;
+    }
+    case "navbar": {
+      const brand = (component.props?.brand ?? {}) as { text?: string; href?: string };
+      const links = (Array.isArray(component.props?.links) ? component.props.links : []) as Array<{ label?: string; href?: string }>;
+      const cta = (component.props?.cta ?? {}) as { text?: string; href?: string };
+      const linksJsx = links.map((l) =>
+        `${childIndent}  <a href="${l.href ?? "#"}" style={{textDecoration:"none",color:"inherit",fontSize:"0.875rem",opacity:0.8}}>${l.label ?? "Link"}</a>`
+      ).join("\n");
+      return `${indent}<nav${styleStr}>
+${childIndent}<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%"}}>
+${childIndent}  <a href="${brand.href ?? "/"}" style={{fontWeight:800,fontSize:"1.25rem",textDecoration:"none",color:"inherit"}}>${brand.text ?? "Brand"}</a>
+${childIndent}  <div style={{display:"flex",gap:"1.5rem",alignItems:"center"}}>
+${linksJsx}
+${cta.text ? `${childIndent}    <a href="${cta.href ?? "#"}" style={{padding:"8px 20px",background:"#0f172a",color:"#fff",borderRadius:"999px",textDecoration:"none",fontWeight:600,fontSize:"0.875rem"}}>${cta.text}</a>` : ""}
+${childIndent}  </div>
+${childIndent}</div>
+${indent}</nav>`;
+    }
+    default:
+      if (component.children.length > 0) {
+        return `${indent}<div${styleStr}>\n${childrenJsx}\n${indent}</div>`;
+      }
+      return `${indent}<div${styleStr} />`;
+  }
+}
+
+// Google Fonts URL for exported projects
+const GOOGLE_FONTS_URL =
+  "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap";
+
+// README content with all dependencies and setup
+function generateReadme(projectName: string): string {
+  return `# ${projectName}
+
+Generated by **Polyglot Studio** — AI Visual Web Builder.
+
+## Quick Start
+
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
+
+Then open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Tech Stack
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| [next](https://nextjs.org/) | ^15.3.0 | React framework with App Router |
+| [react](https://react.dev/) | ^19.0.0 | UI library |
+| [react-dom](https://react.dev/) | ^19.0.0 | DOM renderer |
+| [tailwindcss](https://tailwindcss.com/) | ^4.0.0 | Utility-first CSS framework |
+| [typescript](https://www.typescriptlang.org/) | ^5.0.0 | Type safety |
+| [@types/node](https://www.npmjs.com/package/@types/node) | ^20.0.0 | Node.js types |
+| [@types/react](https://www.npmjs.com/package/@types/react) | ^19.0.0 | React types |
+| [@types/react-dom](https://www.npmjs.com/package/@types/react-dom) | ^19.0.0 | React DOM types |
+
+## Project Structure
+
+\`\`\`
+src/
+  app/
+    layout.tsx      ← Root layout with Google Fonts
+    globals.css     ← Global styles + CSS variables
+    page.tsx        ← Main page (imports all components)
+  components/       ← Generated section components
+\`\`\`
+
+## Google Fonts
+
+This project uses the following fonts loaded via Google Fonts CDN:
+- **Manrope** — primary body font
+- **Inter** — clean universal font
+- **Plus Jakarta Sans** — modern geometric sans
+- **Outfit** — futuristic sans-serif
+- **DM Sans** — low-contrast geometric
+- **Sora** — distinctive geometric sans
+- **Space Grotesk** — display headings
+
+## Customization
+
+- Edit components in \`src/components/\`
+- Global styles live in \`src/app/globals.css\`
+- Add pages in \`src/app/\`
+
+---
+
+*Exported from [Polyglot Studio](https://polyglot.build) on ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}*
+`;
+}
+
+export function generateNextJsProject(
+  project: Project,
+  designElements: DesignElements
+): FileRecord[] {
+  const projectName = sanitizeComponentName(project.name);
+  const rootIds = getProjectRootIds(project);
+
+  // Generate one component file per top-level section
+  const componentFiles: FileRecord[] = rootIds.map((rootId) => {
+    const comp = project.components[rootId];
+    const compName = toPascalCase(comp?.type ?? "Section");
+    const body = generateComponentBody(rootId, project, designElements, 2);
+
+    return {
+      name: `src/components/${compName}_${rootId.slice(-6)}.tsx`,
+      content: `/* eslint-disable @next/next/no-img-element */
+import React from "react";
+
+export default function ${compName}() {
+  return (
+${body}
+  );
+}
+`,
+    };
+  });
+
+  // Main page.tsx that imports all components
+  const componentImports = componentFiles
+    .map((f, i) => {
+      const name = f.name.replace("src/components/", "").replace(".tsx", "");
+      const comp = project.components[rootIds[i]];
+      const compName = toPascalCase(comp?.type ?? "Section");
+      return `import ${compName}_${rootIds[i].slice(-6)} from "@/components/${name}";`;
+    })
+    .join("\n");
+
+  const componentUsages = componentFiles
+    .map((f, i) => {
+      const comp = project.components[rootIds[i]];
+      const compName = toPascalCase(comp?.type ?? "Section");
+      return `      <${compName}_${rootIds[i].slice(-6)} />`;
+    })
+    .join("\n");
+
+  const pageContent = `/* eslint-disable @next/next/no-img-element */
+import React from "react";
+${componentImports}
+
+export default function ${projectName}Page() {
+  return (
+    <main style={{ minHeight: "100vh", background: "#ffffff" }}>
+${componentUsages}
+    </main>
+  );
+}
+`;
+
+  // globals.css with Google Font variables
+  const globalsCss = `@import "tailwindcss";
+
+:root {
+  --font-manrope: "Manrope", sans-serif;
+  --font-inter: "Inter", sans-serif;
+  --font-plus-jakarta-sans: "Plus Jakarta Sans", sans-serif;
+  --font-outfit: "Outfit", sans-serif;
+  --font-dm-sans: "DM Sans", sans-serif;
+  --font-sora: "Sora", sans-serif;
+  --font-space-grotesk: "Space Grotesk", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-manrope), sans-serif;
+  color: #0f172a;
+  background: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+`;
+
+  // layout.tsx with Google Fonts
+  const layoutContent = `import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "${project.name}",
+  description: "Generated by Polyglot Studio",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="${GOOGLE_FONTS_URL}" rel="stylesheet" />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}
+`;
+
+  // package.json with correct versions
+  const packageJson = JSON.stringify(
+    {
+      name: project.name.toLowerCase().replace(/[^a-z0-9-]/g, "-") || "polyglot-export",
+      version: "0.1.0",
+      private: true,
+      scripts: {
+        dev: "next dev",
+        build: "next build",
+        start: "next start",
+        lint: "next lint",
+      },
+      dependencies: {
+        react: "^19.0.0",
+        "react-dom": "^19.0.0",
+        next: "^15.3.0",
+      },
+      devDependencies: {
+        typescript: "^5",
+        "@types/node": "^20",
+        "@types/react": "^19",
+        "@types/react-dom": "^19",
+        postcss: "^8",
+        tailwindcss: "^4.0.0",
+        "@tailwindcss/postcss": "^4.0.0",
+        eslint: "^9",
+        "eslint-config-next": "^15.3.0",
+      },
+    },
+    null,
+    2
+  );
+
+  // tsconfig.json
+  const tsconfig = JSON.stringify(
+    {
+      compilerOptions: {
+        target: "ES2017",
+        lib: ["dom", "dom.iterable", "esnext"],
+        allowJs: true,
+        skipLibCheck: true,
+        strict: true,
+        noEmit: true,
+        esModuleInterop: true,
+        module: "esnext",
+        moduleResolution: "bundler",
+        resolveJsonModule: true,
+        isolatedModules: true,
+        jsx: "preserve",
+        incremental: true,
+        plugins: [{ name: "next" }],
+        paths: { "@/*": ["./src/*"] },
+      },
+      include: ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+      exclude: ["node_modules"],
+    },
+    null,
+    2
+  );
+
+  // next.config.ts
+  const nextConfig = `import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "images.pexels.com" },
+      { protocol: "https", hostname: "i.pravatar.cc" },
+    ],
+  },
+};
+
+export default nextConfig;
+`;
+
+  // tailwind.config.ts
+  const tailwindConfig = `import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: [
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+
+export default config;
+`;
+
+  const gitignore = `# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js build output
+.next/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Misc
+.DS_Store
+*.pem
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vercel
+`;
+
+  const postcssConfig = `export default {
+  plugins: {
+    "@tailwindcss/postcss": {},
+  },
+};
+`;
+
+  return [
+    { name: "README.md", content: generateReadme(project.name) },
+    { name: "package.json", content: packageJson },
+    { name: "tsconfig.json", content: tsconfig },
+    { name: "next.config.ts", content: nextConfig },
+    { name: "tailwind.config.ts", content: tailwindConfig },
+    { name: "postcss.config.mjs", content: postcssConfig },
+    { name: ".gitignore", content: gitignore },
+    { name: "src/app/layout.tsx", content: layoutContent },
+    { name: "src/app/globals.css", content: globalsCss },
+    { name: "src/app/page.tsx", content: pageContent },
+    ...componentFiles,
+  ];
+}

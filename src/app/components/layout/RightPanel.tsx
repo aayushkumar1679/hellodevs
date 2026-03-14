@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+import { X, Palette, Settings2, Zap } from "lucide-react";
 import StylePanel from "../panels/StylePanel";
 import SettingsPanel from "../panels/SettingsPanel";
 import InteractionsPanel from "../panels/InteractionsPanel";
-import ElementInspector from "../panels/ElementInspector";
 import { useDesignStore } from "@/state/useDesignStore";
-import { X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface RightPanelProps {
   isOpen: boolean;
@@ -15,70 +15,105 @@ interface RightPanelProps {
 
 type Tab = "style" | "settings" | "interactions";
 
+const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
+  { id: "style", label: "Style", icon: Palette },
+  { id: "settings", label: "Settings", icon: Settings2 },
+  { id: "interactions", label: "Motion", icon: Zap },
+];
+
 export default function RightPanel({ isOpen, onClose }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>("style");
-  const selectedElements = useDesignStore((state) => state.selectedElements);
+  const selectedElements = useDesignStore((state) => state.selectedElements || []);
 
   if (!isOpen) return null;
 
   return (
-    <div className="w-80 bg-gradient-to-b from-gray-900 to-gray-850 border-l border-gray-800 flex flex-col h-full shadow-lg">
-      {/* Header with Tabs */}
-      <div className="flex items-center justify-between h-14 border-b border-gray-800 px-3 bg-gradient-to-r from-gray-900 to-gray-850">
-        <div className="flex gap-1">
-          {[
-            { id: "style", label: "Style" },
-            { id: "settings", label: "Settings" },
-            { id: "interactions", label: "Interactions" },
-          ].map((tab) => (
+    <aside
+      className="fixed right-0 z-40 flex flex-col border-l bg-white/90 backdrop-blur-2xl"
+      style={{
+        top: "var(--header-h)",
+        bottom: 0,
+        width: "var(--right-panel-w)",
+        borderColor: "rgba(226,232,240,0.6)",
+      }}
+    >
+      {/* Tab Bar */}
+      <div className="flex items-center gap-0.5 border-b border-slate-100 px-2 py-1.5">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const active = activeTab === tab.id;
+          return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as Tab)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-all ${
-                activeTab === tab.id
-                  ? "bg-blue-400 text-gray-100 shadow-lg shadow-blue-400/20"
-                  : "text-gray-400 hover:text-gray-100 hover:bg-gray-800/80"
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative flex flex-1 items-center justify-center gap-1 rounded-lg py-1.5 text-[10px] font-bold uppercase tracking-wide transition-all duration-200 ${
+                active
+                  ? "bg-slate-950 text-white shadow-sm"
+                  : "text-slate-400 hover:bg-slate-50 hover:text-slate-700"
               }`}
             >
-              {tab.label}
+              <Icon size={10} />
+              <span>{tab.label}</span>
             </button>
-          ))}
-        </div>
+          );
+        })}
+
         <button
           onClick={onClose}
-          className="p-1 hover:bg-gray-800/80 rounded-sm transition-colors text-gray-400 hover:text-gray-100"
-          title="Close panel"
+          className="ml-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
         >
-          <X size={16} />
+          <X size={12} />
         </button>
       </div>
 
-      {selectedElements.length === 0 && activeTab === "style" && (
-        <div className="px-4 py-3 bg-gray-800/50 border-b border-gray-700/50">
-          <p className="text-xs text-gray-400">
-            👈 Select an element from canvas to edit styles
-          </p>
+      {/* Panel Content */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <AnimatePresence mode="wait">
+          {activeTab === "style" && (
+            <motion.div
+              key="style"
+              initial={{ opacity: 0, x: 6 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -6 }}
+              transition={{ duration: 0.15 }}
+              className="p-3"
+            >
+              <StylePanel />
+            </motion.div>
+          )}
+          {activeTab === "settings" && (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0, x: 6 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -6 }}
+              transition={{ duration: 0.15 }}
+              className="p-3"
+            >
+              <SettingsPanel />
+            </motion.div>
+          )}
+          {activeTab === "interactions" && (
+            <motion.div
+              key="interactions"
+              initial={{ opacity: 0, x: 6 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -6 }}
+              transition={{ duration: 0.15 }}
+              className="p-3"
+            >
+              <InteractionsPanel />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Empty state hint */}
+      {!selectedElements.length && activeTab === "style" && (
+        <div className="border-t border-amber-100 bg-amber-50/70 px-3 py-2.5 text-[10px] font-medium text-amber-600">
+          ↑ Select an element on the canvas
         </div>
       )}
-
-      {/* Content Area - Split Layout for Style Tab */}
-      <div className="flex-1 overflow-hidden bg-gradient-to-b from-gray-900 to-gray-850 flex flex-col">
-        {activeTab === "style" && (
-          <>
-            {/* Element Inspector - Top Section */}
-            <div className="flex-shrink-0 border-b border-gray-800 overflow-y-auto max-h-[200px]">
-              <ElementInspector />
-            </div>
-
-            {/* Style Panel - Bottom Section */}
-            <div className="flex-1 overflow-y-auto">
-              <StylePanel />
-            </div>
-          </>
-        )}
-        {activeTab === "settings" && <SettingsPanel />}
-        {activeTab === "interactions" && <InteractionsPanel />}
-      </div>
-    </div>
+    </aside>
   );
 }

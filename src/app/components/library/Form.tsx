@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 
 type FormProps = {
   title?: string;
@@ -13,8 +13,6 @@ export const Form = ({
   fields = ["Name", "Email", "Message"],
   submitText = "Submit",
 }: FormProps) => {
-  const [formData, setFormData] = useState<Record<string, string>>({});
-
   return (
     <section className="w-full py-12 px-6 bg-white">
       <div className="max-w-md mx-auto">

@@ -273,10 +273,14 @@ export default function CSSPropertyPanel() {
             {expandedCategories[categoryKey] && (
               <div className="p-4 space-y-4 border-t border-gray-200">
                 {category.properties.map((prop) => {
-                  const currentValue =
-                    selectedElement.cssProperties?.[
+                  const rawValue =
+                    selectedElement.cssProperties?.base?.[
                       prop.key as keyof CSSProperties
-                    ] || "";
+                    ];
+                  const currentValue =
+                    typeof rawValue === "string" || typeof rawValue === "number"
+                      ? rawValue
+                      : "";
 
                   return (
                     <div key={prop.key} className="space-y-2">
@@ -352,7 +356,7 @@ export default function CSSPropertyPanel() {
                             className="flex-1 h-2 bg-gray-200 rounded-lg accent-blue-500"
                           />
                           <span className="text-xs font-mono text-gray-600 bg-gray-100 px-2 py-1 rounded w-12 text-center">
-                            {parseFloat(currentValue || "1").toFixed(1)}
+                            {parseFloat(String(currentValue || "1")).toFixed(1)}
                           </span>
                         </div>
                       )}

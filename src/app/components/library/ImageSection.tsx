@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import NextImage from "next/image";
 
 type ImageSectionProps = {
   title?: string;
@@ -24,11 +25,14 @@ export const ImageSection = ({
         <div className={`grid grid-cols-1 md:grid-cols-${columns} gap-4`}>
           {images.map((img, idx) => (
             <div key={idx} className="overflow-hidden rounded-lg">
-              <img
-                src={img}
-                alt={`Gallery ${idx}`}
-                className="w-full h-64 object-cover hover:scale-105 transition"
-              />
+              <div className="relative w-full h-64 overflow-hidden">
+                <NextImage
+                  src={img}
+                  alt={`Gallery ${idx}`}
+                  fill
+                  className="object-cover hover:scale-105 transition duration-500"
+                />
+              </div>
             </div>
           ))}
         </div>

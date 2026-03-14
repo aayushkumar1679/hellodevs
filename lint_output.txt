@@ -1,0 +1,56 @@
+
+E:\products\all in one\my-dev-builder\src\app\api\generate\route.ts
+  16:7  warning  'projectName' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\products\all in one\my-dev-builder\src\app\api\projects\route.ts
+  6:15  warning  'Project' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\products\all in one\my-dev-builder\src\app\components\canvas\CanvasElement.tsx
+  345:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\products\all in one\my-dev-builder\src\app\components\canvas\ComponentRenderer.tsx
+  1:1  warning  Unused eslint-disable directive (no problems were reported from '@next/next/no-img-element')
+
+E:\products\all in one\my-dev-builder\src\app\components\panels\AIPromptPanel.tsx
+   26:10  warning  'useDesignStore' is defined but never used  @typescript-eslint/no-unused-vars
+  110:20  warning  'e' is defined but never used               @typescript-eslint/no-unused-vars
+
+E:\products\all in one\my-dev-builder\src\app\components\panels\AssetsPanel.tsx
+  42:10  warning  'copiedId' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  42:20  warning  'setCopiedId' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\products\all in one\my-dev-builder\src\app\components\panels\HistoryPanel.tsx
+   5:31  warning  'Project' is defined but never used                              @typescript-eslint/no-unused-vars
+  97:22  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  97:50  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+E:\products\all in one\my-dev-builder\src\app\components\panels\LayersPanel.tsx
+    8:3   warning  'ChevronDown' is defined but never used   @typescript-eslint/no-unused-vars
+  181:28  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  182:27  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\products\all in one\my-dev-builder\src\components\project\PrimitiveRenderer.tsx
+  8:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\products\all in one\my-dev-builder\src\config\componentRegistry.ts
+  1:10  warning  'Element' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\products\all in one\my-dev-builder\src\hooks\useSyncStores.ts
+  53:6  warning  React Hook useEffect has a missing dependency: 'elements'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\products\all in one\my-dev-builder\src\state\useCanvasStore.ts
+  19:7  warning  'buildFromBlueprint' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\products\all in one\my-dev-builder\src\utils\exporter.ts
+  3:10  warning  'generateReactPageCode' is defined but never used  @typescript-eslint/no-unused-vars
+  3:33  warning  'generateHtmlPageCode' is defined but never used   @typescript-eslint/no-unused-vars
+
+E:\products\all in one\my-dev-builder\src\utils\projectRenderer.tsx
+  1:1  warning  Unused eslint-disable directive (no problems were reported from '@next/next/no-img-element')
+
+E:\products\all in one\my-dev-builder\tmp\test-flux.js
+  1:8  warning  'fs' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 22 problems (6 errors, 16 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+

@@ -23,7 +23,7 @@ export default function SettingsPanel() {
     );
   }
 
-  // ✅ FIX
+  //  FIX
   const selectedElementId = selectedElements[0];
   if (!selectedElementId) return null;
 
@@ -39,7 +39,7 @@ export default function SettingsPanel() {
           setExpandedSections((prev) =>
             prev.includes("general")
               ? prev.filter((id) => id !== "general")
-              : [...prev, "general"]
+              : [...prev, "general"],
           )
         }
       >

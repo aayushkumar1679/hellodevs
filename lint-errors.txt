@@ -1,0 +1,54 @@
+
+E:\products\all in one\my-dev-builder\src\app\components\layout\BuilderHeader.tsx
+  15:3   warning  'ChevronDown' is defined but never used                 @typescript-eslint/no-unused-vars
+  41:10  warning  'showDeviceMenu' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  41:26  warning  'setShowDeviceMenu' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  45:9   warning  'deviceIcons' is assigned a value but never used        @typescript-eslint/no-unused-vars
+
+E:\products\all in one\my-dev-builder\src\app\components\library\Card.tsx
+  21:9  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+E:\products\all in one\my-dev-builder\src\app\components\library\ImageSection.tsx
+  27:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+E:\products\all in one\my-dev-builder\src\app\components\panels\AssetsPanel.tsx
+  71:54  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  88:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+E:\products\all in one\my-dev-builder\src\app\components\panels\HistoryPanel.tsx
+    9:20  warning  'currentProject' is assigned a value but never used              @typescript-eslint/no-unused-vars
+    9:36  warning  'undo' is assigned a value but never used                        @typescript-eslint/no-unused-vars
+   10:11  warning  'replaceElements' is assigned a value but never used             @typescript-eslint/no-unused-vars
+   12:9   warning  'handleRevert' is assigned a value but never used                @typescript-eslint/no-unused-vars
+   12:25  warning  'snapshot' is defined but never used                             @typescript-eslint/no-unused-vars
+   12:44  warning  'index' is defined but never used                                @typescript-eslint/no-unused-vars
+  106:22  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  106:50  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+E:\products\all in one\my-dev-builder\src\app\components\panels\LayersPanel.tsx
+   36:10  warning  'dropMode' is assigned a value but never used                          @typescript-eslint/no-unused-vars
+   37:10  warning  'dropPosition' is assigned a value but never used                      @typescript-eslint/no-unused-vars
+   37:24  warning  'setDropPosition' is assigned a value but never used                   @typescript-eslint/no-unused-vars
+   42:10  warning  'openMenuId' is assigned a value but never used                        @typescript-eslint/no-unused-vars
+   88:7   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+   93:9   warning  'getParentId' is assigned a value but never used                       @typescript-eslint/no-unused-vars
+  139:9   warning  'startEditing' is assigned a value but never used                      @typescript-eslint/no-unused-vars
+
+E:\products\all in one\my-dev-builder\src\app\components\panels\MultiSelectToolbar.tsx
+   8:3  warning  'AlignRight' is defined but never used                @typescript-eslint/no-unused-vars
+   9:3  warning  'AlignStartVertical' is defined but never used        @typescript-eslint/no-unused-vars
+  10:3  warning  'AlignCenterVertical' is defined but never used       @typescript-eslint/no-unused-vars
+  11:3  warning  'AlignEndVertical' is defined but never used          @typescript-eslint/no-unused-vars
+  15:3  warning  'Lock' is defined but never used                      @typescript-eslint/no-unused-vars
+  16:3  warning  'Unlock' is defined but never used                    @typescript-eslint/no-unused-vars
+  39:9  warning  'applyGrid3' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  59:9  warning  'applyAlignRight' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\products\all in one\my-dev-builder\src\app\sample\SampleLandingPage.tsx
+  60:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+E:\products\all in one\my-dev-builder\src\state\__tests__\store.test.ts
+  7:17  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 33 problems (4 errors, 29 warnings)
+

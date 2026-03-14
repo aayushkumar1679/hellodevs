@@ -1,507 +1,245 @@
 "use client";
 
-import React, { useState } from "react";
-import { useDesignStore } from "@/state/useDesignStore";
+import React, { useMemo, useState } from "react";
+import {
+  ChevronDown,
+  Layout,
+  Palette,
+  Type,
+  Zap,
+  Move,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  ArrowRight,
+  ArrowDown,
+} from "lucide-react";
+import { useDesignStore, type ResponsiveCss } from "@/state/useDesignStore";
 import { useCanvasStore } from "@/state/useCanvasStore";
-import { ChevronDown, X } from "lucide-react";
+import { useEditorStore } from "@/state/useEditorStore";
+import UnitInput from "../ui/UnitInput";
+import ColorInput from "../ui/ColorInput";
+import VisualSelect from "../ui/VisualSelect";
+import { motion, AnimatePresence } from "framer-motion";
 
-type SectionId =
-  | "layout"
-  | "spacing"
-  | "colors"
-  | "typography"
-  | "effects"
-  | "position";
+type BreakpointKey = "desktop" | "tablet" | "mobile";
+const toBucket = (bp: BreakpointKey) => (bp === "desktop" ? "base" : bp);
+
+function Section({
+  id, title, icon: Icon, open, onToggle, children,
+}: {
+  id: string;
+  title: string;
+  icon: React.ElementType;
+  open: boolean;
+  onToggle: (id: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-100 bg-white transition-all hover:border-slate-200">
+      <button
+        onClick={() => onToggle(id)}
+        className="flex w-full items-center justify-between px-3 py-2 text-left transition-colors hover:bg-slate-50/70"
+      >
+        <div className="flex items-center gap-2">
+          <div className={`flex h-5 w-5 items-center justify-center rounded-md transition-all ${
+            open ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-400"
+          }`}>
+            <Icon className="h-3 w-3" />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-700">
+            {title}
+          </span>
+        </div>
+        <ChevronDown
+          className={`h-3 w-3 text-slate-300 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <div className="space-y-3 border-t border-slate-100 bg-slate-50/30 px-3 py-3">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function StylePanel() {
   const selectedElements = useDesignStore((state) => state.selectedElements);
   const elements = useDesignStore((state) => state.elements);
   const updateCSSProperty = useDesignStore((state) => state.updateCSSProperty);
-  const updateCSSPropertiesBulk = useDesignStore(
-    (state) => state.updateCSSPropertiesBulk
-  );
   const { currentProject } = useCanvasStore();
+  const { activeBreakpoint } = useEditorStore();
 
-  const [expandedSections, setExpandedSections] = useState<Set<SectionId>>(
-    new Set(["layout", "spacing"])
-  );
+  const [expanded, setExpanded] = useState<string[]>(["layout", "surface"]);
 
-  const toggleSection = (sectionId: SectionId) => {
-    const newSections = new Set(expandedSections);
-    if (newSections.has(sectionId)) {
-      newSections.delete(sectionId);
-    } else {
-      newSections.add(sectionId);
-    }
-    setExpandedSections(newSections);
+  const hasSelection = selectedElements.length > 0;
+  const primaryId = hasSelection ? selectedElements[0] : null;
+  const element = primaryId ? elements[primaryId] : null;
+  const bucket = toBucket(activeBreakpoint as BreakpointKey);
+
+  const css = useMemo(() => {
+    const cssAll: ResponsiveCss = element?.cssProperties ?? { base: {} };
+    return { ...(cssAll.base ?? {}), ...(cssAll[bucket] ?? {}) };
+  }, [bucket, element]);
+
+  const getCssValue = (key: string, fallback = "") => {
+    const value = css[key];
+    return typeof value === "string" || typeof value === "number" ? String(value) : fallback;
   };
 
-  if (selectedElements.length === 0) {
+  const toggleSection = (id: string) => {
+    setExpanded((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const currentType = (primaryId && currentProject?.components?.[primaryId]?.type) || "Element";
+  const displayValue = getCssValue("display", "block");
+  const flexDirectionValue = getCssValue("flexDirection", "row");
+  const backgroundValue = getCssValue("background") || getCssValue("backgroundColor");
+  const textAlignValue = getCssValue("textAlign", "left");
+
+  if (!hasSelection || !primaryId) {
     return (
-      <div className="p-4 text-gray-400 text-xs text-center bg-gradient-to-b from-gray-900 to-gray-850 border-t border-gray-800 rounded">
-        <p className="font-semibold mb-1">No Elements Selected</p>
-        <p>Click elements on canvas to select them</p>
-        <p className="text-[10px] mt-2">💡 Ctrl+Click to select multiple</p>
+      <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-300">
+          <Layout className="h-6 w-6" />
+        </div>
+        <p className="text-[11px] font-bold text-slate-500">No selection</p>
+        <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+          Click any element on the canvas to edit its styles.
+        </p>
       </div>
     );
   }
 
-  const selectedIds = selectedElements;
-  const primaryId = selectedIds[0];
-  const element = elements[primaryId];
-
-  if (!element) return null;
-
-  const css = element.cssProperties || {};
-  const isMultiSelect = selectedIds.length > 1;
-
-  const handlePropertyChange = (property: string, value: any) => {
-    if (isMultiSelect) {
-      updateCSSPropertiesBulk(selectedIds, property, value);
-    } else {
-      updateCSSProperty(primaryId, property, value);
-    }
-  };
-
-  const getElementInfo = (id: string) => {
-    const comp = currentProject?.components[id];
-    return comp?.type || "Unknown";
-  };
-
-  const Section = ({
-    id,
-    title,
-    children,
-  }: {
-    id: SectionId;
-    title: string;
-    children: React.ReactNode;
-  }) => {
-    const isExpanded = expandedSections.has(id);
-    return (
-      <div className="p-2 rounded-lg bg-gradient-to-r from-gray-800/50 to-gray-900/50 border border-gray-700/50">
-        <button
-          onClick={() => toggleSection(id)}
-          className="w-full flex items-center justify-between group cursor-pointer"
-        >
-          <h3 className="text-[10px] font-semibold text-gray-300 uppercase tracking-wider">
-            {title}
-          </h3>
-          <ChevronDown
-            className={`w-3 h-3 text-gray-500 group-hover:text-gray-300 transition-transform duration-200 ${
-              isExpanded ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-        {isExpanded && <div className="space-y-2 mt-2">{children}</div>}
-      </div>
-    );
-  };
-
   return (
-    <div className="p-3 space-y-4 text-gray-100 bg-gradient-to-b from-gray-900 to-gray-850 border-t border-gray-800 overflow-y-auto max-h-[calc(100vh-200px)]">
-      {/* Multi-select info */}
-      {isMultiSelect && (
-        <div className="mb-3 px-3 py-2 rounded bg-blue-500/15 border border-blue-500/30">
-          <p className="text-[10px] font-semibold text-blue-200">
-            ✓ {selectedIds.length} Elements Selected
-          </p>
-          <div className="text-[9px] text-blue-300/70 mt-1 space-y-0.5">
-            {selectedIds.slice(0, 3).map((id) => (
-              <div key={id} className="flex items-center gap-1">
-                <span>•</span>
-                <span>{getElementInfo(id)}</span>
-              </div>
-            ))}
-            {selectedIds.length > 3 && (
-              <div className="text-[9px] text-blue-300/50">
-                +{selectedIds.length - 3} more
-              </div>
-            )}
+    <div className="space-y-1.5">
+      {/* Selected Element Badge */}
+      <div className="mb-3 rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50 p-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Selected</p>
+            <p className="mt-0.5 text-[13px] font-black capitalize italic tracking-tight text-slate-900">
+              {currentType}
+            </p>
+            <p className="text-[9px] font-mono text-slate-400">#{primaryId.slice(0, 8)}</p>
           </div>
-          <p className="text-[9px] text-blue-300 mt-2">
-            Changes apply to all selected elements
-          </p>
+          <span className="rounded-lg bg-sky-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-sky-600 ring-1 ring-sky-200/50">
+            {activeBreakpoint}
+          </span>
         </div>
-      )}
+      </div>
 
-      {/* Single element info */}
-      {!isMultiSelect && (
-        <div className="px-2 py-1.5 rounded bg-gray-800/50 border border-gray-700">
-          <p className="text-[9px] text-gray-400">Element Type</p>
-          <p className="text-[11px] font-semibold text-gray-200">
-            {getElementInfo(primaryId)}
-          </p>
+      <Section id="layout" title="Layout" icon={Layout} open={expanded.includes("layout")} onToggle={toggleSection}>
+        <VisualSelect
+          label="Display"
+          value={displayValue}
+          onChange={(val) => updateCSSProperty(primaryId, "display", val)}
+          options={[
+            { value: "block", label: "Block", icon: Layout },
+            { value: "flex", label: "Flex", icon: ArrowRight },
+            { value: "grid", label: "Grid", icon: Layout },
+            { value: "none", label: "Hidden", icon: Zap },
+          ]}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <UnitInput label="Width" value={getCssValue("width")} onChange={(val) => updateCSSProperty(primaryId, "width", val)} placeholder="Auto" />
+          <UnitInput label="Height" value={getCssValue("height")} onChange={(val) => updateCSSProperty(primaryId, "height", val)} placeholder="Auto" />
         </div>
-      )}
-
-      {/* Layout Section */}
-      <Section id="layout" title="Layout">
-        <div>
-          <label className="block text-[10px] text-gray-400 mb-1">
-            Display
-          </label>
-          <select
-            value={css.display || "block"}
-            onChange={(e) => handlePropertyChange("display", e.target.value)}
-            className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-          >
-            <option value="block">Block</option>
-            <option value="inline-block">Inline Block</option>
-            <option value="inline">Inline</option>
-            <option value="flex">Flex</option>
-            <option value="grid">Grid</option>
-            <option value="none">None</option>
-          </select>
-        </div>
-
-        {/* Flex options */}
-        {css.display === "flex" && (
-          <>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[10px] text-gray-400 mb-1">
-                  Direction
-                </label>
-                <select
-                  value={css.flexDirection || "row"}
-                  onChange={(e) =>
-                    handlePropertyChange("flexDirection", e.target.value)
-                  }
-                  className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-                >
-                  <option value="row">Row</option>
-                  <option value="column">Column</option>
-                  <option value="row-reverse">Row Reverse</option>
-                  <option value="column-reverse">Col Reverse</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] text-gray-400 mb-1">
-                  Gap
-                </label>
-                <input
-                  type="text"
-                  value={css.gap || ""}
-                  onChange={(e) => handlePropertyChange("gap", e.target.value)}
-                  placeholder="16px"
-                  className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[10px] text-gray-400 mb-1">
-                  Align Items
-                </label>
-                <select
-                  value={css.alignItems || "stretch"}
-                  onChange={(e) =>
-                    handlePropertyChange("alignItems", e.target.value)
-                  }
-                  className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-                >
-                  <option value="stretch">Stretch</option>
-                  <option value="flex-start">Start</option>
-                  <option value="center">Center</option>
-                  <option value="flex-end">End</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] text-gray-400 mb-1">
-                  Justify
-                </label>
-                <select
-                  value={css.justifyContent || "flex-start"}
-                  onChange={(e) =>
-                    handlePropertyChange("justifyContent", e.target.value)
-                  }
-                  className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-                >
-                  <option value="flex-start">Start</option>
-                  <option value="center">Center</option>
-                  <option value="flex-end">End</option>
-                  <option value="space-between">Between</option>
-                  <option value="space-around">Around</option>
-                </select>
-              </div>
-            </div>
-          </>
+        {(displayValue === "flex" || displayValue === "grid") && (
+          <div className="space-y-2.5 rounded-lg bg-slate-100/60 p-2.5">
+            <VisualSelect
+              label="Direction"
+              value={flexDirectionValue}
+              onChange={(val) => updateCSSProperty(primaryId, "flexDirection", val)}
+              options={[
+                { value: "row", label: "Row", icon: ArrowRight },
+                { value: "column", label: "Col", icon: ArrowDown },
+              ]}
+            />
+            <UnitInput label="Gap" value={getCssValue("gap")} onChange={(val) => updateCSSProperty(primaryId, "gap", val)} placeholder="0px" />
+          </div>
         )}
+      </Section>
 
+      <Section id="spacing" title="Spacing" icon={Move} open={expanded.includes("spacing")} onToggle={toggleSection}>
         <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="block text-[10px] text-gray-400 mb-1">
-              Width
-            </label>
-            <input
-              type="text"
-              value={css.width || ""}
-              onChange={(e) => handlePropertyChange("width", e.target.value)}
-              placeholder="auto"
-              className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] text-gray-400 mb-1">
-              Height
-            </label>
-            <input
-              type="text"
-              value={css.height || ""}
-              onChange={(e) => handlePropertyChange("height", e.target.value)}
-              placeholder="auto"
-              className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-            />
-          </div>
+          <UnitInput label="Padding" value={getCssValue("padding")} onChange={(val) => updateCSSProperty(primaryId, "padding", val)} placeholder="0px" />
+          <UnitInput label="Margin" value={getCssValue("margin")} onChange={(val) => updateCSSProperty(primaryId, "margin", val)} placeholder="0px" />
         </div>
       </Section>
 
-      {/* Spacing Section */}
-      <Section id="spacing" title="Spacing">
-        <div>
-          <label className="block text-[10px] text-gray-400 mb-1">
-            Padding
-          </label>
-          <input
-            type="text"
-            value={css.padding || ""}
-            onChange={(e) => handlePropertyChange("padding", e.target.value)}
-            placeholder="10px"
-            className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-          />
-        </div>
-        <div>
-          <label className="block text-[10px] text-gray-400 mb-1">Margin</label>
-          <input
-            type="text"
-            value={css.margin || ""}
-            onChange={(e) => handlePropertyChange("margin", e.target.value)}
-            placeholder="0"
-            className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-          />
-        </div>
-      </Section>
-
-      {/* Colors Section */}
-      <Section id="colors" title="Colors">
-        <div>
-          <label className="block text-[10px] text-gray-400 mb-1">
-            Background
-          </label>
-          <div className="flex gap-1">
-            <input
-              type="color"
-              value={css.backgroundColor || "#ffffff"}
-              onChange={(e) =>
-                handlePropertyChange("backgroundColor", e.target.value)
-              }
-              className="w-8 h-7 rounded cursor-pointer bg-gray-800 border border-gray-700"
-            />
-            <input
-              type="text"
-              value={css.backgroundColor || ""}
-              onChange={(e) =>
-                handlePropertyChange("backgroundColor", e.target.value)
-              }
-              className="flex-1 px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-[10px] text-gray-400 mb-1">
-            Text Color
-          </label>
-          <div className="flex gap-1">
-            <input
-              type="color"
-              value={css.color || "#000000"}
-              onChange={(e) => handlePropertyChange("color", e.target.value)}
-              className="w-8 h-7 rounded cursor-pointer bg-gray-800 border border-gray-700"
-            />
-            <input
-              type="text"
-              value={css.color || ""}
-              onChange={(e) => handlePropertyChange("color", e.target.value)}
-              className="flex-1 px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-            />
-          </div>
-        </div>
-      </Section>
-
-      {/* Typography Section */}
-      <Section id="typography" title="Typography">
+      <Section id="surface" title="Surface" icon={Palette} open={expanded.includes("surface")} onToggle={toggleSection}>
+        <ColorInput label="Background" value={backgroundValue} onChange={(val) => updateCSSProperty(primaryId, "background", val)} />
+        <ColorInput label="Text Color" value={getCssValue("color")} onChange={(val) => updateCSSProperty(primaryId, "color", val)} />
         <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="block text-[10px] text-gray-400 mb-1">
-              Font Size
-            </label>
-            <input
-              type="text"
-              value={css.fontSize || ""}
-              onChange={(e) => handlePropertyChange("fontSize", e.target.value)}
-              placeholder="16px"
-              className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] text-gray-400 mb-1">
-              Font Weight
-            </label>
-            <select
-              value={css.fontWeight || "400"}
-              onChange={(e) =>
-                handlePropertyChange("fontWeight", e.target.value)
-              }
-              className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-            >
-              <option value="300">Light</option>
-              <option value="400">Normal</option>
-              <option value="500">Medium</option>
-              <option value="600">Semibold</option>
-              <option value="700">Bold</option>
-            </select>
-          </div>
+          <UnitInput label="Radius" value={getCssValue("borderRadius")} onChange={(val) => updateCSSProperty(primaryId, "borderRadius", val)} placeholder="0px" />
+          <UnitInput label="Border" value={getCssValue("borderWidth")} onChange={(val) => updateCSSProperty(primaryId, "borderWidth", val)} placeholder="0px" />
         </div>
+      </Section>
 
-        <div>
-          <label className="block text-[10px] text-gray-400 mb-1">
-            Line Height
-          </label>
-          <input
-            type="text"
-            value={css.lineHeight || ""}
-            onChange={(e) => handlePropertyChange("lineHeight", e.target.value)}
-            placeholder="1.5"
-            className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-          />
-        </div>
-
-        <div>
-          <label className="block text-[10px] text-gray-400 mb-1">
-            Text Align
-          </label>
+      <Section id="typography" title="Typography" icon={Type} open={expanded.includes("typography")} onToggle={toggleSection}>
+        {/* Font Family Picker */}
+        <div className="space-y-1">
+          <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Font Family</p>
           <select
-            value={css.textAlign || "left"}
-            onChange={(e) => handlePropertyChange("textAlign", e.target.value)}
-            className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
+            value={getCssValue("fontFamily", "")}
+            onChange={(e) => updateCSSProperty(primaryId, "fontFamily", e.target.value)}
+            className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-800 shadow-sm transition hover:border-slate-300 focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-200"
           >
-            <option value="left">Left</option>
-            <option value="center">Center</option>
-            <option value="right">Right</option>
-            <option value="justify">Justify</option>
+            <option value="">— Default —</option>
+            <option value="var(--font-manrope), sans-serif">Manrope</option>
+            <option value="var(--font-space-grotesk), sans-serif">Space Grotesk</option>
+            <option value="var(--font-inter), sans-serif">Inter</option>
+            <option value="var(--font-plus-jakarta-sans), sans-serif">Plus Jakarta Sans</option>
+            <option value="var(--font-outfit), sans-serif">Outfit</option>
+            <option value="var(--font-dm-sans), sans-serif">DM Sans</option>
+            <option value="var(--font-sora), sans-serif">Sora</option>
+            <option value="Georgia, serif">Georgia (Serif)</option>
+            <option value="monospace">Monospace</option>
           </select>
         </div>
-      </Section>
-
-      {/* Effects Section */}
-      <Section id="effects" title="Effects">
-        <div>
-          <label className="block text-[10px] text-gray-400 mb-1">
-            Border Radius
-          </label>
-          <input
-            type="text"
-            value={css.borderRadius || ""}
-            onChange={(e) =>
-              handlePropertyChange("borderRadius", e.target.value)
-            }
-            placeholder="0px"
-            className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-          />
-        </div>
-
-        <div>
-          <label className="block text-[10px] text-gray-400 mb-1">Border</label>
-          <input
-            type="text"
-            value={css.border || ""}
-            onChange={(e) => handlePropertyChange("border", e.target.value)}
-            placeholder="1px solid #000"
-            className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-          />
-        </div>
-
-        <div>
-          <label className="block text-[10px] text-gray-400 mb-1">
-            Box Shadow
-          </label>
-          <input
-            type="text"
-            value={css.boxShadow || ""}
-            onChange={(e) => handlePropertyChange("boxShadow", e.target.value)}
-            placeholder="0 4px 6px rgba(0,0,0,0.1)"
-            className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-          />
-        </div>
-
-        <div>
-          <label className="block text-[10px] text-gray-400 mb-1">
-            Opacity
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={css.opacity || 1}
-              onChange={(e) =>
-                handlePropertyChange("opacity", parseFloat(e.target.value))
-              }
-              className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-400"
-            />
-            <span className="text-[10px] text-gray-400 min-w-[30px] text-right">
-              {((css.opacity || 1) * 100).toFixed(0)}%
-            </span>
-          </div>
-        </div>
-      </Section>
-
-      {/* Position Section */}
-      <Section id="position" title="Position">
-        <div>
-          <label className="block text-[10px] text-gray-400 mb-1">
-            Position
-          </label>
-          <select
-            value={css.position || "static"}
-            onChange={(e) => handlePropertyChange("position", e.target.value)}
-            className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-          >
-            <option value="static">Static</option>
-            <option value="relative">Relative</option>
-            <option value="absolute">Absolute</option>
-            <option value="fixed">Fixed</option>
-          </select>
-        </div>
-
         <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="block text-[10px] text-gray-400 mb-1">Top</label>
-            <input
-              type="text"
-              value={css.top || ""}
-              onChange={(e) => handlePropertyChange("top", e.target.value)}
-              placeholder="auto"
-              className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] text-gray-400 mb-1">
-              Right
-            </label>
-            <input
-              type="text"
-              value={css.right || ""}
-              onChange={(e) => handlePropertyChange("right", e.target.value)}
-              placeholder="auto"
-              className="w-full px-2 py-1 bg-gray-800/80 border border-gray-700 rounded-sm text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
-            />
-          </div>
+          <UnitInput label="Font Size" value={getCssValue("fontSize")} onChange={(val) => updateCSSProperty(primaryId, "fontSize", val)} placeholder="16px" />
+          <UnitInput label="Line Height" value={getCssValue("lineHeight")} onChange={(val) => updateCSSProperty(primaryId, "lineHeight", val)} placeholder="1.5" />
         </div>
+        <VisualSelect
+          label="Alignment"
+          value={textAlignValue}
+          onChange={(val) => updateCSSProperty(primaryId, "textAlign", val)}
+          options={[
+            { value: "left", label: "Left", icon: AlignLeft },
+            { value: "center", label: "Center", icon: AlignCenter },
+            { value: "right", label: "Right", icon: AlignRight },
+            { value: "justify", label: "Justify", icon: AlignJustify },
+          ]}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <UnitInput label="Font Weight" value={getCssValue("fontWeight")} onChange={(val) => updateCSSProperty(primaryId, "fontWeight", val)} units={[""]} placeholder="400" />
+          <UnitInput label="Letter Spacing" value={getCssValue("letterSpacing")} onChange={(val) => updateCSSProperty(primaryId, "letterSpacing", val)} placeholder="0em" />
+        </div>
+      </Section>
+
+      <Section id="effects" title="Effects" icon={Zap} open={expanded.includes("effects")} onToggle={toggleSection}>
+        <div className="grid grid-cols-2 gap-2">
+          <UnitInput label="Opacity" value={getCssValue("opacity", "1")} onChange={(val) => updateCSSProperty(primaryId, "opacity", val)} units={[""]} placeholder="1" />
+          <UnitInput label="Z-Index" value={getCssValue("zIndex", "0")} onChange={(val) => updateCSSProperty(primaryId, "zIndex", val)} units={[""]} placeholder="0" />
+        </div>
+        <UnitInput label="Blur" value={getCssValue("backdropFilter")} onChange={(val) => updateCSSProperty(primaryId, "backdropFilter", `blur(${val})`)} units={["px"]} placeholder="0px" />
       </Section>
     </div>
   );
 }
+

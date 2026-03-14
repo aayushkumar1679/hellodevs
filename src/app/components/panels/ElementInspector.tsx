@@ -3,104 +3,102 @@
 import React from "react";
 import { useDesignStore } from "@/state/useDesignStore";
 import { useCanvasStore } from "@/state/useCanvasStore";
-import { X, Copy, Trash2, Eye, EyeOff } from "lucide-react";
+import { X, Trash2, Eye, EyeOff } from "lucide-react";
 
 export default function ElementInspector() {
   const selectedElements = useDesignStore((state) => state.selectedElements);
   const elements = useDesignStore((state) => state.elements);
-  const selectElement = useDesignStore((state) => state.selectElement);
-  const removeElement = useDesignStore((state) => state.removeElement);
   const deselectAll = useDesignStore((state) => state.deselectAll);
   const updateCSSProperty = useDesignStore((state) => state.updateCSSProperty);
-  const { currentProject } = useCanvasStore();
+  const { currentProject, removeComponent } = useCanvasStore();
 
   if (selectedElements.length === 0) {
     return (
-      <div className="p-3 text-gray-500 text-xs bg-linear-to-b from-gray-900 to-gray-850 border-b border-gray-800">
-        <p className="text-center">No elements selected</p>
+      <div className="rounded-[24px] border border-dashed border-slate-300 bg-white/80 px-4 py-5 text-center text-sm text-slate-500">
+        No elements selected yet.
       </div>
     );
   }
 
   const getElementInfo = (id: string) => {
-    const comp = currentProject?.components[id];
-    const elem = elements[id];
-    // ✅ FIXED: Use 'type' instead of non-existent 'label'
+    const component = currentProject?.components[id];
+    const textProp = component?.props?.text;
+    const label =
+      typeof textProp === "string" || typeof textProp === "number"
+        ? String(textProp)
+        : component?.type || "Element";
+
     return {
-      type: comp?.type || "Unknown",
-      label: comp?.props?.text || comp?.type || "Element", // Removed comp?.label
+      type: component?.type || "Unknown",
+      label,
     };
   };
 
-  const handleRemoveElement = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    removeElement(id);
-    if (selectedElements.length === 1) {
-      deselectAll();
-    }
-  };
-
-  const handleToggleVisibility = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const elem = elements[id];
-    const currentDisplay = elem.cssProperties?.display || "block";
-    updateCSSProperty(
-      id,
-      "display",
-      currentDisplay === "none" ? "block" : "none"
-    );
+  const handleToggleVisibility = (id: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    const element = elements[id];
+    const currentDisplay = element?.cssProperties?.base?.display || "block";
+    updateCSSProperty(id, "display", currentDisplay === "none" ? "block" : "none");
   };
 
   return (
-    <div className="p-3 space-y-2 bg-linear-to-b from-gray-900 to-gray-850 border-b border-gray-800">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-[10px] font-semibold text-gray-300 uppercase tracking-wider">
-          {selectedElements.length} Selected
-        </p>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+            Selection
+          </p>
+          <p className="mt-1 text-sm font-semibold text-slate-950">
+            {selectedElements.length} layer
+            {selectedElements.length === 1 ? "" : "s"} selected
+          </p>
+        </div>
+
         <button
           onClick={deselectAll}
-          className="text-gray-500 hover:text-gray-300 transition-colors"
+          className="rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-950"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="max-h-32 overflow-y-auto space-y-1.5">
+      <div className="space-y-2">
         {selectedElements.map((id) => {
           const info = getElementInfo(id);
-          const elem = elements[id];
-          const isHidden = elem.cssProperties?.display === "none";
+          const element = elements[id];
+          const isHidden = element?.cssProperties?.base?.display === "none";
 
           return (
             <div
               key={id}
-              className="p-2 rounded bg-gray-800/50 border border-gray-700 hover:border-gray-600 transition-colors group"
+              className="group rounded-[22px] border border-slate-200 bg-white px-3 py-3 shadow-sm transition hover:border-slate-300"
             >
-              <div className="flex items-start justify-between gap-1 mb-1">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-semibold text-gray-200 truncate">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-slate-900">
                     {info.label}
                   </p>
-                  <p className="text-[9px] text-gray-400">{info.type}</p>
+                  <p className="mt-1 text-xs text-slate-500">{info.type}</p>
                 </div>
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+
+                <div className="flex items-center gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
                   <button
-                    onClick={(e) => handleToggleVisibility(id, e)}
-                    className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-gray-200"
-                    title={isHidden ? "Show" : "Hide"}
+                    onClick={(event) => handleToggleVisibility(id, event)}
+                    className="rounded-full border border-slate-200 bg-slate-50 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-950"
+                    title={isHidden ? "Show layer" : "Hide layer"}
                   >
                     {isHidden ? (
-                      <EyeOff className="w-3 h-3" />
+                      <EyeOff className="h-3.5 w-3.5" />
                     ) : (
-                      <Eye className="w-3 h-3" />
+                      <Eye className="h-3.5 w-3.5" />
                     )}
                   </button>
                   <button
-                    onClick={(e) => handleRemoveElement(id, e)}
-                    className="p-1 hover:bg-red-600/20 rounded text-red-400 hover:text-red-300"
+                    onClick={() => removeComponent(id)}
+                    className="rounded-full border border-rose-200 bg-rose-50 p-2 text-rose-600 transition hover:border-rose-300 hover:bg-rose-100"
                     title="Delete"
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
@@ -110,10 +108,8 @@ export default function ElementInspector() {
       </div>
 
       {selectedElements.length > 1 && (
-        <div className="pt-2 border-t border-gray-700">
-          <p className="text-[9px] text-blue-300 px-2 py-1 bg-blue-500/10 rounded">
-            💡 Editing properties affects all {selectedElements.length} elements
-          </p>
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+          Bulk style edits apply to every selected element.
         </div>
       )}
     </div>
