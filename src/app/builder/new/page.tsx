@@ -1,14 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
-  LayoutDashboard,
   Sparkles,
   Wand2,
   CheckCircle2,
+  Loader2,
+  ChevronDown,
+  Zap,
+  Globe,
+  Layout,
+  ShoppingBag,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useProjectStore } from "@/state/useProjectStore";
@@ -17,262 +23,403 @@ import {
   DEFAULT_OPENAI_MODEL,
   OPENAI_MODEL_OPTIONS,
 } from "@/config/openaiModels";
+import { motion, AnimatePresence } from "framer-motion";
 
-const PROMPT_EXAMPLES = [
-  "A premium AI SaaS landing page with a floating 3D hero, trusted by logos, a feature grid, testimonials, pricing, and a strong final CTA.",
-  "A modern fintech homepage with glass cards, clean charts, comparison sections, and crisp light-theme spacing.",
-  "A world-class agency website with editorial typography, bold asymmetry, work showcase cards, team proof, and a booking CTA.",
+/* ── Prompt examples ──────────────────────────────────────── */
+const TEMPLATES = [
+  {
+    icon: Zap,
+    label: "SaaS",
+    prompt:
+      "A premium AI SaaS landing page with a floating 3D hero, trust badges, feature grid, pricing tiers, and a strong final CTA. Clean white background with violet accents.",
+  },
+  {
+    icon: Globe,
+    label: "Agency",
+    prompt:
+      "A world-class digital agency site with bold editorial typography, asymmetric case-study cards, team proof section, and a booking CTA. Dark theme with warm gold accents.",
+  },
+  {
+    icon: Layout,
+    label: "Startup",
+    prompt:
+      "A modern fintech startup homepage with glass morphism cards, clean typography, feature comparison grid, testimonials, and confident navy + white palette.",
+  },
+  {
+    icon: ShoppingBag,
+    label: "E-Commerce",
+    prompt:
+      "A luxury fashion e-commerce landing with full-bleed hero image, curated product grid, brand story section, editorial imagery, and a minimal newsletter signup.",
+  },
+  {
+    icon: FileText,
+    label: "Blog",
+    prompt:
+      "A premium editorial blog homepage with magazine-style grid, featured article hero, category pills, author spotlights, and a clean white + black palette.",
+  },
 ];
 
 export default function NewProjectPage() {
-  const createProject = useProjectStore((state) => state.createProject);
+  const createProject = useProjectStore((s) => s.createProject);
   const router = useRouter();
 
-  const [name, setName] = useState("Polyglot Test Website");
-  const [prompt, setPrompt] = useState(PROMPT_EXAMPLES[0]);
+  const [name, setName] = useState("My New Website");
+  const [prompt, setPrompt] = useState(TEMPLATES[0].prompt);
   const [model, setModel] = useState(DEFAULT_OPENAI_MODEL);
+  const [showModels, setShowModels] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [genStage, setGenStage] = useState<string | null>(null);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [prompt]);
+
+  const selectedModel =
+    OPENAI_MODEL_OPTIONS.find((m) => m.id === model) ?? OPENAI_MODEL_OPTIONS[0];
+
+  const STAGES = [
+    "Analysing brand identity…",
+    "Architecting layout…",
+    "Crafting design system…",
+    "Generating visuals…",
+    "Assembling your website…",
+  ];
 
   const handleGenerate = async () => {
-    const trimmedName = name.trim();
-    const trimmedPrompt = prompt.trim();
-
-    if (!trimmedName || !trimmedPrompt) {
-      setError("Add a project name and prompt before generating.");
+    if (!name.trim() || !prompt.trim()) {
+      setError("Please add a project name and describe your website.");
       return;
     }
+    setError(null);
+    setIsGenerating(true);
+
+    // Cycle through stage messages
+    let stageIdx = 0;
+    setGenStage(STAGES[0]);
+    const stageInterval = setInterval(() => {
+      stageIdx = Math.min(stageIdx + 1, STAGES.length - 1);
+      setGenStage(STAGES[stageIdx]);
+    }, 2200);
 
     try {
-      setIsGenerating(true);
-      setError(null);
-
-      const response = await fetch("/api/generate", {
+      const res = await fetch("/api/generate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          projectName: trimmedName,
-          prompt: trimmedPrompt,
+          projectName: name.trim(),
+          prompt: prompt.trim(),
           model,
         }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Generation failed.");
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Generation failed");
 
       const materialized = materializeGeneratedProject(data);
-      const projectId = createProject(trimmedName);
-      
-      // Directly set project components in the store
+      const projectId = createProject(name.trim());
+
       useProjectStore.setState((state) => {
         if (!state.currentProject) return state;
         const updated = {
           ...state.currentProject,
-          name: data.projectName || trimmedName,
+          name: data.projectName ?? name.trim(),
           components: materialized.components,
           rootOrder: materialized.rootOrder,
-          rootComponent: materialized.rootOrder[0] || null,
-          generationPrompt: trimmedPrompt,
+          rootComponent: materialized.rootOrder[0] ?? null,
+          generationPrompt: prompt.trim(),
           generationModel: model,
           generationSummary: data.summary,
+          designSystem: data.designSystem,
         };
-        return { currentProject: updated, projects: { ...state.projects, [updated.id]: updated } };
+        return {
+          currentProject: updated,
+          projects: { ...state.projects, [updated.id]: updated },
+        };
       });
 
       router.push(`/builder/${projectId}`);
-    } catch (generationError) {
-      const msg = generationError instanceof Error
-          ? generationError.message
-          : "Unexpected generation error.";
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unexpected error";
       setError(msg);
       toast.error(msg);
     } finally {
+      clearInterval(stageInterval);
       setIsGenerating(false);
+      setGenStage(null);
     }
   };
 
-  const handleBlankCanvas = () => {
-    const trimmedName = name.trim() || "Untitled Project";
-    const projectId = createProject(trimmedName);
+  const handleBlank = () => {
+    const projectId = createProject(name.trim() || "Untitled Project");
     router.push(`/builder/${projectId}`);
   };
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-950">
-      <header className="border-b border-slate-200 bg-white/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <Link href="/" className="text-sm font-medium text-slate-500 transition hover:text-slate-950">
-            Back to dashboard
-          </Link>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-400">
-            Prompt-first creation
-          </p>
-        </div>
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#070709] font-sans selection:bg-violet-500/25">
+      {/* ── Background atmosphere ──────────────────────── */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {/* Gradient orbs */}
+        <div className="absolute -top-40 left-1/2 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-violet-600/10 blur-[100px]" />
+        <div className="absolute top-1/3 -right-40 h-[400px] w-[400px] rounded-full bg-indigo-600/8 blur-[80px]" />
+        <div className="absolute bottom-0 -left-20 h-[300px] w-[300px] rounded-full bg-violet-800/8 blur-[60px]" />
+        {/* Dot grid */}
+        <div
+          className="absolute inset-0 opacity-[0.18]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+          }}
+        />
+        {/* Vignette */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,#070709_100%)]" />
+      </div>
+
+      {/* ── Header ──────────────────────────────────────── */}
+      <header className="relative z-10 flex h-12 items-center justify-between border-b border-white/[0.06] px-6">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 shadow-[0_0_12px_rgba(124,110,248,0.5)]">
+            <Sparkles className="h-3 w-3 text-white" />
+          </div>
+          <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/40">
+            Polyglot
+          </span>
+        </Link>
+        <Link
+          href="/"
+          className="text-[11px] font-medium text-white/30 transition hover:text-white/60"
+        >
+          ← Dashboard
+        </Link>
       </header>
 
-      <main className="mx-auto grid max-w-6xl gap-8 px-6 py-12 lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="rounded-[36px] border border-slate-200 bg-white/90 p-8 shadow-[0_30px_80px_-45px_rgba(15,23,42,0.38)]">
-          <p className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-amber-700">
-            <Sparkles className="h-3.5 w-3.5" />
-            Start with a prompt
-          </p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">
-            Describe the website before you touch the canvas
-          </h1>
-          <p className="mt-4 max-w-xl text-base leading-7 text-slate-600">
-            Polyglot should begin like a real AI product: prompt first, generated
-            site first, then visual refinement. This screen now does exactly that.
-          </p>
+      {/* ── Main ────────────────────────────────────────── */}
+      <main className="relative z-10 flex flex-1 items-start justify-center px-4 py-12 lg:py-16">
+        <div className="w-full max-w-2xl">
+          {/* Hero title */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.25, 0, 0, 1] }}
+            className="mb-8 text-center"
+          >
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-violet-400">
+              <Sparkles className="h-3 w-3" /> AI-First Builder
+            </div>
+            <h1 className="text-4xl font-black tracking-[-0.03em] text-white sm:text-5xl">
+              Describe your website.
+              <br />
+              <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
+                Watch it appear.
+              </span>
+            </h1>
+            <p className="mx-auto mt-3 max-w-md text-[13px] leading-6 text-white/40">
+              One sentence → full page with real images, animations, and a
+              design system. Then edit visually.
+            </p>
+          </motion.div>
 
-          <div className="mt-8 space-y-5">
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">
-                Project name
+          {/* ── Card ──────────────────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.5, ease: [0.25, 0, 0, 1] }}
+            className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0E0E12] shadow-[0_40px_80px_-30px_rgba(0,0,0,0.8)]"
+          >
+            {/* Project name row */}
+            <div className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-white/25 whitespace-nowrap">
+                Project
               </span>
               <input
                 value={name}
-                onChange={(event) => setName(event.target.value)}
-                className="w-full rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-400"
-                placeholder="Acme AI launch site"
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Acme Launch Site"
+                className="flex-1 bg-transparent text-[13px] font-semibold text-white/80 outline-none placeholder:text-white/20 focus:text-white"
               />
-            </label>
-
-            <div>
-              <span className="mb-2 block text-sm font-semibold text-slate-700">
-                Model
-              </span>
-              <div className="space-y-3">
-                {OPENAI_MODEL_OPTIONS.map((option) => {
-                  const active = model === option.id;
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => setModel(option.id)}
-                      className={`flex w-full items-start gap-3 rounded-[24px] border px-4 py-4 text-left transition ${
-                        active
-                          ? "border-slate-950 bg-slate-950 text-white"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                      }`}
-                    >
-                      <div
-                        className={`mt-1 h-4 w-4 rounded-full border ${
-                          active ? "border-white bg-white" : "border-slate-300"
-                        }`}
-                      />
-                      <div>
-                        <p className="text-sm font-semibold">{option.label}</p>
-                        <p
-                          className={`mt-1 text-sm ${
-                            active ? "text-slate-200" : "text-slate-500"
-                          }`}
-                        >
-                          {option.description}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
             </div>
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">
-                What should the website look like?
-              </span>
-              <textarea
-                value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
-                className="min-h-56 w-full rounded-[28px] border border-slate-200 bg-slate-50 px-4 py-4 text-base leading-7 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                placeholder="Describe the page you want Polyglot to generate..."
-              />
-            </label>
-
-            <div className="flex flex-wrap gap-2">
-              {PROMPT_EXAMPLES.map((example) => (
+            {/* Template chips */}
+            <div className="flex flex-wrap gap-1.5 border-b border-white/[0.06] px-4 py-3">
+              {TEMPLATES.map(({ icon: Icon, label, prompt: p }) => (
                 <button
-                  key={example}
-                  type="button"
-                  onClick={() => setPrompt(example)}
-                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-950"
+                  key={label}
+                  onClick={() => setPrompt(p)}
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-semibold transition-all ${
+                    prompt === p
+                      ? "border-violet-500/40 bg-violet-500/15 text-violet-300"
+                      : "border-white/[0.08] bg-white/[0.03] text-white/40 hover:border-white/15 hover:text-white/60"
+                  }`}
                 >
-                  {example.length > 58 ? `${example.slice(0, 58)}...` : example}
+                  <Icon className="h-3 w-3" />
+                  {label}
                 </button>
               ))}
             </div>
 
-            {error && (
-              <div className="rounded-[22px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                {error}
-              </div>
-            )}
+            {/* Prompt textarea */}
+            <div className="px-4 py-3">
+              <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-white/25">
+                Describe your website
+              </p>
+              <textarea
+                ref={textareaRef}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="A luxury hotel website with parallax hero, warm amber palette, booking form, gallery, and animated section reveals…"
+                className="min-h-[100px] w-full resize-none bg-transparent text-[13px] leading-6 text-white/70 outline-none placeholder:text-white/20 focus:text-white/90"
+                style={{ overflow: "hidden" }}
+              />
+            </div>
 
-            <div className="flex flex-wrap gap-3">
-              <button
+            {/* Model selector */}
+            <div className="border-t border-white/[0.06] px-4 py-2.5">
+              <div className="relative">
+                <button
+                  onClick={() => setShowModels((v) => !v)}
+                  className="flex w-full items-center justify-between rounded-lg border border-white/[0.07] bg-white/[0.03] px-3 py-2 text-[11px] transition hover:border-white/12 hover:bg-white/[0.05]"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-violet-400" />
+                    <span className="font-semibold text-white/60">
+                      {selectedModel.label}
+                    </span>
+                    <span className="text-white/25">
+                      {selectedModel.description}
+                    </span>
+                  </div>
+                  <motion.div
+                    animate={{ rotate: showModels ? 180 : 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <ChevronDown className="h-3 w-3 text-white/30" />
+                  </motion.div>
+                </button>
+
+                <AnimatePresence>
+                  {showModels && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4, scaleY: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scaleY: 1 }}
+                      exit={{ opacity: 0, y: -4, scaleY: 0.95 }}
+                      transition={{ duration: 0.12 }}
+                      className="absolute bottom-full left-0 right-0 z-50 mb-1 overflow-hidden rounded-xl border border-white/[0.08] bg-[#1A1A1E] shadow-2xl"
+                    >
+                      {OPENAI_MODEL_OPTIONS.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => {
+                            setModel(option.id);
+                            setShowModels(false);
+                          }}
+                          className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-white/[0.05]"
+                        >
+                          <div
+                            className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${model === option.id ? "bg-violet-400" : "bg-white/15"}`}
+                          />
+                          <div>
+                            <p className="text-[11px] font-semibold text-white/70">
+                              {option.label}
+                            </p>
+                            <p className="text-[10px] text-white/30">
+                              {option.description}
+                            </p>
+                          </div>
+                          {model === option.id && (
+                            <CheckCircle2 className="ml-auto h-3 w-3 text-violet-400" />
+                          )}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Error */}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="border-t border-rose-500/15 bg-rose-500/8 px-4 py-2.5 text-[11px] font-medium text-rose-400"
+                >
+                  {error}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* CTA row */}
+            <div className="flex items-center gap-2 border-t border-white/[0.06] px-4 py-3">
+              <motion.button
                 onClick={handleGenerate}
                 disabled={isGenerating}
-                className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                whileTap={{ scale: 0.97 }}
+                className="group relative flex flex-1 h-9 items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-[12px] font-bold text-white shadow-[0_4px_20px_rgba(124,110,248,0.35)] transition-all hover:shadow-[0_6px_28px_rgba(124,110,248,0.5)] disabled:opacity-60"
               >
                 {isGenerating ? (
                   <>
-                    <Wand2 className="h-4 w-4 animate-pulse" />
-                    Generating website...
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={genStage}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-[11px]"
+                      >
+                        {genStage}
+                      </motion.span>
+                    </AnimatePresence>
                   </>
                 ) : (
                   <>
+                    <Wand2 className="h-3.5 w-3.5" />
                     Generate website
-                    <ArrowRight className="h-4 w-4" />
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                   </>
                 )}
-              </button>
+                {/* Shimmer */}
+                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+              </motion.button>
 
               <button
-                onClick={handleBlankCanvas}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
+                onClick={handleBlank}
+                disabled={isGenerating}
+                className="flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 text-[11px] font-semibold text-white/40 transition hover:border-white/15 hover:text-white/60 disabled:opacity-40"
               >
                 Blank canvas
               </button>
             </div>
-          </div>
-        </section>
+          </motion.div>
 
-        <section className="rounded-[36px] border border-slate-200 bg-[radial-gradient(circle_at_top,#fef3c7,transparent_42%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-8 shadow-[0_30px_80px_-45px_rgba(15,23,42,0.38)]">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-white">
-              <LayoutDashboard className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-950">
-                What the generated flow now does
-              </p>
-              <p className="text-sm text-slate-500">
-                Closer to the product vision you described
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-8 space-y-4 text-sm text-slate-600">
+          {/* Footer hints */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="mt-6 flex items-center justify-center gap-6 text-[10px] text-white/20"
+          >
             {[
-              "Generate a first draft website from the prompt before the builder opens.",
-              "Open the builder with a real canvas tree and editable styles already in place.",
-              "Rewrite the prompt later from the AI panel to regenerate and refine.",
-              "Use the upgraded light-theme inspector to tune CSS, glass, and 3D depth.",
-            ].map((item) => (
-              <div
-                key={item}
-                className="flex items-start gap-3 rounded-[24px] border border-white/80 bg-white/85 px-4 py-4 shadow-sm"
-              >
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                <span>{item}</span>
-              </div>
+              "AI-generated images",
+              "Framer Motion animations",
+              "One-click export",
+            ].map((feat) => (
+              <span key={feat} className="flex items-center gap-1.5">
+                <span className="h-1 w-1 rounded-full bg-violet-500/50" />
+                {feat}
+              </span>
             ))}
-          </div>
-        </section>
+          </motion.div>
+        </div>
       </main>
     </div>
   );

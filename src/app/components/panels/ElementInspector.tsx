@@ -6,101 +6,90 @@ import { useEditorStore } from "@/state/useEditorStore";
 import { X, Trash2, Eye, EyeOff } from "lucide-react";
 
 export default function ElementInspector() {
-  const selectedElements = useEditorStore((state) => state.selectedElements);
-  const deselectAll = useEditorStore((state) => state.deselectAll);
-  const activeBreakpoint = useEditorStore((state) => state.activeBreakpoint);
-  const updateCSSProperty = useProjectStore((state) => state.updateComponentCSSOverride);
-  const { currentProject, removeComponent } = useProjectStore();
+  const selectedElements = useEditorStore((s) => s.selectedElements);
+  const deselectAll = useEditorStore((s) => s.deselectAll);
+  const activeBreakpoint = useEditorStore((s) => s.activeBreakpoint);
+  const { currentProject, removeComponent, updateComponentCSSOverride } =
+    useProjectStore();
 
   if (selectedElements.length === 0) {
     return (
-      <div className="rounded-[24px] border border-dashed border-slate-300 bg-white/80 px-4 py-5 text-center text-sm text-slate-500">
-        No elements selected yet.
+      <div className="rounded-xl border border-dashed border-white/[0.07] px-3 py-4 text-center">
+        <p className="text-[10px] text-white/20">No element selected</p>
       </div>
     );
   }
 
-  const getElementInfo = (id: string) => {
-    const component = currentProject?.components[id];
-    const textProp = component?.props?.text;
-    const label =
-      typeof textProp === "string" || typeof textProp === "number"
-        ? String(textProp)
-        : component?.type || "Element";
-
+  const getInfo = (id: string) => {
+    const comp = currentProject?.components[id];
+    const textProp = comp?.props?.text;
     return {
-      type: component?.type || "Unknown",
-      label,
+      type: comp?.type ?? "Unknown",
+      label:
+        typeof textProp === "string" ? textProp : (comp?.type ?? "Element"),
     };
   };
 
-  const handleToggleVisibility = (id: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    const element = currentProject?.components[id];
-    const currentDisplay = element?.cssOverrides?.base?.display || "block";
-    updateCSSProperty(id, activeBreakpoint, "display", currentDisplay === "none" ? "block" : "none");
+  const toggleVisibility = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const comp = currentProject?.components[id];
+    const cur = comp?.cssOverrides?.base?.display || "block";
+    updateComponentCSSOverride(
+      id,
+      activeBreakpoint,
+      "display",
+      cur === "none" ? "block" : "none",
+    );
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-            Selection
-          </p>
-          <p className="mt-1 text-sm font-semibold text-slate-950">
-            {selectedElements.length} layer
-            {selectedElements.length === 1 ? "" : "s"} selected
-          </p>
-        </div>
-
+        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/25">
+          {selectedElements.length} selected
+        </p>
         <button
           onClick={deselectAll}
-          className="rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-950"
+          className="flex h-5 w-5 items-center justify-center rounded-md text-white/20 transition hover:bg-white/[0.06] hover:text-white/50"
         >
-          <X className="h-4 w-4" />
+          <X className="h-3 w-3" />
         </button>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {selectedElements.map((id) => {
-          const info = getElementInfo(id);
-          const element = currentProject?.components[id];
-          const isHidden = element?.cssOverrides?.base?.display === "none";
+          const info = getInfo(id);
+          const comp = currentProject?.components[id];
+          const isHidden = comp?.cssOverrides?.base?.display === "none";
 
           return (
             <div
               key={id}
-              className="group rounded-[22px] border border-slate-200 bg-white px-3 py-3 shadow-sm transition hover:border-slate-300"
+              className="group flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-2.5 py-2 transition hover:border-white/10"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-900">
-                    {info.label}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">{info.type}</p>
-                </div>
-
-                <div className="flex items-center gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
-                  <button
-                    onClick={(event) => handleToggleVisibility(id, event)}
-                    className="rounded-full border border-slate-200 bg-slate-50 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-950"
-                    title={isHidden ? "Show layer" : "Hide layer"}
-                  >
-                    {isHidden ? (
-                      <EyeOff className="h-3.5 w-3.5" />
-                    ) : (
-                      <Eye className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => removeComponent(id)}
-                    className="rounded-full border border-rose-200 bg-rose-50 p-2 text-rose-600 transition hover:border-rose-300 hover:bg-rose-100"
-                    title="Delete"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[11px] font-semibold text-white/60">
+                  {info.label}
+                </p>
+                <p className="text-[9px] text-white/25">{info.type}</p>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  onClick={(e) => toggleVisibility(id, e)}
+                  className={`flex h-6 w-6 items-center justify-center rounded-md transition ${isHidden ? "text-white/20" : "text-white/30 hover:bg-white/[0.06] hover:text-white/60"}`}
+                >
+                  {isHidden ? (
+                    <EyeOff className="h-3 w-3" />
+                  ) : (
+                    <Eye className="h-3 w-3" />
+                  )}
+                </button>
+                <button
+                  onClick={() => removeComponent(id)}
+                  className="flex h-6 w-6 items-center justify-center rounded-md text-white/20 transition hover:bg-rose-500/10 hover:text-rose-400"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
               </div>
             </div>
           );
@@ -108,9 +97,9 @@ export default function ElementInspector() {
       </div>
 
       {selectedElements.length > 1 && (
-        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
-          Bulk style edits apply to every selected element.
-        </div>
+        <p className="rounded-lg border border-sky-500/15 bg-sky-500/6 px-2.5 py-1.5 text-[9px] text-sky-400">
+          Bulk style edits apply to all selected elements.
+        </p>
       )}
     </div>
   );

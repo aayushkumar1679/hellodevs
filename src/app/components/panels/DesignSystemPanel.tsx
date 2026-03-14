@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Palette, Type, Square, Moon, Sun, Check, Copy } from "lucide-react";
+import { Palette, Type, Square, Check, Copy } from "lucide-react";
 import { useProjectStore } from "@/state/useProjectStore";
 import {
   QUICK_PALETTES,
@@ -10,9 +10,8 @@ import {
 } from "@/config/DesignSystem";
 import { toast } from "sonner";
 
-type Tab = "colors" | "typography" | "shadows";
+type Tab = "colors" | "typography" | "effects";
 
-// ─── Color Swatch ─────────────────────────────────────────────────────────────
 function ColorSwatch({
   label,
   value,
@@ -24,7 +23,7 @@ function ColorSwatch({
 }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="group flex items-center gap-3">
+    <div className="group flex items-center gap-2.5">
       <label className="relative cursor-pointer">
         <input
           type="color"
@@ -33,13 +32,15 @@ function ColorSwatch({
           className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
         />
         <div
-          className="h-9 w-9 shrink-0 rounded-xl border border-white/10 shadow-sm transition-transform group-hover:scale-105"
+          className="h-7 w-7 flex-shrink-0 rounded-lg border border-white/10 shadow-sm transition-transform group-hover:scale-110"
           style={{ backgroundColor: value }}
         />
       </label>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</p>
-        <p className="font-mono text-[11px] text-slate-600">{value}</p>
+        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/30">
+          {label}
+        </p>
+        <p className="font-mono text-[9px] text-white/40">{value}</p>
       </div>
       <button
         onClick={() => {
@@ -47,131 +48,92 @@ function ColorSwatch({
           setCopied(true);
           setTimeout(() => setCopied(false), 1200);
         }}
-        className="h-6 w-6 flex items-center justify-center rounded-lg text-slate-400 opacity-0 transition group-hover:opacity-100 hover:text-slate-700"
+        className="flex h-5 w-5 items-center justify-center rounded-md text-white/15 opacity-0 transition group-hover:opacity-100 hover:text-white/40"
       >
-        {copied ? <Check size={12} /> : <Copy size={12} />}
+        {copied ? (
+          <Check className="h-2.5 w-2.5 text-emerald-400" />
+        ) : (
+          <Copy className="h-2.5 w-2.5" />
+        )}
       </button>
     </div>
   );
 }
 
-// ─── Quick Palette Chip ───────────────────────────────────────────────────────
-function PaletteChip({
-  palette,
-  onSelect,
-}: {
-  palette: (typeof QUICK_PALETTES)[0];
-  onSelect: () => void;
-}) {
-  const colors = [
-    palette.colors.background,
-    palette.colors.surface,
-    palette.colors.primary,
-    palette.colors.secondary,
-    palette.colors.accent,
-  ];
-  return (
-    <button
-      onClick={onSelect}
-      className="group rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-slate-300 hover:shadow-md active:scale-[0.97]"
-    >
-      <div className="flex gap-1 mb-2">
-        {colors.map((c, i) => (
-          <div
-            key={i}
-            className="h-4 flex-1 rounded-md"
-            style={{ backgroundColor: c }}
-          />
-        ))}
-      </div>
-      <p className="text-[10px] font-bold text-slate-700 group-hover:text-slate-900 transition-colors">
-        {palette.name}
-      </p>
-    </button>
-  );
-}
-
-// ─── Main Panel ───────────────────────────────────────────────────────────────
 export default function DesignSystemPanel() {
-  const [activeTab, setActiveTab] = useState<Tab>("colors");
+  const [tab, setTab] = useState<Tab>("colors");
   const currentProject = useProjectStore((s) => s.currentProject);
   const updateProject = useProjectStore((s) => s.updateProject);
 
-  const designSystem = currentProject?.designSystem ?? DEFAULT_DESIGN_SYSTEM as any;
-  const colors: ColorPalette = designSystem?.colors ?? DEFAULT_DESIGN_SYSTEM.colors;
+  const designSystem =
+    currentProject?.designSystem ?? (DEFAULT_DESIGN_SYSTEM as any);
+  const colors: ColorPalette =
+    designSystem?.colors ?? DEFAULT_DESIGN_SYSTEM.colors;
 
   const updateColor = (key: keyof ColorPalette, value: string) => {
     if (!currentProject) return;
-    updateProject(currentProject.id, {
-      designSystem: {
-        ...designSystem,
-        colors: { ...colors, [key]: value },
-      },
-    });
+    updateProject({
+      designSystem: { ...designSystem, colors: { ...colors, [key]: value } },
+    } as any);
   };
 
-  const applyQuickPalette = (palette: (typeof QUICK_PALETTES)[0]) => {
+  const applyPalette = (p: (typeof QUICK_PALETTES)[0]) => {
     if (!currentProject) return;
-    updateProject(currentProject.id, {
-      designSystem: { ...designSystem, colors: palette.colors },
-    });
-    toast.success(`Applied "${palette.name}" palette`);
+    updateProject({
+      designSystem: { ...designSystem, colors: p.colors },
+    } as any);
+    toast.success(`Applied "${p.name}"`);
   };
 
-  const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "colors", label: "Colors", icon: Palette },
-    { id: "typography", label: "Type", icon: Type },
-    { id: "shadows", label: "Effects", icon: Square },
+  const TABS = [
+    { id: "colors" as Tab, icon: Palette, label: "Colors" },
+    { id: "typography" as Tab, icon: Type, label: "Type" },
+    { id: "effects" as Tab, icon: Square, label: "Effects" },
   ];
 
   if (!currentProject) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-        <Palette className="mb-3 h-8 w-8 text-slate-300" />
-        <p className="text-sm font-semibold text-slate-500">Open a project to edit its design system</p>
+        <Palette className="mb-3 h-6 w-6 text-white/10" />
+        <p className="text-[10px] text-white/25">
+          Open a project to edit tokens
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Header */}
-      <div className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(238,242,255,0.95))] p-5 shadow-[0_24px_60px_-40px_rgba(99,102,241,0.3)]">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Design Tokens</p>
-            <p className="mt-1.5 text-sm font-bold text-slate-900">{currentProject.name}</p>
-          </div>
-          <div className="h-10 w-10 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600">
-            <Palette size={18} />
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex bg-slate-100 rounded-xl p-1">
-        {tabs.map(({ id, label, icon: Icon }) => (
+    <div className="space-y-3 text-white">
+      {/* Tab bar */}
+      <div className="flex rounded-lg border border-white/[0.07] bg-white/[0.03] p-0.5">
+        {TABS.map(({ id, icon: Icon, label }) => (
           <button
             key={id}
-            onClick={() => setActiveTab(id)}
-            className={`flex flex-1 items-center justify-center gap-1.5 py-1.5 text-[10px] font-black uppercase tracking-wide rounded-lg transition-all ${
-              activeTab === id
-                ? "bg-white text-slate-950 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
+            onClick={() => setTab(id)}
+            className={`flex flex-1 items-center justify-center gap-1 rounded-md py-1 text-[9px] font-bold uppercase tracking-wider transition-all ${tab === id ? "bg-violet-600/80 text-white" : "text-white/25 hover:text-white/50"}`}
           >
-            <Icon size={10} />
-            {label}
+            <Icon className="h-2.5 w-2.5" />
+            <span className="hidden sm:inline">{label}</span>
           </button>
         ))}
       </div>
 
-      {/* Colors Tab */}
-      {activeTab === "colors" && (
-        <div className="space-y-5">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Color Palette</h3>
-            {(["background", "surface", "primary", "secondary", "accent"] as const).map((key) => (
+      {/* Colors */}
+      {tab === "colors" && (
+        <div className="space-y-3">
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-3">
+            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-white/25">
+              Color Palette
+            </p>
+            {(
+              [
+                "background",
+                "surface",
+                "primary",
+                "secondary",
+                "accent",
+              ] as const
+            ).map((key) => (
               <ColorSwatch
                 key={key}
                 label={key}
@@ -180,72 +142,126 @@ export default function DesignSystemPanel() {
               />
             ))}
           </div>
-
-          <div className="space-y-3">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Quick Palettes</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {QUICK_PALETTES.map((palette) => (
-                <PaletteChip
-                  key={palette.name}
-                  palette={palette}
-                  onSelect={() => applyQuickPalette(palette)}
-                />
+          <div>
+            <p className="mb-2 text-[8px] font-black uppercase tracking-[0.2em] text-white/25">
+              Quick Palettes
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {QUICK_PALETTES.map((p) => (
+                <button
+                  key={p.name}
+                  onClick={() => applyPalette(p)}
+                  className="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5 text-left transition hover:border-violet-500/25 hover:bg-violet-500/5"
+                >
+                  <div className="mb-1.5 flex gap-0.5">
+                    {[
+                      p.colors.background,
+                      p.colors.surface,
+                      p.colors.primary,
+                      p.colors.secondary,
+                      p.colors.accent,
+                    ].map((c, i) => (
+                      <div
+                        key={i}
+                        className="h-3 flex-1 rounded-sm"
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-[9px] font-bold text-white/40 group-hover:text-white/60 transition">
+                    {p.name}
+                  </p>
+                </button>
               ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* Typography Tab */}
-      {activeTab === "typography" && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Font Family</h3>
-          <select
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-indigo-500"
-            value={(designSystem as any)?.typography?.fontFamily || DEFAULT_DESIGN_SYSTEM.typography.fontFamily}
-            onChange={(e) =>
-              updateProject(currentProject.id, {
-                designSystem: { ...designSystem, typography: { ...DEFAULT_DESIGN_SYSTEM.typography, fontFamily: e.target.value } },
-              })
-            }
-          >
-            {[
-              "'Manrope', sans-serif",
-              "'Inter', sans-serif",
-              "'Plus Jakarta Sans', sans-serif",
-              "'Outfit', sans-serif",
-              "'DM Sans', sans-serif",
-              "'Sora', sans-serif",
-              "'Space Grotesk', sans-serif",
-              "'Playfair Display', serif",
-              "'Lora', serif",
-            ].map((font) => (
-              <option key={font} value={font}>{font.replace(/'/g, "").split(",")[0]}</option>
-            ))}
-          </select>
-          <div
-            className="mt-4 rounded-xl bg-slate-50 p-4 text-center"
-            style={{ fontFamily: (designSystem as any)?.typography?.fontFamily || DEFAULT_DESIGN_SYSTEM.typography.fontFamily }}
-          >
-            <p className="text-2xl font-bold text-slate-900">Aa Bb Cc</p>
-            <p className="mt-1 text-sm text-slate-500">The quick brown fox</p>
+      {/* Typography */}
+      {tab === "typography" && (
+        <div className="space-y-3">
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+            <p className="mb-2 text-[8px] font-black uppercase tracking-[0.2em] text-white/25">
+              Font Family
+            </p>
+            <select
+              className="w-full rounded-lg border border-white/[0.07] bg-[#1A1A1E] px-2.5 py-1.5 text-[11px] text-white/60 outline-none appearance-none transition focus:border-violet-500/40"
+              value={
+                (designSystem as any)?.typography?.fontFamily ||
+                DEFAULT_DESIGN_SYSTEM.typography.fontFamily
+              }
+              onChange={(e) =>
+                updateProject({
+                  designSystem: {
+                    ...designSystem,
+                    typography: {
+                      ...DEFAULT_DESIGN_SYSTEM.typography,
+                      fontFamily: e.target.value,
+                    },
+                  },
+                } as any)
+              }
+            >
+              {[
+                "'Manrope', sans-serif",
+                "'Inter', sans-serif",
+                "'Plus Jakarta Sans', sans-serif",
+                "'Outfit', sans-serif",
+                "'DM Sans', sans-serif",
+                "'Sora', sans-serif",
+                "'Space Grotesk', sans-serif",
+                "'Playfair Display', serif",
+                "'Lora', serif",
+              ].map((f) => (
+                <option key={f} value={f}>
+                  {f.replace(/'/g, "").split(",")[0]}
+                </option>
+              ))}
+            </select>
+            <div
+              className="mt-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-center"
+              style={{
+                fontFamily:
+                  (designSystem as any)?.typography?.fontFamily ||
+                  DEFAULT_DESIGN_SYSTEM.typography.fontFamily,
+              }}
+            >
+              <p className="text-xl font-bold text-white/70">Aa Bb Cc</p>
+              <p className="mt-0.5 text-[11px] text-white/30">
+                The quick brown fox
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Shadows Tab */}
-      {activeTab === "shadows" && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Shadow Presets</h3>
+      {/* Effects */}
+      {tab === "effects" && (
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-2.5">
+          <p className="text-[8px] font-black uppercase tracking-[0.2em] text-white/25">
+            Shadow Presets
+          </p>
           {DEFAULT_DESIGN_SYSTEM.shadows.map((shadow) => (
-            <div key={shadow.id} className="flex items-center gap-3">
+            <div key={shadow.id} className="flex items-center gap-2.5">
               <div
-                className="h-8 w-8 shrink-0 rounded-xl bg-white border border-slate-200"
-                style={{ boxShadow: shadow.value === "none" ? "none" : shadow.value.replace("var(--poly-color-accent)", colors.accent).replace("var(--poly-color-primary)", colors.primary) }}
+                className="h-7 w-7 flex-shrink-0 rounded-lg border border-white/[0.07] bg-white/[0.03]"
+                style={{
+                  boxShadow:
+                    shadow.value === "none"
+                      ? "none"
+                      : shadow.value
+                          .replace("var(--poly-color-accent)", colors.accent)
+                          .replace("var(--poly-color-primary)", colors.primary),
+                }}
               />
               <div>
-                <p className="text-xs font-semibold text-slate-700">{shadow.name}</p>
-                <p className="text-[10px] font-mono text-slate-400 truncate max-w-[180px]">{shadow.value}</p>
+                <p className="text-[10px] font-semibold text-white/50">
+                  {shadow.name}
+                </p>
+                <p className="font-mono text-[8px] text-white/20 truncate max-w-[180px]">
+                  {shadow.value}
+                </p>
               </div>
             </div>
           ))}

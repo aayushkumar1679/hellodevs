@@ -7,117 +7,109 @@ import {
   Layers,
   Image as ImageIcon,
   Clock3,
-  Settings,
   Package,
+  Settings,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface SidebarPanel {
-  id: string;
-  label: string;
-  icon: React.ElementType;
-  accent?: string;
-}
+type LeftPanelId =
+  | "ai"
+  | "components"
+  | "custom"
+  | "layers"
+  | "assets"
+  | "history"
+  | null;
 
 interface LeftSidebarProps {
-  activeLeftPanel: string | null;
-  setActiveLeftPanel: (panel: string | null) => void;
+  activeLeftPanel: LeftPanelId;
+  setActiveLeftPanel: (id: LeftPanelId) => void;
+  width?: number;
 }
+
+const PANELS = [
+  { id: "ai" as const, icon: Sparkles, label: "AI Studio", accent: "#a78bfa" },
+  {
+    id: "components" as const,
+    icon: Grid3x3,
+    label: "Components",
+    accent: null,
+  },
+  { id: "custom" as const, icon: Package, label: "Custom", accent: null },
+  { id: "layers" as const, icon: Layers, label: "Layers", accent: null },
+  { id: "assets" as const, icon: ImageIcon, label: "Assets", accent: null },
+  { id: "history" as const, icon: Clock3, label: "History", accent: null },
+];
 
 export default function LeftSidebar({
   activeLeftPanel,
   setActiveLeftPanel,
 }: LeftSidebarProps) {
-  const panels: SidebarPanel[] = [
-    { id: "ai", label: "AI Studio", icon: Sparkles, accent: "#f59e0b" },
-    { id: "components", label: "Library", icon: Grid3x3 },
-    { id: "custom", label: "Custom", icon: Package },
-    { id: "layers", label: "Layers", icon: Layers },
-    { id: "assets", label: "Assets", icon: ImageIcon },
-    { id: "history", label: "History", icon: Clock3 },
-  ];
-
   return (
-    <aside
-      className="fixed left-0 z-40 flex flex-col items-center gap-1.5 border-r py-3"
-      style={{
-        top: "var(--header-h)",
-        bottom: 0,
-        width: "var(--left-sidebar-w)",
-        background: "var(--sidebar-bg)",
-        borderColor: "var(--sidebar-border)",
-      }}
-    >
-      {panels.map((panel, i) => {
-        const Icon = panel.icon;
-        const active = activeLeftPanel === panel.id;
-
+    /*
+     * This sidebar is a plain flex child — NOT fixed.
+     * It sits in the flex row alongside the canvas.
+     * Width is w-10 (40px) — just the icon strip.
+     */
+    <aside className="flex h-full w-10 flex-shrink-0 flex-col items-center gap-1 border-r border-white/[0.06] bg-[#0A0A0D] py-2">
+      {PANELS.map(({ id, icon: Icon, label, accent }, i) => {
+        const active = activeLeftPanel === id;
         return (
           <motion.div
-            key={panel.id}
-            className="relative group"
-            initial={{ opacity: 0, x: -8 }}
+            key={id}
+            className="group relative"
+            initial={{ opacity: 0, x: -6 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.04, duration: 0.25, ease: "easeOut" }}
+            transition={{ delay: i * 0.03, duration: 0.2 }}
           >
             <motion.button
-              onClick={() => setActiveLeftPanel(active ? null : panel.id)}
-              className="relative flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200"
-              style={{
-                background: active
-                  ? panel.accent
-                    ? `${panel.accent}22`
-                    : "rgba(255,255,255,0.1)"
-                  : "transparent",
-                color: active
-                  ? panel.accent || "rgba(255,255,255,0.95)"
-                  : "var(--sidebar-icon)",
-              }}
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.9 }}
-              title={panel.label}
+              onClick={() => setActiveLeftPanel(active ? null : id)}
+              whileTap={{ scale: 0.88 }}
+              title={label}
+              className={`relative flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150 ${
+                active
+                  ? "bg-white/[0.10] text-white"
+                  : "text-white/30 hover:bg-white/[0.05] hover:text-white/60"
+              }`}
             >
               <Icon
-                size={15}
-                style={{
-                  color: active
-                    ? panel.accent || "rgba(255,255,255,0.95)"
-                    : undefined,
-                  filter: active && panel.accent
-                    ? `drop-shadow(0 0 6px ${panel.accent}88)`
-                    : undefined,
-                }}
+                className="h-3.5 w-3.5"
+                style={
+                  active && accent
+                    ? {
+                        color: accent,
+                        filter: `drop-shadow(0 0 5px ${accent}99)`,
+                      }
+                    : undefined
+                }
               />
 
-              {/* Active indicator bar */}
+              {/* Active pill on left edge */}
               <AnimatePresence>
                 {active && (
                   <motion.div
-                    layoutId="sidebar-active-bar"
-                    initial={{ opacity: 0, scaleY: 0 }}
-                    animate={{ opacity: 1, scaleY: 1 }}
-                    exit={{ opacity: 0, scaleY: 0 }}
-                    className="absolute -left-3 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+                    layoutId="left-active-pill"
+                    initial={{ scaleY: 0, opacity: 0 }}
+                    animate={{ scaleY: 1, opacity: 1 }}
+                    exit={{ scaleY: 0, opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute -left-[9px] top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full"
                     style={{
-                      background: panel.accent || "rgba(255,255,255,0.85)",
-                      boxShadow: panel.accent
-                        ? `0 0 8px ${panel.accent}88`
-                        : "0 0 8px rgba(255,255,255,0.4)",
+                      background: accent ?? "rgba(255,255,255,0.7)",
+                      boxShadow: `0 0 6px ${accent ?? "rgba(255,255,255,0.4)"}`,
                     }}
                   />
                 )}
               </AnimatePresence>
             </motion.button>
 
-            {/* Hover Tooltip */}
-            <div className="pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 translate-x-1 opacity-0 transition-all duration-150 group-hover:translate-x-0 group-hover:opacity-100 z-50">
-              <div
-                className="whitespace-nowrap rounded-lg px-2.5 py-1 text-[10px] font-bold tracking-wide text-white shadow-xl"
-                style={{ background: "rgba(15,15,17,0.95)", border: "1px solid rgba(255,255,255,0.08)" }}
-              >
-                {panel.label}
-                <div className="absolute top-1/2 -left-1.5 -translate-y-1/2 border-y-[4px] border-y-transparent border-r-[6px]"
-                  style={{ borderRightColor: "rgba(15,15,17,0.95)" }}
+            {/* Tooltip */}
+            <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-2.5 -translate-y-1/2 translate-x-1 opacity-0 transition-all duration-100 group-hover:translate-x-0 group-hover:opacity-100">
+              <div className="whitespace-nowrap rounded-lg border border-white/[0.08] bg-[#1C1C20] px-2.5 py-1 text-[10px] font-semibold text-white/80 shadow-xl">
+                {label}
+                <div
+                  className="absolute -left-1 top-1/2 -translate-y-1/2 border-y-[4px] border-y-transparent border-r-[5px]"
+                  style={{ borderRightColor: "#1C1C20" }}
                 />
               </div>
             </div>
@@ -125,16 +117,14 @@ export default function LeftSidebar({
         );
       })}
 
-      {/* Spacer + Settings */}
+      {/* Spacer + settings */}
       <div className="mt-auto">
         <motion.button
-          className="flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200"
-          style={{ color: "var(--sidebar-icon)" }}
-          whileHover={{ scale: 1.08, color: "rgba(255,255,255,0.8)" }}
-          whileTap={{ scale: 0.9 }}
+          whileTap={{ scale: 0.88 }}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-white/50"
           title="Settings"
         >
-          <Settings size={14} />
+          <Settings className="h-3.5 w-3.5" />
         </motion.button>
       </div>
     </aside>

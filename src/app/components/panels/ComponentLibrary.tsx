@@ -28,161 +28,181 @@ import {
 } from "@/config/componentRegistry";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface ComponentLibraryProps {
-  categories?: ComponentCategory[];
-  onComponentAdd?: (def: ComponentDefinition, id: string) => void;
-}
-
-const COMPONENT_ICONS: Record<string, React.ReactNode> = {
-  section: <LayoutTemplate size={13} />,
-  "flex-row": <Rows size={13} />,
-  "flex-column": <Columns size={13} />,
-  grid: <Grid3x3 size={13} />,
-  container: <Box size={13} />,
-  spacer: <Minus size={13} />,
-  divider: <Minus size={13} />,
-  navbar: <Navigation size={13} />,
-  "feature-section": <Grid3x3 size={13} />,
-  "testimonial-section": <Rows size={13} />,
-  "pricing-section": <Columns size={13} />,
-  "stats-strip": <LayoutTemplate size={13} />,
-  card: <Square size={13} />,
-  heading: <Type size={13} />,
-  text: <FileText size={13} />,
-  image: <ImageIcon size={13} />,
-  button: <MousePointerClick size={13} />,
-  badge: <BadgeCheck size={13} />,
-  alert: <AlertTriangle size={13} />,
+const ICONS: Record<string, React.ReactNode> = {
+  section: <LayoutTemplate size={11} />,
+  "flex-row": <Rows size={11} />,
+  "flex-column": <Columns size={11} />,
+  grid: <Grid3x3 size={11} />,
+  container: <Box size={11} />,
+  spacer: <Minus size={11} />,
+  divider: <Minus size={11} />,
+  navbar: <Navigation size={11} />,
+  "feature-section": <Grid3x3 size={11} />,
+  "testimonial-section": <Rows size={11} />,
+  card: <Square size={11} />,
+  heading: <Type size={11} />,
+  text: <FileText size={11} />,
+  image: <ImageIcon size={11} />,
+  button: <MousePointerClick size={11} />,
+  badge: <BadgeCheck size={11} />,
+  alert: <AlertTriangle size={11} />,
 };
 
-const FALLBACK_ICON = <Square size={13} />;
+const FALLBACK = <Square size={11} />;
 
-export default function ComponentLibrary({ categories, onComponentAdd }: ComponentLibraryProps) {
+/* Category accent colours */
+const CAT_COLORS: Record<string, string> = {
+  layout: "text-sky-400",
+  navigation: "text-violet-400",
+  content: "text-emerald-400",
+  marketing: "text-amber-400",
+  media: "text-rose-400",
+  feedback: "text-orange-400",
+  commerce: "text-indigo-400",
+};
+
+export default function ComponentLibrary() {
   const { addComponent } = useProjectStore();
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<ComponentCategory | "all">("all");
-
-  const handleAddComponent = (def: ComponentDefinition) => {
-    const componentId = addComponent(def.type);
-    onComponentAdd?.(def, componentId);
-  };
+  const [activeCategory, setActiveCategory] = useState<
+    ComponentCategory | "all"
+  >("all");
 
   const availableCategories = useMemo(
     () => Array.from(new Set(COMPONENT_LIBRARY.map((c) => c.category))).sort(),
-    []
+    [],
   );
 
-  const filteredComponents = useMemo(() => {
-    return COMPONENT_LIBRARY.filter((component) => {
-      if (categories && !categories.includes(component.category)) return false;
-      if (activeCategory !== "all" && component.category !== activeCategory) return false;
+  const filtered = useMemo(() => {
+    return COMPONENT_LIBRARY.filter((c) => {
+      if (activeCategory !== "all" && c.category !== activeCategory)
+        return false;
       if (!search.trim()) return true;
       const q = search.toLowerCase();
       return (
-        component.label.toLowerCase().includes(q) ||
-        component.type.toLowerCase().includes(q) ||
-        component.description.toLowerCase().includes(q)
+        c.label.toLowerCase().includes(q) || c.type.toLowerCase().includes(q)
       );
     });
-  }, [categories, activeCategory, search]);
+  }, [activeCategory, search]);
 
-  const displayGroups = useMemo(() => {
-    if (activeCategory === "all") return { "All Components": filteredComponents };
-    return { [activeCategory]: filteredComponents };
-  }, [activeCategory, filteredComponents]);
+  /* Group by category when "all" is selected */
+  const groups = useMemo(() => {
+    if (activeCategory !== "all") return { [activeCategory]: filtered };
+    const g: Record<string, ComponentDefinition[]> = {};
+    filtered.forEach((c) => {
+      if (!g[c.category]) g[c.category] = [];
+      g[c.category].push(c);
+    });
+    return g;
+  }, [activeCategory, filtered]);
 
   return (
-    <div className="space-y-3 p-3">
-      {/* Header */}
-      <div>
-        <p className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400">Library</p>
-        <h2 className="mt-0.5 text-[12px] font-black text-slate-950">Add Components</h2>
-      </div>
+    <div className="flex h-full flex-col bg-[#111114] text-white">
+      {/* ── Header ───────────────────────────────────────── */}
+      <div className="flex-shrink-0 space-y-2 border-b border-white/[0.06] p-3">
+        <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/25">
+          Components
+        </p>
 
-      {/* Search */}
-      <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm focus-within:border-slate-400 transition-colors">
-        <Search className="h-3 w-3 shrink-0 text-slate-400" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search..."
-          className="w-full bg-transparent text-[11px] text-slate-700 outline-none placeholder:text-slate-400"
-        />
-        {search && (
-          <button onClick={() => setSearch("")} className="text-slate-400 hover:text-slate-700 transition-colors">
-            <X className="h-3 w-3" />
-          </button>
-        )}
-      </div>
-
-      {/* Category Pills */}
-      <div className="flex flex-wrap gap-1">
-        {["all", ...availableCategories].map((cat) => {
-          const active = activeCategory === cat;
-          return (
-            <motion.button
-              key={cat}
-              onClick={() => setActiveCategory(active ? "all" : (cat as ComponentCategory | "all"))}
-              className={`rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-wide transition-all ${
-                active
-                  ? "bg-slate-950 text-white shadow-sm"
-                  : "border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900"
-              }`}
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.96 }}
+        {/* Search */}
+        <div className="flex h-7 items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.04] px-2.5 transition focus-within:border-white/15 focus-within:bg-white/[0.06]">
+          <Search className="h-3 w-3 flex-shrink-0 text-white/25" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search…"
+            className="flex-1 bg-transparent text-[10px] text-white/60 outline-none placeholder:text-white/20"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="text-white/25 hover:text-white/50"
             >
-              {cat === "all" ? "All" : cat}
-            </motion.button>
-          );
-        })}
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+
+        {/* Category pills */}
+        <div className="flex flex-wrap gap-1">
+          {["all", ...availableCategories].map((cat) => {
+            const active = activeCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() =>
+                  setActiveCategory(cat as ComponentCategory | "all")
+                }
+                className={`rounded-md px-2 py-0.5 text-[8px] font-black uppercase tracking-wider transition-all ${
+                  active
+                    ? "bg-violet-600/80 text-white"
+                    : "border border-white/[0.07] text-white/25 hover:border-white/15 hover:text-white/50"
+                }`}
+              >
+                {cat === "all" ? "All" : cat}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Component List */}
-      <div className="space-y-3 overflow-y-auto custom-scrollbar" style={{ maxHeight: "calc(100vh - 280px)" }}>
+      {/* ── List ─────────────────────────────────────────── */}
+      <div
+        className="flex-1 overflow-y-auto p-2"
+        style={{
+          scrollbarWidth: "thin",
+          scrollbarColor: "#2a2a30 transparent",
+        }}
+      >
         <AnimatePresence mode="popLayout" initial={false}>
-          {Object.entries(displayGroups).map(([group, components]) => (
+          {Object.entries(groups).map(([group, components]) => (
             <motion.div
               key={group}
               layout
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="space-y-1"
+              className="mb-3"
             >
-              <p className="px-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{group}</p>
-
+              <p
+                className={`mb-1 px-1 text-[8px] font-black uppercase tracking-[0.22em] ${CAT_COLORS[group] ?? "text-white/25"}`}
+              >
+                {group}
+              </p>
               <div className="space-y-0.5">
-                {components.map((component, i) => (
+                {components.map((comp) => (
                   <motion.button
-                    key={component.type}
+                    key={comp.type}
                     layout
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.02 }}
-                    onClick={() => handleAddComponent(component)}
-                    className="group flex w-full items-center gap-2.5 rounded-xl border border-transparent px-2.5 py-2 text-left transition-all duration-150 hover:border-slate-200 hover:bg-slate-50 hover:shadow-sm"
-                    whileHover={{ x: 2 }}
-                    whileTap={{ scale: 0.98 }}
+                    onClick={() => addComponent(comp.type)}
+                    whileTap={{ scale: 0.97 }}
+                    className="group flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 text-left transition-all hover:border-white/[0.07] hover:bg-white/[0.04]"
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("polyglot/type", comp.type);
+                    }}
                   >
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 transition-colors group-hover:bg-amber-100 group-hover:text-amber-700">
-                      {COMPONENT_ICONS[component.type] ?? FALLBACK_ICON}
+                    <span
+                      className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border border-white/[0.06] bg-white/[0.03] transition-all group-hover:border-violet-500/30 group-hover:bg-violet-500/10 ${CAT_COLORS[comp.category] ?? "text-white/30"}`}
+                    >
+                      {ICONS[comp.type] ?? FALLBACK}
                     </span>
-
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="truncate text-[11px] font-bold text-slate-900">{component.label}</p>
-                        {component.isLayout && (
-                          <span className="shrink-0 rounded-md bg-sky-50 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-sky-600">
+                      <div className="flex items-center gap-1">
+                        <span className="truncate text-[10px] font-semibold text-white/60 group-hover:text-white/80">
+                          {comp.label}
+                        </span>
+                        {comp.isLayout && (
+                          <span className="flex-shrink-0 rounded bg-sky-500/10 px-1 py-0.5 text-[7px] font-black uppercase tracking-wider text-sky-400">
                             Layout
                           </span>
                         )}
                       </div>
-                      <p className="truncate text-[9px] text-slate-400">{component.description}</p>
+                      <p className="truncate text-[9px] text-white/20">
+                        {comp.description}
+                      </p>
                     </div>
-
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-slate-200 text-slate-400 transition-all group-hover:border-slate-950 group-hover:bg-slate-950 group-hover:text-white group-hover:rotate-90">
-                      <Plus size={10} />
-                    </span>
+                    <Plus className="h-3 w-3 flex-shrink-0 text-white/15 opacity-0 transition-opacity group-hover:opacity-100 group-hover:text-violet-400" />
                   </motion.button>
                 ))}
               </div>
@@ -190,15 +210,11 @@ export default function ComponentLibrary({ categories, onComponentAdd }: Compone
           ))}
         </AnimatePresence>
 
-        {filteredComponents.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center"
-          >
-            <Search className="mx-auto h-5 w-5 text-slate-200 mb-2" />
-            <p className="text-[11px] font-medium text-slate-400">No components found</p>
-          </motion.div>
+        {filtered.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Search className="h-5 w-5 text-white/10 mb-2" />
+            <p className="text-[10px] text-white/25">No components found</p>
+          </div>
         )}
       </div>
     </div>

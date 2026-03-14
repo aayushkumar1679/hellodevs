@@ -12,11 +12,12 @@ import {
   Monitor,
   Eye,
   EyeOff,
-  LogOut,
   User as UserIcon,
   Loader2,
   Check,
   Save,
+  PanelRight,
+  LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSession, signOut } from "next-auth/react";
@@ -26,261 +27,321 @@ import { useEditorStore } from "@/state/useEditorStore";
 import type { TechStack } from "@/utils/exportGenerators";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function BuilderHeader() {
-  const undo = useProjectStore((state) => state.undo);
-  const redo = useProjectStore((state) => state.redo);
-  const saveProject = useProjectStore((state) => state.saveProject);
-  const currentProject = useProjectStore((state) => state.currentProject);
-  const setDesignBreakpoint = () => {}; // Replaced by useEditorStore hook
+interface BuilderHeaderProps {
+  rightOpen?: boolean;
+  onToggleRight?: () => void;
+}
 
-  const {
-    activeBreakpoint,
-    setBreakpoint,
-    previewEnabled,
-    togglePreview,
-    breakpoints,
-  } = useEditorStore();
+const BREAKPOINTS = [
+  { id: "desktop" as const, icon: Monitor, label: "Desktop · 1440px" },
+  { id: "tablet" as const, icon: Tablet, label: "Tablet · 768px" },
+  { id: "mobile" as const, icon: Smartphone, label: "Mobile · 375px" },
+];
+
+export default function BuilderHeader({
+  rightOpen,
+  onToggleRight,
+}: BuilderHeaderProps) {
+  const undo = useProjectStore((s) => s.undo);
+  const redo = useProjectStore((s) => s.redo);
+  const saveProject = useProjectStore((s) => s.saveProject);
+  const currentProject = useProjectStore((s) => s.currentProject);
+
+  const { activeBreakpoint, setBreakpoint, previewEnabled, togglePreview } =
+    useEditorStore();
 
   const { data: session } = useSession();
   const [showExport, setShowExport] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showUser, setShowUser] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [exportSuccess, setExportSuccess] = useState(false);
+  const [didExport, setDidExport] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const currentDevice = breakpoints[activeBreakpoint];
+  const handleSave = async () => {
+    setIsSaving(true);
+    await saveProject?.().catch(() => {});
+    setIsSaving(false);
+    toast.success("Saved", { duration: 1500 });
+  };
 
   const handleExport = async (format: TechStack) => {
     if (!currentProject || isExporting) return;
-
     setIsExporting(true);
+    setShowExport(false);
     try {
-      const response = await fetch("/api/export", {
+      const res = await fetch("/api/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId: currentProject.id, format }),
       });
-
-      if (!response.ok) throw new Error("Export failed");
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${currentProject.name.replace(/[^a-z0-9]/gi, "_")}-export.zip`;
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement("a"), {
+        href: url,
+        download: `${currentProject.name.replace(/[^a-z0-9]/gi, "_")}-export.zip`,
+      });
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      setExportSuccess(true);
-      setTimeout(() => setExportSuccess(false), 2000);
-    } catch (error) {
-      console.error("Export Error:", error);
-      toast.error("Failed to export project. Please try again.");
+      setDidExport(true);
+      setTimeout(() => setDidExport(false), 2200);
+    } catch {
+      toast.error("Export failed");
     } finally {
       setIsExporting(false);
-      setShowExport(false);
     }
   };
 
+  /* ── Shared button base ─────────────────────────────────── */
+  const iconBtn =
+    "flex h-6 w-6 items-center justify-center rounded-md text-white/40 transition-all hover:bg-white/8 hover:text-white/80 active:scale-90";
+
   return (
-    <>
-      <header className="sticky top-0 z-50 h-12 border-b border-slate-200/60 bg-white/90 backdrop-blur-2xl">
-        <div className="flex h-full items-center justify-between px-3 gap-2">
-          {/* ── Logo + Project Name ── */}
-          <div className="flex min-w-0 items-center gap-2.5">
-            <Link href="/" className="group flex items-center gap-2">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-white shadow-[0_8px_20px_-6px_rgba(15,23,42,0.7)] transition-transform group-hover:scale-105 group-hover:rotate-3">
-                <Sparkles className="h-3.5 w-3.5" />
-              </div>
-              <div className="hidden sm:block min-w-0">
-                <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 leading-none">
-                  Polyglot
-                </p>
-                <p className="truncate max-w-[120px] text-[12px] font-black tracking-tight text-slate-950 leading-tight group-hover:text-sky-600 transition-colors">
-                  {currentProject?.name || "Studio"}
-                </p>
-              </div>
-            </Link>
-          </div>
+    <header className="relative z-50 flex h-9 flex-shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#0A0A0D] px-2 select-none">
+      {/* ─── LEFT: brand + project name ─────────────────────── */}
+      <div className="flex min-w-0 items-center gap-2">
+        <Link
+          href="/"
+          className="group flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 shadow-[0_0_12px_rgba(124,110,248,0.4)] transition-transform hover:scale-105"
+        >
+          <Sparkles className="h-3 w-3 text-white" />
+        </Link>
 
-          {/* ── Device Breakpoints (Center) ── */}
-          <div className="flex flex-1 items-center justify-center gap-1">
-            {(["desktop", "tablet", "mobile"] as const).map((d) => (
-              <motion.button
-                key={d}
-                onClick={() => { setBreakpoint(d); }}
-                className={`flex h-7 w-8 items-center justify-center rounded-lg transition-all duration-200 ${
-                  activeBreakpoint === d
-                    ? "bg-slate-950 text-white shadow-[0_6px_16px_-4px_rgba(15,23,42,0.5)]"
-                    : "text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                }`}
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.9 }}
-                title={d.charAt(0).toUpperCase() + d.slice(1)}
-              >
-                {d === "desktop" && <Monitor size={13} />}
-                {d === "tablet" && <Tablet size={13} />}
-                {d === "mobile" && <Smartphone size={13} />}
-              </motion.button>
-            ))}
-          </div>
+        <div className="hidden min-w-0 sm:block">
+          <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/25">
+            Polyglot /
+          </span>
+          <span className="ml-1.5 max-w-[140px] truncate text-[11px] font-semibold text-white/70">
+            {currentProject?.name ?? "Studio"}
+          </span>
+        </div>
 
-          {/* ── Right Actions ── */}
-          <div className="flex items-center gap-1.5">
-            {/* Undo / Redo */}
-            <div className="hidden sm:flex items-center gap-0.5 rounded-lg border border-slate-200 bg-white/60 p-0.5">
-              <button
-                onClick={undo}
-                className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
-                title="Undo (Ctrl+Z)"
-              >
-                <Undo2 size={12} />
-              </button>
-              <button
-                onClick={redo}
-                className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
-                title="Redo (Ctrl+Shift+Z)"
-              >
-                <Redo2 size={12} />
-              </button>
-            </div>
+        {/* Saved dot indicator */}
+        <div
+          className="h-1 w-1 rounded-full bg-emerald-500/60"
+          title="Auto-saved"
+        />
+      </div>
 
-            {/* Preview Toggle */}
-            <button
-              onClick={togglePreview}
-              className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-all duration-200 ${
-                previewEnabled
-                  ? "border-sky-400 bg-sky-500 text-white shadow-[0_4px_12px_-2px_rgba(14,165,233,0.45)]"
-                  : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700"
+      {/* ─── CENTER: breakpoint switcher ────────────────────── */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-0.5 rounded-lg border border-white/[0.07] bg-white/[0.04] p-0.5">
+        {BREAKPOINTS.map(({ id, icon: Icon, label }) => {
+          const active = activeBreakpoint === id;
+          return (
+            <motion.button
+              key={id}
+              onClick={() => setBreakpoint(id)}
+              title={label}
+              whileTap={{ scale: 0.88 }}
+              className={`flex h-6 w-7 items-center justify-center rounded-md transition-all duration-150 ${
+                active
+                  ? "bg-violet-600/90 text-white shadow-[0_2px_8px_rgba(124,110,248,0.35)]"
+                  : "text-white/30 hover:text-white/60"
               }`}
-              title="Toggle Preview"
             >
-              {previewEnabled ? <Eye size={13} /> : <EyeOff size={13} />}
-            </button>
+              <Icon className="h-3 w-3" />
+            </motion.button>
+          );
+        })}
+      </div>
 
-            {/* Save */}
-            <button
-              onClick={saveProject}
-              className="group inline-flex h-7 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-bold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
-              title="Save Project Manually"
-            >
-              <Save size={13} className="text-slate-400 group-hover:text-slate-700" />
-              Save
-            </button>
-
-            {/* Export */}
-            <div className="relative">
-              <motion.button
-                onClick={() => setShowExport((v) => !v)}
-                disabled={isExporting}
-                className="group inline-flex h-7 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-[11px] font-bold text-white transition-all hover:bg-slate-800 hover:shadow-[0_8px_20px_-6px_rgba(15,23,42,0.4)] disabled:opacity-50"
-                whileTap={{ scale: 0.96 }}
-              >
-                <AnimatePresence mode="wait">
-                  {isExporting ? (
-                    <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <Loader2 size={12} className="animate-spin" />
-                    </motion.span>
-                  ) : exportSuccess ? (
-                    <motion.span key="success" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0 }}>
-                      <Check size={12} className="text-emerald-400" />
-                    </motion.span>
-                  ) : (
-                    <motion.span key="download" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <Download size={12} />
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-                {isExporting ? "Exporting..." : exportSuccess ? "Done!" : "Export"}
-              </motion.button>
-
-              <AnimatePresence>
-                {showExport && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 6, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 6, scale: 0.96 }}
-                    transition={{ duration: 0.15, ease: "easeOut" }}
-                    className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.3)]"
-                  >
-                    <p className="px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Export Format</p>
-                    {[
-                      ["react-tailwind", "Next.js + Tailwind", "Production ready"],
-                      ["html-css", "HTML + CSS", "Zero dependencies"],
-                    ].map(([value, label, desc]) => (
-                      <button
-                        key={value}
-                        onClick={() => handleExport(value as TechStack)}
-                        className="group/item flex w-full flex-col rounded-xl px-2.5 py-2 text-left transition hover:bg-slate-50"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[12px] font-bold text-slate-900">{label}</span>
-                          <Download className="h-3 w-3 text-slate-300 group-hover/item:text-slate-700 transition-colors" />
-                        </div>
-                        <span className="text-[10px] text-slate-400">{desc}</span>
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* User Avatar */}
-            <div className="relative">
-              <button
-                onClick={() => setShowUserMenu((v) => !v)}
-                className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md overflow-hidden"
-              >
-                {session?.user?.image ? (
-                  <Image
-                    src={session.user.image}
-                    alt="User"
-                    width={28}
-                    height={28}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <UserIcon size={12} className="text-slate-500" />
-                )}
-              </button>
-
-              <AnimatePresence>
-                {showUserMenu && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 6, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 6, scale: 0.96 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.3)]"
-                  >
-                    <div className="px-3 py-2.5">
-                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Account</p>
-                      <p className="mt-0.5 truncate text-[12px] font-bold text-slate-950">
-                        {session?.user?.name || "Member"}
-                      </p>
-                      <p className="truncate text-[10px] text-slate-400">{session?.user?.email}</p>
-                    </div>
-                    <div className="h-px bg-slate-100 mx-1 mb-1" />
-                    <button
-                      onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[12px] font-bold text-rose-600 transition hover:bg-rose-50"
-                    >
-                      <LogOut size={12} />
-                      Sign out
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
+      {/* ─── RIGHT: actions ──────────────────────────────────── */}
+      <div className="flex items-center gap-1">
+        {/* Undo / Redo */}
+        <div className="flex items-center rounded-md border border-white/[0.07] bg-white/[0.03]">
+          <button
+            onClick={undo}
+            className={`${iconBtn} rounded-l-md px-1.5`}
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo2 className="h-3 w-3" />
+          </button>
+          <div className="h-3.5 w-px bg-white/8" />
+          <button
+            onClick={redo}
+            className={`${iconBtn} rounded-r-md px-1.5`}
+            title="Redo (Ctrl+Shift+Z)"
+          >
+            <Redo2 className="h-3 w-3" />
+          </button>
         </div>
-      </header>
 
-      {previewEnabled && (
-        <div className="border-b border-sky-100 bg-sky-50/80 px-4 py-1.5 text-center text-[9px] font-black uppercase tracking-[0.3em] text-sky-600 animate-slide-in-left">
-          Viewing {currentDevice?.label || activeBreakpoint} · Preview Mode
+        {/* Preview toggle */}
+        <button
+          onClick={togglePreview}
+          title={previewEnabled ? "Exit preview" : "Preview mode"}
+          className={`flex h-6 items-center gap-1 rounded-md border px-2 text-[10px] font-semibold transition-all ${
+            previewEnabled
+              ? "border-sky-500/40 bg-sky-500/15 text-sky-400"
+              : "border-white/[0.07] bg-white/[0.03] text-white/40 hover:text-white/70"
+          }`}
+        >
+          {previewEnabled ? (
+            <Eye className="h-3 w-3" />
+          ) : (
+            <EyeOff className="h-3 w-3" />
+          )}
+          <span className="hidden sm:inline">
+            {previewEnabled ? "Live" : "Preview"}
+          </span>
+        </button>
+
+        {/* Save */}
+        <button
+          onClick={handleSave}
+          className="flex h-6 items-center gap-1 rounded-md border border-white/[0.07] bg-white/[0.03] px-2 text-[10px] font-semibold text-white/40 transition-all hover:bg-white/6 hover:text-white/70"
+        >
+          {isSaving ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Save className="h-3 w-3" />
+          )}
+          <span className="hidden sm:inline">Save</span>
+        </button>
+
+        {/* Export dropdown */}
+        <div className="relative">
+          <motion.button
+            onClick={() => setShowExport((v) => !v)}
+            disabled={isExporting}
+            whileTap={{ scale: 0.95 }}
+            className="flex h-6 items-center gap-1 rounded-md bg-violet-600/90 px-2.5 text-[10px] font-bold text-white shadow-[0_2px_8px_rgba(124,110,248,0.3)] transition-all hover:bg-violet-500 disabled:opacity-40"
+          >
+            <AnimatePresence mode="wait">
+              {isExporting ? (
+                <motion.span
+                  key="spin"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                </motion.span>
+              ) : didExport ? (
+                <motion.span
+                  key="done"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <Check className="h-3 w-3 text-emerald-300" />
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="dl"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <Download className="h-3 w-3" />
+                </motion.span>
+              )}
+            </AnimatePresence>
+            {isExporting ? "Building…" : didExport ? "Done!" : "Export"}
+          </motion.button>
+
+          <AnimatePresence>
+            {showExport && (
+              <motion.div
+                initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                transition={{ duration: 0.12 }}
+                className="absolute right-0 top-full z-[100] mt-1.5 w-44 overflow-hidden rounded-xl border border-white/[0.08] bg-[#1A1A1E] p-1 shadow-[0_16px_40px_rgba(0,0,0,0.6)]"
+              >
+                <p className="px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-white/30">
+                  Choose format
+                </p>
+                {[
+                  {
+                    value: "react-tailwind" as TechStack,
+                    label: "Next.js + Tailwind",
+                    hint: "Production ready",
+                  },
+                  {
+                    value: "html-css" as TechStack,
+                    label: "HTML + CSS",
+                    hint: "Zero deps",
+                  },
+                ].map(({ value, label, hint }) => (
+                  <button
+                    key={value}
+                    onClick={() => handleExport(value)}
+                    className="group flex w-full flex-col rounded-lg px-2.5 py-2 text-left transition hover:bg-white/[0.06]"
+                  >
+                    <span className="text-[11px] font-semibold text-white/80 group-hover:text-white">
+                      {label}
+                    </span>
+                    <span className="text-[10px] text-white/30">{hint}</span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      )}
-    </>
+
+        {/* Right panel toggle */}
+        <button
+          onClick={onToggleRight}
+          title="Toggle inspector"
+          className={`${iconBtn} ${rightOpen ? "text-white/60" : ""}`}
+        >
+          <PanelRight className="h-3.5 w-3.5" />
+        </button>
+
+        {/* User avatar */}
+        <div className="relative ml-0.5">
+          <button
+            onClick={() => setShowUser((v) => !v)}
+            className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-lg border border-white/[0.10] transition hover:border-white/20"
+          >
+            {session?.user?.image ? (
+              <Image
+                src={session.user.image}
+                alt="User"
+                width={24}
+                height={24}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <UserIcon className="h-3 w-3 text-white/40" />
+            )}
+          </button>
+
+          <AnimatePresence>
+            {showUser && (
+              <motion.div
+                initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                transition={{ duration: 0.12 }}
+                className="absolute right-0 top-full z-[100] mt-1.5 w-48 overflow-hidden rounded-xl border border-white/[0.08] bg-[#1A1A1E] p-1 shadow-[0_16px_40px_rgba(0,0,0,0.6)]"
+              >
+                <div className="px-2.5 py-2">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/30">
+                    Account
+                  </p>
+                  <p className="mt-0.5 truncate text-[11px] font-semibold text-white/80">
+                    {session?.user?.name ?? "Member"}
+                  </p>
+                  <p className="truncate text-[10px] text-white/30">
+                    {session?.user?.email}
+                  </p>
+                </div>
+                <div className="mx-1 h-px bg-white/[0.06]" />
+                <button
+                  onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-rose-400 transition hover:bg-rose-500/10"
+                >
+                  <LogOut className="h-3 w-3" /> Sign out
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </header>
   );
 }

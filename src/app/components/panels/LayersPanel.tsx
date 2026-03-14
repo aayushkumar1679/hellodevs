@@ -14,33 +14,21 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-type LayerMeta = {
-  locked?: boolean;
-  hidden?: boolean;
-};
+type LayerMeta = { locked?: boolean; hidden?: boolean };
 
 export default function LayersPanel() {
-  const {
-    currentProject,
-    moveComponent,
-    updateComponent,
-  } = useProjectStore();
-
+  const { currentProject, moveComponent, updateComponent } = useProjectStore();
   const { selectElement, selectedElements, deselectAll } = useEditorStore();
 
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
   const [draggedId, setDraggedId] = React.useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = React.useState<string | null>(null);
-
   const [editingId, setEditingId] = React.useState<string | null>(null);
-  const [editValue, setEditValue] = React.useState<string>("");
-
+  const [editValue, setEditValue] = React.useState("");
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setEditingId(null);
-      }
+      if (e.key === "Escape") setEditingId(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -48,215 +36,225 @@ export default function LayersPanel() {
 
   if (!currentProject || Object.keys(currentProject.components).length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center p-8 text-center text-slate-400">
-        <Layers className="mb-4 h-12 w-12 opacity-20" />
-        <p className="text-xs font-medium">No layers yet</p>
+      <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+        <Layers className="mb-3 h-8 w-8 text-white/10" />
+        <p className="text-[10px] font-semibold text-white/25">No layers yet</p>
+        <p className="mt-1 text-[9px] text-white/15">
+          Add components from the library
+        </p>
       </div>
     );
   }
-
-  /* ---------------- Helpers ---------------- */
 
   const getMeta = (props: Record<string, unknown>): LayerMeta => {
     const meta = props.meta;
     return meta && typeof meta === "object" ? (meta as LayerMeta) : {};
   };
 
-  const toggleExpanded = (id: string, e?: React.MouseEvent) => {
+  const toggle = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
     });
   };
 
-
-  const getRootOrder = (): string[] => {
+  const getRoots = () => {
     const comps = currentProject.components;
-    const allIds = Object.keys(comps);
-    const childrenIds = new Set<string>();
-    allIds.forEach((id) =>
-      (comps[id].children || []).forEach((c: string) => childrenIds.add(c))
+    const childIds = new Set<string>();
+    Object.values(comps).forEach((c) =>
+      c.children.forEach((id: string) => childIds.add(id)),
     );
-    return allIds.filter((id) => !childrenIds.has(id));
+    return Object.keys(comps).filter((id) => !childIds.has(id));
   };
 
-  const isDescendant = (parentId: string, possibleChildId: string) => {
+  const isDescendant = (parentId: string, childId: string) => {
     const stack = [parentId];
     while (stack.length) {
       const cur = stack.pop()!;
-      if (cur === possibleChildId) return true;
+      if (cur === childId) return true;
       stack.push(...(currentProject.components[cur]?.children ?? []));
     }
     return false;
   };
 
   const toggleLock = (id: string) => {
-    const comp = currentProject.components[id];
-    const props = comp.props ?? {};
+    const c = currentProject.components[id];
+    const props = c.props ?? {};
     const meta = getMeta(props);
     const newMeta = { ...meta, locked: !meta.locked };
     updateComponent(id, { props: { ...props, meta: newMeta } });
-    if (newMeta.locked && selectedElements.includes(id)) {
-      deselectAll();
-    }
+    if (newMeta.locked && selectedElements.includes(id)) deselectAll();
   };
 
   const toggleHidden = (id: string) => {
-    const comp = currentProject.components[id];
-    const props = comp.props ?? {};
+    const c = currentProject.components[id];
+    const props = c.props ?? {};
     const meta = getMeta(props);
-    const newMeta = { ...meta, hidden: !meta.hidden };
-    updateComponent(id, { props: { ...props, meta: newMeta } });
+    updateComponent(id, {
+      props: { ...props, meta: { ...meta, hidden: !meta.hidden } },
+    });
   };
 
-
   const commitRename = (id: string) => {
-    if (!id) return;
-    const comp = currentProject.components[id];
-    const props = comp.props ?? {};
-    updateComponent(id, { props: { ...props, label: editValue } });
+    const c = currentProject.components[id];
+    updateComponent(id, { props: { ...c.props, label: editValue } });
     setEditingId(null);
   };
 
-  /* ---------------- Drag logic ---------------- */
-
-  const onDragStart = (id: string, e: React.DragEvent) => {
-    const comp = currentProject.components[id];
-    if (getMeta(comp.props ?? {}).locked) {
-      e.preventDefault();
-      return;
-    }
-    setDraggedId(id);
-  };
-
-  const onDragOver = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    if (!draggedId || draggedId === targetId || isDescendant(draggedId, targetId)) return;
-    setDropTargetId(targetId);
-  };
-
-  const onDrop = (targetId: string) => {
-    if (draggedId && draggedId !== targetId && !isDescendant(draggedId, targetId)) {
-      moveComponent(draggedId, targetId);
-    }
-    setDraggedId(null);
-    setDropTargetId(null);
-  };
-
-  /* ---------------- Render Component ---------------- */
-
-  const renderComponent = (
+  const renderLayer = (
     c: (typeof currentProject.components)[string],
-    level = 0
-  ) => {
+    level = 0,
+  ): React.ReactNode => {
     const isExpanded = expandedIds.has(c.id);
     const isSelected = selectedElements.includes(c.id);
     const isDrop = dropTargetId === c.id;
-    const pad = 12 + level * 16;
-
     const props = c.props ?? {};
     const meta = getMeta(props);
     const locked = !!meta.locked;
     const hidden = !!meta.hidden;
-    const labelSource = props.label ?? props.text;
-    const label =
-      typeof labelSource === "string" || typeof labelSource === "number"
-        ? String(labelSource)
-        : c.type;
+    const labelSrc = props.label ?? props.text;
+    const label = typeof labelSrc === "string" ? labelSrc : c.type;
 
     return (
       <div key={c.id}>
         <motion.div
           layout
-          initial={{ opacity: 0, x: -10 }}
+          initial={{ opacity: 0, x: -6 }}
           animate={{ opacity: 1, x: 0 }}
           draggable={!locked}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onDragStart={(e: any) => onDragStart(c.id, e)}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onDragOver={(e: any) => onDragOver(e, c.id)}
-          onDrop={() => onDrop(c.id)}
+          onDragStart={(e: any) => {
+            if (locked) {
+              e.preventDefault();
+              return;
+            }
+            setDraggedId(c.id);
+          }}
+          onDragOver={(e: any) => {
+            e.preventDefault();
+            if (
+              !draggedId ||
+              draggedId === c.id ||
+              isDescendant(draggedId, c.id)
+            )
+              return;
+            setDropTargetId(c.id);
+          }}
+          onDrop={() => {
+            if (
+              draggedId &&
+              draggedId !== c.id &&
+              !isDescendant(draggedId, c.id)
+            )
+              moveComponent(draggedId, c.id);
+            setDraggedId(null);
+            setDropTargetId(null);
+          }}
           onClick={() => !locked && selectElement(c.id)}
-          className={`group flex items-center gap-2 px-1 py-1.5 transition-all cursor-pointer border-b border-slate-50/50 
-            ${isSelected ? "bg-sky-50/80" : "hover:bg-slate-50/50"}
-            ${isDrop ? "ring-2 ring-sky-400 ring-inset" : ""}
-          `}
-          style={{ paddingLeft: pad }}
+          className={`group flex h-7 cursor-pointer items-center gap-1.5 border-b border-white/[0.03] transition-all ${
+            isSelected ? "bg-violet-600/15" : "hover:bg-white/[0.03]"
+          } ${isDrop ? "ring-1 ring-inset ring-violet-500/40" : ""}`}
+          style={{ paddingLeft: 8 + level * 14 }}
         >
-          {/* Collapse/Expand Toggle */}
-          <div className="w-5 flex items-center justify-center">
+          {/* Expand chevron */}
+          <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center">
             {c.children.length > 0 ? (
-              <button 
-                onClick={(e) => toggleExpanded(c.id, e)}
-                className={`p-1 rounded-md transition-colors hover:bg-slate-200/50 ${isSelected ? "text-sky-600" : "text-slate-400"}`}
+              <button
+                onClick={(e) => toggle(c.id, e)}
+                className="text-white/20 hover:text-white/50 transition-colors"
               >
-                <div className={`transition-transform duration-300 ${isExpanded ? "rotate-90" : ""}`}>
-                  <ChevronRight size={12} />
-                </div>
+                <ChevronRight
+                  className={`h-3 w-3 transition-transform duration-150 ${isExpanded ? "rotate-90" : ""}`}
+                />
               </button>
             ) : (
-              <div className="w-1.5 h-1.5 rounded-full bg-slate-200/50" />
+              <div className="h-1 w-1 rounded-full bg-white/10" />
             )}
           </div>
 
-          <div className={`p-1.5 rounded-lg border transition-all duration-300 ${isSelected ? "bg-white border-sky-200 text-sky-600 shadow-sm" : "bg-slate-100/50 border-slate-200 text-slate-500"}`}>
-             <Box size={14} />
+          {/* Type icon */}
+          <div
+            className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded transition-colors ${isSelected ? "text-violet-400" : "text-white/20"}`}
+          >
+            <Box className="h-2.5 w-2.5" />
           </div>
 
-          <div className="flex-1 min-w-0 overflow-hidden">
+          {/* Label / rename */}
+          <div className="min-w-0 flex-1 overflow-hidden">
             {editingId === c.id ? (
               <input
                 autoFocus
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 onBlur={() => commitRename(c.id)}
-                onKeyDown={(e) => e.key === "Enter" && commitRename(c.id)}
-                className="w-full bg-white px-1.5 py-0.5 rounded border border-sky-300 outline-none text-xs text-sky-700"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitRename(c.id);
+                }}
+                className="w-full rounded bg-violet-500/15 px-1 text-[10px] text-white/80 outline-none"
               />
             ) : (
-              <div className="flex flex-col">
-                <span className={`truncate text-xs font-black leading-tight tracking-tight ${isSelected ? "text-sky-950" : "text-slate-800"} ${hidden ? "opacity-30 italic" : ""}`}>
+              <div
+                className="flex items-baseline gap-1"
+                onDoubleClick={() => {
+                  setEditingId(c.id);
+                  setEditValue(label);
+                }}
+              >
+                <span
+                  className={`truncate text-[10px] font-medium ${isSelected ? "text-white/80" : "text-white/45"} ${hidden ? "opacity-30 line-through" : ""}`}
+                >
                   {label}
                 </span>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{c.type}</span>
+                <span className="flex-shrink-0 text-[8px] text-white/15">
+                  {c.type}
+                </span>
               </div>
             )}
           </div>
 
-          {/* Visibility & Locking Indicators */}
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-2">
-            <button 
-              onClick={(e) => { e.stopPropagation(); toggleHidden(c.id); }}
-              className={`p-1 rounded-md hover:bg-slate-200/50 ${hidden ? "text-slate-300" : "text-slate-500"}`}
+          {/* Actions (visible on hover) */}
+          <div className="flex flex-shrink-0 items-center gap-0.5 pr-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleHidden(c.id);
+              }}
+              className={`rounded p-0.5 transition ${hidden ? "text-white/20" : "text-white/30 hover:text-white/60"}`}
             >
-              {hidden ? <EyeOff size={13} /> : <Eye size={13} />}
+              {hidden ? (
+                <EyeOff className="h-2.5 w-2.5" />
+              ) : (
+                <Eye className="h-2.5 w-2.5" />
+              )}
             </button>
-            <button 
-              onClick={(e) => { e.stopPropagation(); toggleLock(c.id); }}
-              className={`p-1 rounded-md hover:bg-slate-200/50 ${locked ? "text-amber-500" : "text-slate-500"}`}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleLock(c.id);
+              }}
+              className={`rounded p-0.5 transition ${locked ? "text-amber-400" : "text-white/30 hover:text-white/60"}`}
             >
-              {locked ? <Lock size={13} /> : <Unlock size={13} />}
+              {locked ? (
+                <Lock className="h-2.5 w-2.5" />
+              ) : (
+                <Unlock className="h-2.5 w-2.5" />
+              )}
             </button>
           </div>
         </motion.div>
 
         <AnimatePresence>
           {isExpanded && c.children.length > 0 && (
-            <motion.div 
+            <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="border-l border-slate-100 ml-4 overflow-hidden"
+              className="overflow-hidden border-l border-white/[0.04] ml-4"
             >
               {c.children.map((cid: string) => {
                 const child = currentProject.components[cid];
-                return child ? renderComponent(child, level + 1) : null;
+                return child ? renderLayer(child, level + 1) : null;
               })}
             </motion.div>
           )}
@@ -266,16 +264,22 @@ export default function LayersPanel() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
-      <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/30">
-        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-          Component Tree
-        </h3>
+    <div className="flex h-full flex-col bg-[#111114] text-white">
+      <div className="flex-shrink-0 border-b border-white/[0.06] px-3 py-2">
+        <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/25">
+          Layers
+        </p>
       </div>
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
-        {getRootOrder().map((id) => {
+      <div
+        className="flex-1 overflow-y-auto"
+        style={{
+          scrollbarWidth: "thin",
+          scrollbarColor: "#2a2a30 transparent",
+        }}
+      >
+        {getRoots().map((id) => {
           const c = currentProject.components[id];
-          return c ? renderComponent(c) : null;
+          return c ? renderLayer(c) : null;
         })}
       </div>
     </div>

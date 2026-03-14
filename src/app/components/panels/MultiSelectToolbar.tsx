@@ -3,162 +3,94 @@
 import React, { useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
-import {
-  AlignLeft,
-  AlignCenter,
-  Columns3,
-  Copy,
-  Trash2,
-} from "lucide-react";
+import { AlignLeft, AlignCenter, Columns3, Copy, Trash2 } from "lucide-react";
 
 export default function MultiSelectToolbar() {
   const selectedElements = useEditorStore((s) => s.selectedElements);
   const { activeBreakpoint } = useEditorStore();
-  const updateComponentCSSOverride = useProjectStore((s) => s.updateComponentCSSOverride);
+  const updateComponentCSSOverride = useProjectStore(
+    (s) => s.updateComponentCSSOverride,
+  );
   const removeElement = useProjectStore((s) => s.removeComponent);
-
-  const updateCSSBulk = (ids: string[], property: string, value: string) => {
-    ids.forEach((id) => updateComponentCSSOverride(id, activeBreakpoint, property, value));
-  };
   const [copied, setCopied] = useState(false);
 
   if (selectedElements.length < 2) return null;
 
-  // Bulk operations
-  const applyFlexRow = () => {
-    updateCSSBulk(selectedElements, "display", "flex");
-    updateCSSBulk(selectedElements, "flexDirection", "row");
-    updateCSSBulk(selectedElements, "alignItems", "center");
-  };
+  const bulk = (prop: string, val: string) =>
+    selectedElements.forEach((id) =>
+      updateComponentCSSOverride(id, activeBreakpoint, prop, val),
+    );
 
-  const applyFlexColumn = () => {
-    updateCSSBulk(selectedElements, "display", "flex");
-    updateCSSBulk(selectedElements, "flexDirection", "column");
-  };
-
-
-  const applyGap = (gap: string) => {
-    updateCSSBulk(selectedElements, "gap", gap);
-  };
-
-  const applyAlignCenter = () => {
-    updateCSSBulk(selectedElements, "textAlign", "center");
-  };
-
-  const applyAlignLeft = () => {
-    updateCSSBulk(selectedElements, "textAlign", "left");
-  };
-
-
-  const applyPadding = (padding: string) => {
-    updateCSSBulk(selectedElements, "padding", padding);
-  };
-
-  const duplicateElements = () => {
-    // This would need to be implemented in the store
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const deleteSelected = () => {
-    if (window.confirm(`Delete ${selectedElements.length} elements?`)) {
-      selectedElements.forEach((id) => removeElement(id));
-    }
-  };
+  const BTN =
+    "flex items-center justify-center gap-1 rounded-md border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[9px] font-bold text-white/35 transition hover:border-white/15 hover:text-white/60";
 
   return (
-    <div className="px-3 py-2 border-b border-gray-800 bg-gradient-to-r from-gray-900/80 to-gray-850/80 space-y-2">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold text-blue-300 uppercase tracking-wider">
-          {selectedElements.length} Elements Selected
+    <div className="flex-shrink-0 border-b border-white/[0.06] bg-[#0E0E12] px-2.5 py-2">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-violet-400">
+          {selectedElements.length} selected
         </span>
+        <button
+          onClick={() => {
+            if (window.confirm(`Delete ${selectedElements.length} elements?`))
+              selectedElements.forEach((id) => removeElement(id));
+          }}
+          className="flex h-5 items-center gap-1 rounded-md px-1.5 text-[8px] font-bold text-rose-400/60 transition hover:bg-rose-500/8 hover:text-rose-400"
+        >
+          <Trash2 className="h-2.5 w-2.5" /> Del
+        </button>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-1.5">
-        {/* Layout buttons */}
+      <div className="grid grid-cols-4 gap-1">
         <button
-          onClick={applyFlexRow}
-          className="px-2 py-1.5 rounded-sm bg-gray-800/80 hover:bg-gray-800 text-gray-200 text-[10px] font-medium transition-colors flex items-center justify-center gap-1"
-          title="Apply flex row layout"
+          onClick={() => {
+            bulk("display", "flex");
+            bulk("flexDirection", "row");
+            bulk("alignItems", "center");
+          }}
+          className={BTN}
+          title="Flex Row"
         >
-          <Columns3 className="w-3.5 h-3.5" />
-          Flex Row
+          <Columns3 className="h-3 w-3" />
+          Row
         </button>
         <button
-          onClick={applyFlexColumn}
-          className="px-2 py-1.5 rounded-sm bg-gray-800/80 hover:bg-gray-800 text-gray-200 text-[10px] font-medium transition-colors flex items-center justify-center gap-1"
-          title="Apply flex column layout"
+          onClick={() => {
+            bulk("display", "flex");
+            bulk("flexDirection", "column");
+          }}
+          className={BTN}
+          title="Flex Column"
         >
-          <Columns3 className="w-3.5 h-3.5 rotate-90" />
-          Flex Column
-        </button>
-
-        {/* Spacing */}
-        <button
-          onClick={() => applyGap("8px")}
-          className="px-2 py-1.5 rounded-sm bg-gray-800/80 hover:bg-gray-800 text-gray-200 text-[10px] font-medium transition-colors"
-          title="Set gap to 8px"
-        >
-          Gap: 8px
+          <Columns3 className="h-3 w-3 rotate-90" />
+          Col
         </button>
         <button
-          onClick={() => applyGap("16px")}
-          className="px-2 py-1.5 rounded-sm bg-gray-800/80 hover:bg-gray-800 text-gray-200 text-[10px] font-medium transition-colors"
-          title="Set gap to 16px"
-        >
-          Gap: 16px
-        </button>
-
-        {/* Alignment */}
-        <button
-          onClick={applyAlignLeft}
-          className="px-2 py-1.5 rounded-sm bg-gray-800/80 hover:bg-gray-800 text-gray-200 text-[10px] font-medium transition-colors flex items-center justify-center"
+          onClick={() => bulk("textAlign", "left")}
+          className={BTN}
           title="Align left"
         >
-          <AlignLeft className="w-3.5 h-3.5" />
+          <AlignLeft className="h-3 w-3" />
         </button>
         <button
-          onClick={applyAlignCenter}
-          className="px-2 py-1.5 rounded-sm bg-gray-800/80 hover:bg-gray-800 text-gray-200 text-[10px] font-medium transition-colors flex items-center justify-center"
+          onClick={() => bulk("textAlign", "center")}
+          className={BTN}
           title="Align center"
         >
-          <AlignCenter className="w-3.5 h-3.5" />
+          <AlignCenter className="h-3 w-3" />
         </button>
 
-        {/* Padding */}
-        <button
-          onClick={() => applyPadding("12px")}
-          className="px-2 py-1.5 rounded-sm bg-gray-800/80 hover:bg-gray-800 text-gray-200 text-[10px] font-medium transition-colors"
-          title="Apply 12px padding"
-        >
-          Pad: 12px
+        <button onClick={() => bulk("gap", "8px")} className={BTN}>
+          G 8
         </button>
-        <button
-          onClick={() => applyPadding("24px")}
-          className="px-2 py-1.5 rounded-sm bg-gray-800/80 hover:bg-gray-800 text-gray-200 text-[10px] font-medium transition-colors"
-          title="Apply 24px padding"
-        >
-          Pad: 24px
+        <button onClick={() => bulk("gap", "16px")} className={BTN}>
+          G 16
         </button>
-
-        {/* Destructive actions */}
-        <button
-          onClick={duplicateElements}
-          className="px-2 py-1.5 rounded-sm bg-gray-800/80 hover:bg-gray-800 text-gray-200 text-[10px] font-medium transition-colors flex items-center justify-center gap-1"
-          title="Duplicate selected elements"
-        >
-          <Copy className="w-3.5 h-3.5" />
-          {copied ? "Copied!" : "Copy"}
+        <button onClick={() => bulk("padding", "12px")} className={BTN}>
+          P 12
         </button>
-        <button
-          onClick={deleteSelected}
-          className="px-2 py-1.5 rounded-sm bg-red-600/20 hover:bg-red-600/30 text-red-400 text-[10px] font-medium transition-colors flex items-center justify-center gap-1"
-          title="Delete selected elements"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-          Delete
+        <button onClick={() => bulk("padding", "24px")} className={BTN}>
+          P 24
         </button>
       </div>
     </div>
