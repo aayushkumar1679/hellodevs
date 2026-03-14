@@ -2,9 +2,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import debounce from "lodash.debounce";
-import { COMPONENT_LIBRARY } from "@/config/componentRegistry";
+import { COMPONENT_LIBRARY, BlueprintNode } from "@/config/componentRegistry";
+import { toast } from "sonner";
 import { useDesignStore, type Element } from "@/state/useDesignStore";
-import type { BlueprintNode } from "@/config/componentRegistry";
 import {
   mergeProjectDesignElements,
   normalizeProject,
@@ -16,23 +16,7 @@ import {
 const getComponentDef = (type: string) =>
   COMPONENT_LIBRARY.find((c) => c.type === type);
 
-const buildFromBlueprint = (
-  blueprint: BlueprintNode,
-  add: (node: BlueprintNode, parentId?: string) => string,
-  parentId?: string
-): string => {
-  const id = add(blueprint, parentId);
 
-  // If blueprint node has props or css, we'll rely on updateComponent elsewhere.
-  // But we still create subtree.
-  if (blueprint.children?.length) {
-    blueprint.children.forEach((child: BlueprintNode) => {
-      buildFromBlueprint(child, add, id);
-    });
-  }
-
-  return id;
-};
 
 /* -------------------------------------------------
  * Types
@@ -113,6 +97,7 @@ interface CanvasState {
   ) => void;
   undo: () => void;
   redo: () => void;
+  saveProject: () => Promise<void>;
 }
 
 /* -------------------------------------------------
@@ -139,13 +124,27 @@ const collectSubtree = (
  * Store
  * ------------------------------------------------- */
 
+// Strips fields that are not accepted by the API schema
+const buildSavePayload = (project: Project) => ({
+  id: project.id,
+  name: project.name,
+  components: project.components,
+  rootOrder: project.rootOrder,
+  rootComponent: project.rootComponent,
+  generationPrompt: project.generationPrompt ?? null,
+  generationModel: project.generationModel ?? null,
+  generationSummary: project.generationSummary ?? null,
+  // designElements are stored separately in the design store but also on the project
+  designElements: project.designElements,
+});
+
 // Debounced helper to save to API
 const syncToServer = debounce(async (project: Project) => {
   try {
     await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(project),
+      body: JSON.stringify(buildSavePayload(project)),
     });
   } catch (error) {
     console.error("Failed to sync project to server", error);
@@ -154,7 +153,7 @@ const syncToServer = debounce(async (project: Project) => {
 
 export const useCanvasStore = create<CanvasState>()(
   persist(
-    (set) => {
+    (set, get) => {
       /**
        * originalAddComponent - fallback single-component adder used by addComponent
        * Implemented here (closure) so it can call set() and return new id synchronously.
@@ -194,7 +193,19 @@ export const useCanvasStore = create<CanvasState>()(
             future: [],
           }));
 
-          syncToServer(project);
+          // Pre-populate with our stunning new landing page template
+          const store = get();
+          store.addComponent("navbar");
+          store.addComponent("hero");
+          store.addComponent("feature-section");
+          store.addComponent("testimonial-section");
+          store.addComponent("cta");
+          store.addComponent("footer");
+
+          // Sync the fully populated project once
+          const finalProject = get().projects[id];
+          if (finalProject) syncToServer(finalProject);
+
           return id;
         },
 
@@ -699,6 +710,34 @@ export const useCanvasStore = create<CanvasState>()(
             syncToServer(next);
             return nextState;
           });
+        },
+
+        saveProject: async () => {
+          const state = get();
+          if (!state.currentProject) return;
+          try {
+            const payload = buildSavePayload(state.currentProject);
+            toast.promise(
+              fetch("/api/projects", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+              }).then(async (res) => {
+                if (!res.ok) {
+                  const err = await res.json().catch(() => ({}));
+                  throw new Error(err?.error || `Save failed (${res.status})`);
+                }
+                return res.json();
+              }),
+              {
+                loading: "Saving project...",
+                success: "Project saved successfully!",
+                error: (err: Error) => err.message || "Failed to save project.",
+              }
+            );
+          } catch (err) {
+            console.error("Manual save error", err);
+          }
         },
 
         fetchProjects: async () => {

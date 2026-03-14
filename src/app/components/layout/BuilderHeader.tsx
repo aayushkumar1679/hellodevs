@@ -15,7 +15,10 @@ import {
   LogOut,
   User as UserIcon,
   Loader2,
+  Check,
+  Save,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useSession, signOut } from "next-auth/react";
 import Image from "next/image";
 import { useCanvasStore } from "@/state/useCanvasStore";
@@ -25,7 +28,10 @@ import type { TechStack } from "@/utils/exportGenerators";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function BuilderHeader() {
-  const { undo, redo, currentProject } = useCanvasStore();
+  const undo = useCanvasStore((state) => state.undo);
+  const redo = useCanvasStore((state) => state.redo);
+  const saveProject = useCanvasStore((state) => state.saveProject);
+  const currentProject = useCanvasStore((state) => state.currentProject);
   const setDesignBreakpoint = useDesignStore((state) => state.setActiveBreakpoint);
 
   const {
@@ -40,7 +46,7 @@ export default function BuilderHeader() {
   const [showExport, setShowExport] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-
+  const [exportSuccess, setExportSuccess] = useState(false);
 
   const currentDevice = breakpoints[activeBreakpoint];
 
@@ -51,13 +57,8 @@ export default function BuilderHeader() {
     try {
       const response = await fetch("/api/export", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          projectId: currentProject.id,
-          format,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: currentProject.id, format }),
       });
 
       if (!response.ok) throw new Error("Export failed");
@@ -71,9 +72,11 @@ export default function BuilderHeader() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      setExportSuccess(true);
+      setTimeout(() => setExportSuccess(false), 2000);
     } catch (error) {
       console.error("Export Error:", error);
-      alert("Failed to export project. Please try again.");
+      toast.error("Failed to export project. Please try again.");
     } finally {
       setIsExporting(false);
       setShowExport(false);
@@ -82,125 +85,140 @@ export default function BuilderHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 h-[73px] border-b border-slate-200/80 bg-white/75 backdrop-blur-2xl transition-all">
-        <div className="mx-auto flex h-full max-w-[100vw] items-center justify-between px-6">
-          <div className="flex min-w-0 items-center gap-4">
-            <Link href="/" className="group flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-[0_18px_35px_-22px_rgba(15,23,42,0.85)] transition-transform group-hover:scale-105 group-hover:rotate-3 active:scale-95">
-                <Sparkles className="h-4 w-4" />
+      <header className="sticky top-0 z-50 h-12 border-b border-slate-200/60 bg-white/90 backdrop-blur-2xl">
+        <div className="flex h-full items-center justify-between px-3 gap-2">
+          {/* ── Logo + Project Name ── */}
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Link href="/" className="group flex items-center gap-2">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-white shadow-[0_8px_20px_-6px_rgba(15,23,42,0.7)] transition-transform group-hover:scale-105 group-hover:rotate-3">
+                <Sparkles className="h-3.5 w-3.5" />
               </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">
-                  Polyglot Studio
+              <div className="hidden sm:block min-w-0">
+                <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 leading-none">
+                  Polyglot
                 </p>
-                <h1 className="truncate text-sm font-black tracking-tight text-slate-950 group-hover:text-sky-600 transition-colors">
-                  {currentProject?.name || "Untitled Project"}
-                </h1>
+                <p className="truncate max-w-[120px] text-[12px] font-black tracking-tight text-slate-950 leading-tight group-hover:text-sky-600 transition-colors">
+                  {currentProject?.name || "Studio"}
+                </p>
               </div>
             </Link>
-
-            {currentProject?.id && (
-              <Link
-                href={`/builder/${currentProject.id}/preview`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hidden rounded-full border border-slate-200 bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-500 transition-all hover:border-slate-400 hover:text-slate-950 hover:shadow-sm sm:inline-flex active:scale-95"
-              >
-                Preview Pass
-              </Link>
-            )}
           </div>
 
-          <div className="flex flex-1 items-center justify-center gap-2">
+          {/* ── Device Breakpoints (Center) ── */}
+          <div className="flex flex-1 items-center justify-center gap-1">
             {(["desktop", "tablet", "mobile"] as const).map((d) => (
               <motion.button
                 key={d}
-                layout
-                onClick={() => {
-                  setBreakpoint(d);
-                  setDesignBreakpoint(d);
-                }}
-                className={`flex h-11 w-13 items-center justify-center rounded-[18px] transition-all duration-300 ${
+                onClick={() => { setBreakpoint(d); setDesignBreakpoint(d); }}
+                className={`flex h-7 w-8 items-center justify-center rounded-lg transition-all duration-200 ${
                   activeBreakpoint === d
-                    ? "bg-slate-950 text-white shadow-[0_15px_30px_-10px_rgba(15,23,42,0.6)]"
-                    : "text-slate-400 hover:bg-slate-100 hover:text-slate-950"
+                    ? "bg-slate-950 text-white shadow-[0_6px_16px_-4px_rgba(15,23,42,0.5)]"
+                    : "text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                 }`}
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.9 }}
                 title={d.charAt(0).toUpperCase() + d.slice(1)}
               >
-                {d === "desktop" && <Monitor size={20} />}
-                {d === "tablet" && <Tablet size={20} />}
-                {d === "mobile" && <Smartphone size={20} />}
+                {d === "desktop" && <Monitor size={13} />}
+                {d === "tablet" && <Tablet size={13} />}
+                {d === "mobile" && <Smartphone size={13} />}
               </motion.button>
             ))}
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="hidden items-center gap-1 rounded-full border border-slate-200 bg-white/50 p-1 shadow-sm md:flex backdrop-blur-md">
+          {/* ── Right Actions ── */}
+          <div className="flex items-center gap-1.5">
+            {/* Undo / Redo */}
+            <div className="hidden sm:flex items-center gap-0.5 rounded-lg border border-slate-200 bg-white/60 p-0.5">
               <button
                 onClick={undo}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-950 hover:shadow-sm"
+                className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
                 title="Undo (Ctrl+Z)"
               >
-                <Undo2 size={18} />
+                <Undo2 size={12} />
               </button>
               <button
                 onClick={redo}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-950 hover:shadow-sm"
+                className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
                 title="Redo (Ctrl+Shift+Z)"
               >
-                <Redo2 size={18} />
+                <Redo2 size={12} />
               </button>
             </div>
 
-            <div className="h-8 w-px bg-slate-200" />
-
+            {/* Preview Toggle */}
             <button
               onClick={togglePreview}
-              className={`flex h-11 w-11 items-center justify-center rounded-full border transition-all duration-300 active:scale-90 ${
+              className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-all duration-200 ${
                 previewEnabled
-                  ? "border-sky-500 bg-sky-500 text-white shadow-[0_10px_20px_-8px_rgba(14,165,233,0.5)]"
-                  : "border-slate-200 bg-white text-slate-500 hover:border-slate-400 hover:text-slate-950 hover:shadow-sm"
+                  ? "border-sky-400 bg-sky-500 text-white shadow-[0_4px_12px_-2px_rgba(14,165,233,0.45)]"
+                  : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700"
               }`}
-              title="Toggle Live Content"
+              title="Toggle Preview"
             >
-              {previewEnabled ? <Eye size={18} /> : <EyeOff size={18} />}
+              {previewEnabled ? <Eye size={13} /> : <EyeOff size={13} />}
             </button>
 
+            {/* Save */}
+            <button
+              onClick={saveProject}
+              className="group inline-flex h-7 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-bold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
+              title="Save Project Manually"
+            >
+              <Save size={13} className="text-slate-400 group-hover:text-slate-700" />
+              Save
+            </button>
+
+            {/* Export */}
             <div className="relative">
-              <button
+              <motion.button
                 onClick={() => setShowExport((v) => !v)}
                 disabled={isExporting}
-                className="group inline-flex h-11 items-center gap-2 rounded-full bg-slate-950 px-6 text-[13px] font-bold text-white transition-all hover:bg-slate-800 hover:shadow-[0_15px_30px_-10px_rgba(15,23,42,0.5)] active:scale-95 disabled:opacity-50"
+                className="group inline-flex h-7 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-[11px] font-bold text-white transition-all hover:bg-slate-800 hover:shadow-[0_8px_20px_-6px_rgba(15,23,42,0.4)] disabled:opacity-50"
+                whileTap={{ scale: 0.96 }}
               >
-                {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                {isExporting ? "Cooking..." : "Export"}
-              </button>
+                <AnimatePresence mode="wait">
+                  {isExporting ? (
+                    <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <Loader2 size={12} className="animate-spin" />
+                    </motion.span>
+                  ) : exportSuccess ? (
+                    <motion.span key="success" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0 }}>
+                      <Check size={12} className="text-emerald-400" />
+                    </motion.span>
+                  ) : (
+                    <motion.span key="download" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <Download size={12} />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+                {isExporting ? "Exporting..." : exportSuccess ? "Done!" : "Export"}
+              </motion.button>
 
               <AnimatePresence>
                 {showExport && (
                   <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    initial={{ opacity: 0, y: 6, scale: 0.96 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                    className="absolute right-0 z-50 mt-3 w-56 overflow-hidden rounded-[32px] border border-slate-200 bg-white p-3 shadow-[0_32px_80px_-24px_rgba(15,23,42,0.4)]"
+                    exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.3)]"
                   >
-                     <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Standard Packages</p>
+                    <p className="px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Export Format</p>
                     {[
                       ["react-tailwind", "Next.js + Tailwind", "Production ready"],
-                      ["html-css", "Clean HTML + CSS", "Zero dependencies"],
+                      ["html-css", "HTML + CSS", "Zero dependencies"],
                     ].map(([value, label, desc]) => (
                       <button
                         key={value}
                         onClick={() => handleExport(value as TechStack)}
-                        className="group/item flex w-full flex-col rounded-[20px] px-4 py-3 text-left transition hover:bg-slate-50"
+                        className="group/item flex w-full flex-col rounded-xl px-2.5 py-2 text-left transition hover:bg-slate-50"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-slate-950">{label}</span>
-                          <Download className="h-3.5 w-3.5 text-slate-400 group-hover/item:text-slate-950" />
+                          <span className="text-[12px] font-bold text-slate-900">{label}</span>
+                          <Download className="h-3 w-3 text-slate-300 group-hover/item:text-slate-700 transition-colors" />
                         </div>
-                        <span className="mt-0.5 text-[10px] font-medium text-slate-400">{desc}</span>
+                        <span className="text-[10px] text-slate-400">{desc}</span>
                       </button>
                     ))}
                   </motion.div>
@@ -208,60 +226,60 @@ export default function BuilderHeader() {
               </AnimatePresence>
             </div>
 
+            {/* User Avatar */}
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu((v) => !v)}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition hover:border-slate-400 hover:shadow-md"
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md overflow-hidden"
               >
                 {session?.user?.image ? (
                   <Image
                     src={session.user.image}
-                    alt="User Profile"
-                    width={32}
-                    height={32}
-                    className="h-8 w-8 rounded-full ring-2 ring-slate-100"
+                    alt="User"
+                    width={28}
+                    height={28}
+                    className="h-full w-full object-cover"
                   />
                 ) : (
-                  <UserIcon size={18} className="text-slate-500" />
+                  <UserIcon size={12} className="text-slate-500" />
                 )}
               </button>
 
-                <AnimatePresence>
-                  {showUserMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                      className="absolute right-0 z-50 mt-3 w-64 overflow-hidden rounded-[32px] border border-slate-200 bg-white p-3 shadow-[0_32px_80px_-24px_rgba(15,23,42,0.4)]"
+              <AnimatePresence>
+                {showUserMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.3)]"
+                  >
+                    <div className="px-3 py-2.5">
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Account</p>
+                      <p className="mt-0.5 truncate text-[12px] font-bold text-slate-950">
+                        {session?.user?.name || "Member"}
+                      </p>
+                      <p className="truncate text-[10px] text-slate-400">{session?.user?.email}</p>
+                    </div>
+                    <div className="h-px bg-slate-100 mx-1 mb-1" />
+                    <button
+                      onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[12px] font-bold text-rose-600 transition hover:bg-rose-50"
                     >
-                      <div className="px-4 py-4">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Account</p>
-                        <p className="mt-1 truncate text-sm font-bold text-slate-950">
-                          {session?.user?.name || "Member"}
-                        </p>
-                        <p className="truncate text-xs text-slate-500">
-                          {session?.user?.email}
-                        </p>
-                      </div>
-                      <div className="h-px bg-slate-100 mx-1 mb-1" />
-                      <button
-                        onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-                        className="flex w-full items-center gap-3 rounded-[20px] px-4 py-3 text-left text-sm font-bold text-rose-600 transition hover:bg-rose-50"
-                      >
-                        <LogOut size={16} />
-                        Sign out
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      <LogOut size={12} />
+                      Sign out
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
       </header>
 
       {previewEnabled && (
-        <div className="border-b border-sky-100 bg-sky-50 px-5 py-2.5 text-center text-[11px] font-bold uppercase tracking-widest text-sky-700 animate-in slide-in-from-top duration-500">
-          Viewing {currentDevice.label} Layout
+        <div className="border-b border-sky-100 bg-sky-50/80 px-4 py-1.5 text-center text-[9px] font-black uppercase tracking-[0.3em] text-sky-600 animate-slide-in-left">
+          Viewing {currentDevice?.label || activeBreakpoint} · Preview Mode
         </div>
       )}
     </>

@@ -10,6 +10,7 @@ import {
   Wand2,
   CheckCircle2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useCanvasStore } from "@/state/useCanvasStore";
 import { materializeGeneratedProject } from "@/utils/projectHydration";
 import {
@@ -81,11 +82,11 @@ export default function NewProjectPage() {
 
       router.push(`/builder/${projectId}`);
     } catch (generationError) {
-      setError(
-        generationError instanceof Error
+      const msg = generationError instanceof Error
           ? generationError.message
-          : "Unexpected generation error."
-      );
+          : "Unexpected generation error.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsGenerating(false);
     }

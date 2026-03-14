@@ -31,11 +31,11 @@ describe('State Synchronization & Undo/Redo', () => {
             id: 'root',
             type: 'box',
             children: [],
-            styles: { backgroundColor: '#ffffff' }
+            props: { backgroundColor: '#ffffff' }
           }
         },
         rootOrder: ['root'],
-        assets: [],
+        rootComponent: 'root',
         designElements: {
           'root': {
             id: 'root',

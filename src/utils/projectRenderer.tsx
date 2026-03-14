@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 
 import React from "react";
 import type { Project } from "@/state/useCanvasStore";
@@ -546,30 +545,45 @@ export function generateHtmlPageCode(
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(project.name)}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    body {
+    :root {
+      --font-manrope: "Manrope", sans-serif;
+      --font-inter: "Inter", sans-serif;
+      --font-plus-jakarta-sans: "Plus Jakarta Sans", sans-serif;
+      --font-outfit: "Outfit", sans-serif;
+      --font-dm-sans: "DM Sans", sans-serif;
+      --font-sora: "Sora", sans-serif;
+      --font-space-grotesk: "Space Grotesk", sans-serif;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
       margin: 0;
+      padding: 0;
+    }
+
+    body {
       min-height: 100vh;
-      background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+      background: #ffffff;
       color: #0f172a;
-      font-family: "Manrope", "Segoe UI", sans-serif;
-      padding: 40px 24px;
+      font-family: var(--font-manrope), sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }
 
     main {
-      max-width: 1200px;
-      margin: 0 auto;
-      background: rgba(255, 255, 255, 0.92);
-      border: 1px solid rgba(148, 163, 184, 0.3);
-      border-radius: 32px;
-      box-shadow: 0 35px 80px -45px rgba(15, 23, 42, 0.45);
-      padding: 24px;
+      min-height: 100vh;
     }
 
     img {
       max-width: 100%;
       display: block;
     }
+
+    a { color: inherit; }
 
     ${POLYGLOT_MOTION_CSS}
   </style>

@@ -2,9 +2,11 @@
 "use client";
 
 import React from "react";
+import NextImage from "next/image";
 
 interface PrimitiveRendererProps {
   type: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   props?: Record<string, any>;
   style?: React.CSSProperties;
   children?: React.ReactNode;
@@ -42,25 +44,28 @@ export default function PrimitiveRenderer({
     case "image": {
       const src = props.src || "https://images.unsplash.com/photo-1498050108023-c5249f4df085";
       const alt = props.alt || "Image";
-      
-      // If we are in the builder, we might want to avoid full NextImage optimization 
-      // sometimes, but for "World Class Polish", let's use it.
-      // However, NextImage requires width/height or fill.
-      // Since our builder uses CSS for width/height, we should use 'fill' if they are present in style,
-      // or just a standard img if things get complex.
-      // For now, let's use a standard img but optimized styles.
+
+      // Respect the incoming CSS styles (from designStore) for dimensions.
+      // Only fallback to block display; don't override width/height if already set.
+      const objectFit = (props.objectFit as React.CSSProperties["objectFit"]) || "cover";
+      const imageStyle: React.CSSProperties = {
+        position: "relative",
+        display: "block",
+        overflow: "hidden",
+        ...baseStyle,
+      };
+
       return (
-        <img
-          src={src}
-          alt={alt}
-          style={{
-            ...baseStyle,
-            objectFit: (props.objectFit as React.CSSProperties["objectFit"]) || "cover",
-            display: "block",
-            width: "100%",
-            height: "100%",
-          }}
-        />
+        <div style={imageStyle}>
+          <NextImage
+            src={String(src)}
+            alt={String(alt)}
+            fill
+            style={{ objectFit }}
+            sizes="(max-width: 768px) 100vw, 50vw"
+            unoptimized={process.env.NODE_ENV === "development"}
+          />
+        </div>
       );
     }
 
@@ -132,12 +137,12 @@ export default function PrimitiveRenderer({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
-            <a href={brand?.href || "#"} style={{ fontWeight: 800, fontSize: "1.25rem" }}>
+            <a href={brand?.href || "#"} style={{ fontWeight: 800, fontSize: "1.25rem", textDecoration: "none", color: "inherit" }}>
               {brand?.text || "Polyglot"}
             </a>
             <div style={{ display: "flex", gap: "1.5rem" }}>
               {links.map((link, i) => (
-                <a key={i} href={link.href || "#"} style={{ fontSize: "0.875rem", opacity: 0.7 }}>
+                <a key={i} href={link.href || "#"} style={{ fontSize: "0.875rem", opacity: 0.7, textDecoration: "none", color: "inherit" }}>
                   {link.label || "Link"}
                 </a>
               ))}
@@ -153,6 +158,7 @@ export default function PrimitiveRenderer({
                 borderRadius: "999px",
                 fontSize: "0.875rem",
                 fontWeight: 600,
+                textDecoration: "none",
               }}
             >
               {cta.text}
@@ -162,12 +168,6 @@ export default function PrimitiveRenderer({
         </nav>
       );
     }
-
-    /* 
-       NOTE: Complex components (pricing-card, product-card, cta, feature, testimonial)
-       have been converted to BLUEPRINTS in the registry. 
-       They no longer need custom rendering here.
-    */
 
     default:
       return <div style={baseStyle}>{children}</div>;

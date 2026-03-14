@@ -2,11 +2,11 @@
 
 import React, { useMemo, useState } from "react";
 import { X, Download, Copy, Check, Sparkles, Loader2 } from "lucide-react";
-import { useCanvasStore } from "@/state/useCanvasStore";
-import { useDesignStore } from "@/state/useDesignStore";
-import { generateNextJsProject } from "@/utils/exporter";
-import type { TechStack } from "@/utils/exportGenerators";
-
+import { useCanvasStore } from "../../../state/useCanvasStore";
+import { useDesignStore } from "../../../state/useDesignStore";
+import { generateNextJsProject } from "../../../utils/exporter";
+import type { TechStack } from "../../../utils/exportGenerators";
+import { toast } from "sonner";
 
 type ExportDialogProps = {
   isOpen: boolean;
@@ -52,7 +52,7 @@ export default function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
       window.URL.revokeObjectURL(url);
     } catch (e) {
       console.error(e);
-      alert("Failed to download project zip.");
+      toast.error("Failed to download project zip.");
     } finally {
       setIsExporting(false);
     }

@@ -60,9 +60,7 @@ export default function ComponentWrapper({ component }: ComponentWrapperProps) {
     <div
       onDoubleClick={handleDoubleClick}
       className={`relative group rounded-sm transition-all ${
-        isEditing
-          ? "ring-1 ring-sky-400/60 bg-sky-50/60"
-          : "hover:bg-slate-100/70"
+        isEditing ? "ring-1 ring-sky-400/60" : ""
       }`}
     >
       {isEditing ? (
@@ -76,7 +74,6 @@ export default function ComponentWrapper({ component }: ComponentWrapperProps) {
               event.preventDefault();
               saveText();
             }
-
             if (event.key === "Escape") {
               event.preventDefault();
               cancelText();
@@ -94,7 +91,7 @@ export default function ComponentWrapper({ component }: ComponentWrapperProps) {
           removeComponent(component.id);
         }}
         title="Delete component"
-        className="absolute -top-2 -right-2 rounded-full bg-rose-500/95 p-1.5 text-white opacity-0 scale-90 shadow-[0_12px_20px_-12px_rgba(225,29,72,0.9)] transition-all group-hover:opacity-100 group-hover:scale-100 hover:bg-rose-600"
+        className="absolute -top-2 -right-2 z-50 rounded-full bg-rose-500/95 p-1.5 text-white opacity-0 scale-90 shadow-[0_12px_20px_-12px_rgba(225,29,72,0.9)] transition-all group-hover:opacity-100 group-hover:scale-100 hover:bg-rose-600"
       >
         <Trash2 size={12} />
       </button>

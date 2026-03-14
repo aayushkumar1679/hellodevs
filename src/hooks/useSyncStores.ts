@@ -50,6 +50,7 @@ export function useSyncStores() {
       lastSerializedDesignRef.current = serializedProjectDesign;
       replaceElements(normalizedDesign);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProject, replaceElements]);
 
   useEffect(() => {

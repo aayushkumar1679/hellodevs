@@ -459,7 +459,12 @@ export default function Canvas() {
       const boundedLeft = Math.max(0, Math.round(newLeft));
       const boundedTop = Math.max(0, Math.round(newTop));
 
-      updateCSSProperty(id, "position", "absolute");
+      // Only move elements that are already absolutely positioned.
+      // This prevents flex/grid children from being ripped out of their flow layout.
+      const currentCss = useDesignStore.getState().getResolvedCss(id);
+      const isAlreadyAbsolute = currentCss?.position === "absolute";
+      if (!isAlreadyAbsolute) return;
+
       updateCSSProperty(id, "left", `${boundedLeft}px`);
       updateCSSProperty(id, "top", `${boundedTop}px`);
 
@@ -717,12 +722,15 @@ export default function Canvas() {
     const canvasRect = canvasRef.current.getBoundingClientRect();
 
     Object.entries(childrenRel).forEach(([id, rel]) => {
+      const currentCss = useDesignStore.getState().getResolvedCss(id);
+      const isAlreadyAbsolute = currentCss?.position === "absolute";
+      if (!isAlreadyAbsolute) return;
+
       const left = Math.round(newLeft - canvasRect.left + rel.relL * newW);
       const top = Math.round(newTop - canvasRect.top + rel.relT * newH);
       const w = Math.round(rel.relW * newW);
       const h = Math.round(rel.relH * newH);
 
-      updateCSSProperty(id, "position", "absolute");
       updateCSSProperty(id, "left", `${left}px`);
       updateCSSProperty(id, "top", `${top}px`);
       updateCSSProperty(id, "width", `${Math.max(10, w)}px`);

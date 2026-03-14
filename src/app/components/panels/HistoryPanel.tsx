@@ -2,8 +2,8 @@
 
 import React from "react";
 import { Clock3, RotateCcw, Sparkles, User, History as HistoryIcon } from "lucide-react";
-import { useCanvasStore, type Project } from "@/state/useCanvasStore";
-
+import { useCanvasStore } from "@/state/useCanvasStore";
+import { useDesignStore } from "@/state/useDesignStore";
 export default function HistoryPanel() {
   const { history } = useCanvasStore();
 

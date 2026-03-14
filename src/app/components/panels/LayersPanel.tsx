@@ -5,7 +5,6 @@ import { useCanvasStore } from "@/state/useCanvasStore";
 import { useDesignStore } from "@/state/useDesignStore";
 import {
   ChevronRight,
-  ChevronDown,
   Layers,
   Lock,
   Unlock,
@@ -178,7 +177,9 @@ export default function LayersPanel() {
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           draggable={!locked}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onDragStart={(e: any) => onDragStart(c.id, e)}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onDragOver={(e: any) => onDragOver(e, c.id)}
           onDrop={() => onDrop(c.id)}
           onClick={() => !locked && selectElement(c.id)}

@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { authOptions } from "@/lib/auth";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -16,83 +12,104 @@ export async function POST(req: Request) {
   try {
     const {
       prompt,
-      model,
-      projectName,
+      model = "gpt-4o",
     } = (await req.json()) as {
       prompt?: string;
       model?: string;
-      projectName?: string;
     };
 
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
+    // Determine Provider & Client
+    let apiKey = process.env.OPENAI_API_KEY;
+    let baseURL = undefined;
+
+    if (model.includes("phi-3.5")) {
+      apiKey = process.env.NVIDIA_PHI_API_KEY;
+      baseURL = "https://integrate.api.nvidia.com/v1";
+    } else if (model.includes("falcon3")) {
+      apiKey = process.env.NVIDIA_FALCON_API_KEY;
+      baseURL = "https://integrate.api.nvidia.com/v1";
+    }
+
+    const client = new OpenAI({ apiKey, baseURL });
+
     const systemPrompt = `
-You are Polyglot AI, a world-class web designer and engineer. 
-Your goal is to generate a high-end, premium landing page structure based on a user prompt.
+You are Polyglot AI, a world-class web designer and engineer generating an emergent, vast, and highly-detailed website layout.
 
 ### UI GUIDELINES:
+- Output a massively detailed component tree. The layout should be rich, containing 20+ distinct sections (hero, features, grid, testimonials, articles, etc.) forming a complete emergent site.
 - Use vibrant, harmonious color palettes (no plain colors).
 - Prioritize visual excellence: smooth gradients, glassmorphism (rgba(255,255,255,0.7) + backdrop-filter), and modern typography.
-- Use the provided component library types.
-- Layout must be responsive (mobile stackable, desktop spacious).
+- Ensure pixel-perfect layout using responsive grids and flexbox.
 
 ### COMPONENT TYPES:
-- layout: section, container, flex-row, flex-column, grid, spacer, divider
-- navigation: navbar
-- content: heading, text, button, card
-- media: image
-- marketing: hero, feature-section, testimonial-section, pricing-section, cta
-- form: form, input, textarea
+For structure, leverage the following robust layout types:
+layout: section, container, flex-row, flex-column, grid, spacer, divider
+content: heading, text, button, card, badge
+media: image
 
-### DATA STRUCTURE:
-You must return a JSON object that matches the GeneratedProjectPayload type:
+If a specific component doesn't fit standard macros, describe its visual look entirely in "css" props using standard CSS properties (camelCase format).
+
+### IMAGE ASSETS (CRITICAL):
+For any image, you MUST output a prop called \`imagePrompt\`.
+This \`imagePrompt\` should be a highly detailed, descriptive prompt for generating the image using NVIDIA FLUX.1-dev AI model. 
+Example image object:
+{ "type": "image", "props": { "imagePrompt": "A highly detailed photorealistic shot of a futuristic metropolis bathed in neon cyberpunk glow, volumetric lighting, 8k" }, "css": { "width": "100%", "height": "400px", "borderRadius": "24px", "objectFit": "cover" } }
+Do NOT provide ordinary \`src\` or \`alt\` tags if you want the image generated. Provide \`imagePrompt\`.
+
+### OUTPUT FORMAT:
+You must output a strictly valid JSON object. 
 {
-  "projectName": string,
-  "summary": string,
-  "roots": GeneratedComponentNode[]
+  "projectName": "Generated World-Class Landing Page",
+  "summary": "Massive 2000-line generated layout with FLUX images...",
+  "roots": [
+    { "type": "navbar", "css": { ... } },
+    { "type": "section", "css": { "backgroundColor": "#0f172a", "padding": "120px 32px" }, "children": [ ... deeply nested components ... ] }
+  ]
 }
 
-GeneratedComponentNode {
-  "type": string,
-  "props": Record<string, any>, (optional)
-  "css": Record<string, any>, (optional)
-  "children": GeneratedComponentNode[] (optional)
-}
-
-### CRITICAL RULES:
-- "roots" should contain the top-level sections (navbar, hero, features, etc.).
-- Use "type" exactly as listed above.
-- Return ONLY valid JSON.
-- For "css", use standard CSS properties in camelCase (e.g., backgroundColor, borderRadius).
+CRITICAL RULES:
+- Return ONLY the JSON object. No markdown ticks outside the JSON if possible, but the client will parse strings robustly.
+- Ensure the tree is extremely deep and varied (an "infinite" single page site layout).
+- Every image MUST have an \`imagePrompt\` prop.
+- Output massive, rich layouts. Do not stop early.
 
 Prompt: ${prompt}
     `;
 
-    const response = await openai.chat.completions.create({
-      model: model || "gpt-4o",
+    const stream = await client.chat.completions.create({
+      model: model,
       messages: [
         { role: "system", content: "You are a professional web builder engine that outputs strict JSON." },
         { role: "user", content: systemPrompt },
       ],
-      response_format: { type: "json_object" },
+      stream: true,
+      max_tokens: 4096,
+      // response_format: { type: "json_object" }, // NVIDIA models might not support this property
     });
 
-    const content = response.choices[0].message.content;
-    if (!content) {
-      throw new Error("No content received from OpenAI");
-    }
+    // Create a ReadableStream to pipe the tokens forward
+    const encoder = new TextEncoder();
+    const customStream = new ReadableStream({
+      async start(controller) {
+        for await (const chunk of stream) {
+          const content = chunk.choices[0]?.delta?.content || "";
+          if (content) {
+            controller.enqueue(encoder.encode(content));
+          }
+        }
+        controller.close();
+      },
+    });
 
-    const result = JSON.parse(content) as {
-      projectName?: string;
-      summary?: string;
-      roots?: unknown[];
-    };
-
-    return NextResponse.json({
-      ...result,
-      projectName: result.projectName || projectName || "Polyglot Project",
+    return new Response(customStream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+      },
     });
   } catch (error) {
     console.error("AI Generation Error:", error);

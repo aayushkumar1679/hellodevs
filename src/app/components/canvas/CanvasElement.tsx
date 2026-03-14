@@ -342,7 +342,7 @@ export default function CanvasElement({
     };
   }, [onResizeMove, stopResize]);
 
-  const Component = (as || "div") as any;
+  const Component = (as || "div") as React.ElementType;
 
   return (
     <Component
@@ -351,8 +351,6 @@ export default function CanvasElement({
       style={inlineStyle}
       data-resizing={isResizing ? "true" : "false"}
       data-element-id={elementId}
-      role="group"
-      aria-label={`Canvas element ${elementId}`}
       className={`relative transition-shadow duration-150 will-change-transform ${
         isSelected
           ? "outline outline-2 outline-sky-500 outline-offset-2 shadow-[0_22px_44px_-28px_rgba(14,165,233,0.55)]"
