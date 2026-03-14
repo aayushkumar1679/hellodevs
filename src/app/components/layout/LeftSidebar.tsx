@@ -8,6 +8,7 @@ import {
   Image as ImageIcon,
   Clock3,
   Settings,
+  Package,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -29,7 +30,8 @@ export default function LeftSidebar({
 }: LeftSidebarProps) {
   const panels: SidebarPanel[] = [
     { id: "ai", label: "AI Studio", icon: Sparkles, accent: "#f59e0b" },
-    { id: "components", label: "Components", icon: Grid3x3 },
+    { id: "components", label: "Library", icon: Grid3x3 },
+    { id: "custom", label: "Custom", icon: Package },
     { id: "layers", label: "Layers", icon: Layers },
     { id: "assets", label: "Assets", icon: ImageIcon },
     { id: "history", label: "History", icon: Clock3 },

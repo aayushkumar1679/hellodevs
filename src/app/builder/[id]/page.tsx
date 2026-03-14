@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowRight, PanelRightOpen, Sparkles, Wand2, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,86 +13,30 @@ import LayersPanel from "@/app/components/panels/LayersPanel";
 import AIPromptPanel from "@/app/components/panels/AIPromptPanel";
 import HistoryPanel from "@/app/components/panels/HistoryPanel";
 import AssetsPanel from "@/app/components/panels/AssetsPanel";
+import CustomComponentPanel from "@/app/components/panels/CustomComponentPanel";
+import AIChatWidget from "@/app/components/AIChatWidget";
 import { useParams } from "next/navigation";
-import { useCanvasStore } from "@/state/useCanvasStore";
-import { useDesignStore } from "@/state/useDesignStore";
-import { useEffect } from "react";
+import { useProjectStore } from "@/state/useProjectStore";
+import { useEditorStore } from "@/state/useEditorStore";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import {
+  Panel,
+  Group as PanelGroup,
+  Separator as PanelResizeHandle,
+} from "react-resizable-panels";
 
 export default function BuilderPage() {
-  const params = useParams();
-  const projectId = params.id as string;
-  const { currentProjectId, setCurrentProject, fetchProject, undo, redo } = useCanvasStore();
-  const { deselectAll } = useDesignStore();
-  const [activeLeftPanel, setActiveLeftPanel] = useState<string | null>("ai");
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
+  const { id: projectId } = useParams();
+  const { currentProject, currentProjectId, isLoading } = useProjectStore();
+  const [activeLeftPanel, setActiveLeftPanel] = useState<string | null>("components");
 
+  // Selection state
+  const { selectedElements } = useEditorStore();
+
+  // Handle mobile / responsive widths if needed
   useEffect(() => {
-    let mounted = true;
-    const loadProject = async () => {
-      setIsLoading(true);
-      try {
-        const existingProject = useCanvasStore.getState().projects[projectId];
-        if (existingProject) setCurrentProject(projectId);
-        await fetchProject(projectId);
-      } catch (error) {
-        console.error("Error loading project:", error);
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    };
-    if (projectId) void loadProject();
-    return () => { mounted = false; };
-  }, [fetchProject, projectId, setCurrentProject]);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === "z" && !event.shiftKey) {
-        event.preventDefault();
-        undo();
-      }
-      if ((event.ctrlKey || event.metaKey) && (event.key === "y" || (event.key === "z" && event.shiftKey))) {
-        event.preventDefault();
-        redo();
-      }
-      if (event.key === "Escape") deselectAll();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo, deselectAll]);
-
-  // Loading State
-  if (isLoading && currentProjectId !== projectId) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          className="max-w-sm rounded-3xl border border-white/80 bg-white p-8 text-center shadow-[0_30px_80px_-20px_rgba(15,23,42,0.2)]"
-        >
-          <motion.div
-            className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-white mb-4"
-            animate={{ rotate: [0, 5, -5, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <Sparkles className="h-5 w-5 text-amber-400" />
-          </motion.div>
-          <p className="text-sm font-bold text-slate-950">Opening studio…</p>
-          <p className="mt-1 text-xs text-slate-400">Syncing project state</p>
-          <motion.div
-            className="mt-5 h-1 rounded-full bg-slate-100 overflow-hidden"
-          >
-            <motion.div
-              className="h-full bg-gradient-to-r from-amber-400 to-slate-950 rounded-full"
-              initial={{ width: "0%" }}
-              animate={{ width: "90%" }}
-              transition={{ duration: 2, ease: "easeOut" }}
-            />
-          </motion.div>
-        </motion.div>
-      </div>
-    );
-  }
+    // Initial setup logic
+  }, []);
 
   // Error / Not Found
   if (!isLoading && currentProjectId !== projectId) {
@@ -130,118 +74,57 @@ export default function BuilderPage() {
     >
       <BuilderHeader />
 
-      <div className="flex flex-1 overflow-hidden" style={{ paddingTop: 0 }}>
-        {/* Left Sidebar */}
+      <div className="flex-1 overflow-hidden relative" style={{ display: 'flex' }}>
+        {/* Permanent Left Tab Strip */}
         <LeftSidebar activeLeftPanel={activeLeftPanel} setActiveLeftPanel={setActiveLeftPanel} />
 
-        {/* Left Panel (Slide-in) */}
-        <AnimatePresence>
-          {activeLeftPanel && activeLeftPanel !== "ai" && (
-            <motion.div
-              key="left-panel"
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="border-r border-slate-200/80 bg-white/90 backdrop-blur-xl overflow-y-auto"
-              style={{
-                width: "var(--left-panel-w)",
-                marginLeft: "var(--left-sidebar-w)",
-                marginTop: "var(--header-h)",
-                position: "fixed",
-                left: 0,
-                top: 0,
-                bottom: 0,
-                zIndex: 35,
-              }}
+        <PanelGroup orientation="horizontal" className="flex-1 ml-[var(--left-sidebar-w)]">
+          {/* Left Panel Area */}
+          {activeLeftPanel && (
+            <Panel
+              defaultSize={20}
+              minSize={15}
+              maxSize={35}
+              className="z-20 bg-white border-r border-slate-200 overflow-hidden"
             >
-              {activeLeftPanel === "components" && <ComponentLibrary />}
-              {activeLeftPanel === "layers" && <LayersPanel />}
-              {activeLeftPanel === "assets" && <AssetsPanel />}
-              {activeLeftPanel === "history" && <HistoryPanel />}
-            </motion.div>
+              <div className="h-full overflow-y-auto custom-scrollbar">
+                <ErrorBoundary componentName="LeftPanel">
+                  {activeLeftPanel === "ai" && <AIPromptPanel />}
+                  {activeLeftPanel === "components" && <ComponentLibrary />}
+                  {activeLeftPanel === "custom" && <CustomComponentPanel />}
+                  {activeLeftPanel === "layers" && <LayersPanel />}
+                  {activeLeftPanel === "assets" && <AssetsPanel />}
+                  {activeLeftPanel === "history" && <HistoryPanel />}
+                </ErrorBoundary>
+              </div>
+            </Panel>
           )}
-        </AnimatePresence>
+          {activeLeftPanel && <PanelResizeHandle className="w-[1px] bg-slate-200 hover:bg-sky-400 hover:w-1 transition-all z-30" />}
 
-        {/* AI Prompt Panel — Full-screen Modal */}
-        <AnimatePresence>
-          {activeLeftPanel === "ai" && (
-            <motion.div
-              key="ai-modal"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
-              style={{
-                background: "rgba(15,15,17,0.5)",
-                backdropFilter: "blur(12px)",
-              }}
-            >
-              <motion.div
-                initial={{ scale: 0.92, y: 24 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.92, y: 24 }}
-                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className="relative w-full max-w-xl bg-white rounded-[36px] shadow-[0_60px_120px_-20px_rgba(0,0,0,0.4)] overflow-hidden border border-white/10"
-                style={{ height: "min(88vh, 700px)" }}
-              >
-                <button
-                  onClick={() => setActiveLeftPanel(null)}
-                  className="absolute top-5 right-5 z-20 h-8 w-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-slate-950 hover:text-white transition-all shadow-sm"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-                <AIPromptPanel />
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          {/* Canvas Center Area */}
+          <Panel id="CanvasPanel" defaultSize={58} className="relative z-10 flex flex-col bg-slate-50/50 overflow-hidden">
+            <main className="flex-1 overflow-hidden relative">
+              <Canvas />
+            </main>
+          </Panel>
 
-        {/* Canvas Area */}
-        <div
-          className="relative flex-1 overflow-hidden"
-          style={{
-            marginLeft: activeLeftPanel && activeLeftPanel !== "ai"
-              ? `calc(var(--left-sidebar-w) + var(--left-panel-w))`
-              : "var(--left-sidebar-w)",
-            marginRight: isRightPanelOpen ? "var(--right-panel-w)" : 0,
-            marginTop: "var(--header-h)",
-            transition: "margin 0.2s ease",
-          }}
-        >
-          {/* Canvas Background Decor */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.07),transparent_40%),radial-gradient(circle_at_70%_80%,rgba(251,191,36,0.1),transparent_35%)]" />
-            <div className="absolute inset-0 opacity-[0.015]"
-              style={{
-                backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1' cy='1' r='1' fill='%230f172a'/%3E%3C/svg%3E\")",
-                backgroundSize: "20px 20px",
-              }}
-            />
-          </div>
-          <Canvas />
-        </div>
+          <PanelResizeHandle className="w-1.5 bg-transparent hover:bg-sky-500/30 transition-colors cursor-col-resize z-50 flex items-center justify-center group">
+            <div className="w-[1px] h-8 bg-slate-300 group-hover:bg-sky-500 transition-colors" />
+          </PanelResizeHandle>
 
-        {/* Right Panel */}
-        {isRightPanelOpen && (
-          <RightPanel isOpen={isRightPanelOpen} onClose={() => setIsRightPanelOpen(false)} />
-        )}
-
-        {/* Reopen Right Panel Button */}
-        {!isRightPanelOpen && (
-          <motion.button
-            initial={{ opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
-            type="button"
-            onClick={() => setIsRightPanelOpen(true)}
-            className="fixed right-4 z-30 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/90 px-3 py-1.5 text-[10px] font-bold text-slate-600 shadow-sm backdrop-blur-xl transition hover:border-slate-300 hover:text-slate-950"
-            style={{ top: "calc(var(--header-h) + 12px)" }}
+          {/* Right Panel Area */}
+          <Panel
+            defaultSize={22}
+            minSize={18}
+            maxSize={35}
+            className="z-20 bg-white border-l border-slate-200 shadow-2xl overflow-hidden"
           >
-            <PanelRightOpen className="h-3 w-3" />
-            Inspector
-          </motion.button>
-        )}
+            <RightPanel />
+          </Panel>
+        </PanelGroup>
+
+        {/* Floating AI Chat Widget */}
+        <AIChatWidget />
       </div>
     </div>
   );

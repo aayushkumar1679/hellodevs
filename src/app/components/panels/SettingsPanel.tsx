@@ -1,11 +1,13 @@
 "use client";
 
 import React from "react";
-import { useDesignStore } from "@/state/useDesignStore";
+import { useProjectStore } from "@/state/useProjectStore";
+import { useEditorStore } from "@/state/useEditorStore";
 import PropertySection from "../editor/PropertySection";
 
 export default function SettingsPanel() {
-  const { selectedElements, elements } = useDesignStore();
+  const { currentProject } = useProjectStore();
+  const selectedElements = useEditorStore((state) => state.selectedElements);
   const [expandedSections, setExpandedSections] = React.useState<string[]>([
     "general",
   ]);
@@ -27,7 +29,7 @@ export default function SettingsPanel() {
   const selectedElementId = selectedElements[0];
   if (!selectedElementId) return null;
 
-  const selectedElement = elements[selectedElementId];
+  const selectedElement = currentProject?.components[selectedElementId];
   if (!selectedElement) return null;
 
   return (

@@ -16,6 +16,11 @@ interface EditorState {
   /* Preview / canvas frame */
   previewEnabled: boolean;
 
+  /* Selection State */
+  selectedElements: string[];
+  selectElement: (id: string, multiSelect?: boolean) => void;
+  deselectAll: () => void;
+
   /* Breakpoint configs */
   breakpoints: Record<Breakpoint, BreakpointConfig>;
 
@@ -30,6 +35,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   /* Default state */
   activeBreakpoint: "desktop",
   previewEnabled: true,
+  selectedElements: [],
 
   breakpoints: {
     mobile: {
@@ -56,4 +62,15 @@ export const useEditorStore = create<EditorState>((set) => ({
     set((state) => ({
       previewEnabled: !state.previewEnabled,
     })),
+
+  selectElement: (id, multiSelect = false) =>
+    set((state) => ({
+      selectedElements: multiSelect
+        ? state.selectedElements.includes(id)
+          ? state.selectedElements.filter((sid) => sid !== id)
+          : [...state.selectedElements, id]
+        : [id],
+    })),
+
+  deselectAll: () => set({ selectedElements: [] }),
 }));

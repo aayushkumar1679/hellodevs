@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, Plus, FolderOpen, Eye, Check, Copy, Download, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useCanvasStore, type Project as CanvasProject } from "@/state/useCanvasStore";
+import { useProjectStore, type PolyglotProject as CanvasProject } from "@/state/useProjectStore";
 import ExportModal from "./ExportModal"; // We will create this
 
 interface InitialProject {
@@ -18,7 +18,7 @@ interface InitialProject {
 }
 
 export default function DashboardClient({ initialProjects }: { initialProjects: InitialProject[] }) {
-  const { projects: storeProjects, fetchProjects, deleteProject } = useCanvasStore();
+  const { projects: storeProjects, fetchProjects, deleteProject } = useProjectStore();
   const [search, setSearch] = useState("");
   const [exportProjectId, setExportProjectId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);

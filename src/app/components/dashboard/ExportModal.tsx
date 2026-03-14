@@ -4,7 +4,7 @@ import React from "react";
 import { Download, X } from "lucide-react";
 import { toast } from "sonner";
 import { generateNextJsProject } from "@/utils/exporter";
-import type { Project as CanvasProject } from "@/state/useCanvasStore";
+import type { PolyglotProject as CanvasProject } from "@/state/useProjectStore";
 
 interface ExportModalProps {
   project: CanvasProject;
@@ -35,7 +35,7 @@ export default function ExportModal({ project, onClose }: ExportModalProps) {
     }
   };
 
-  const files = generateNextJsProject(project, project.designElements);
+  const files = generateNextJsProject(project);
   const mainPage = files.find((f) => f.name === "src/app/page.tsx") || files[0];
   const previewCode = mainPage.content;
   const previewFileName = mainPage.name;

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { useDesignStore } from "@/state/useDesignStore";
+import { useProjectStore } from "@/state/useProjectStore";
+import { useEditorStore } from "@/state/useEditorStore";
 import {
   AlignLeft,
   AlignCenter,
@@ -11,9 +12,14 @@ import {
 } from "lucide-react";
 
 export default function MultiSelectToolbar() {
-  const selectedElements = useDesignStore((s) => s.selectedElements);
-  const updateCSSBulk = useDesignStore((s) => s.updateCSSPropertiesBulk);
-  const removeElement = useDesignStore((s) => s.removeElement);
+  const selectedElements = useEditorStore((s) => s.selectedElements);
+  const { activeBreakpoint } = useEditorStore();
+  const updateComponentCSSOverride = useProjectStore((s) => s.updateComponentCSSOverride);
+  const removeElement = useProjectStore((s) => s.removeComponent);
+
+  const updateCSSBulk = (ids: string[], property: string, value: string) => {
+    ids.forEach((id) => updateComponentCSSOverride(id, activeBreakpoint, property, value));
+  };
   const [copied, setCopied] = useState(false);
 
   if (selectedElements.length < 2) return null;

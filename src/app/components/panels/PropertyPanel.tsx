@@ -1,13 +1,13 @@
 "use client";
 
 import React from "react";
-import { useCanvasStore } from "@/state/useCanvasStore";
-import { useDesignStore } from "@/state/useDesignStore";
+import { useProjectStore } from "@/state/useProjectStore";
+import { useEditorStore } from "@/state/useEditorStore";
 
 export default function PropertyPanel() {
-  const currentProject = useCanvasStore((state) => state.currentProject);
-  const updateComponent = useCanvasStore((state) => state.updateComponent);
-  const selectedElements = useDesignStore((state) => state.selectedElements);
+  const currentProject = useProjectStore((state) => state.currentProject);
+  const updateComponent = useProjectStore((state) => state.updateComponent);
+  const selectedElements = useEditorStore((state) => state.selectedElements);
 
   const selectedComponentId = selectedElements[0];
   const selectedComponent =
@@ -41,31 +41,82 @@ export default function PropertyPanel() {
         <p className="mt-1 text-xs text-slate-500">{selectedComponent.id}</p>
       </div>
 
-      {"text" in (selectedComponent.props || {}) && (
-        <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            Text
-          </label>
-          <textarea
-            value={String(selectedComponent.props?.text || "")}
-            onChange={(event) => updateProp("text", event.target.value)}
-            className="min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-400"
-          />
-        </div>
-      )}
+      {Object.entries(selectedComponent.props || {}).map(([key, val]) => {
+        // Skip hidden/internal props
+        if (key.startsWith("_")) return null;
 
-      {"title" in (selectedComponent.props || {}) && (
-        <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            Title
-          </label>
-          <input
-            value={String(selectedComponent.props?.title || "")}
-            onChange={(event) => updateProp("title", event.target.value)}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-400"
-          />
-        </div>
-      )}
+        const stringVal = String(val || "");
+
+        // Determine input type
+        if (key === "text" || key === "description" || stringVal.length > 50) {
+          return (
+            <div key={key}>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                {key}
+              </label>
+              <textarea
+                value={stringVal}
+                onChange={(event) => updateProp(key, event.target.value)}
+                className="min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-400 custom-scrollbar"
+              />
+            </div>
+          );
+        }
+
+        if (key === "href" || key === "src") {
+           return (
+             <div key={key}>
+               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                 {key}
+               </label>
+               <input
+                 type="url"
+                 value={stringVal}
+                 onChange={(event) => updateProp(key, event.target.value)}
+                 placeholder={`https://...`}
+                 className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-400"
+               />
+             </div>
+           );
+        }
+
+        if (key === "variant") {
+            return (
+              <div key={key}>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  {key}
+                </label>
+                <select
+                  value={stringVal}
+                  onChange={(event) => updateProp(key, event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-400 appearance-none"
+                >
+                  <option value="default">Default</option>
+                  <option value="primary">Primary</option>
+                  <option value="secondary">Secondary</option>
+                  <option value="outline">Outline</option>
+                  <option value="ghost">Ghost</option>
+                  <option value="destructive">Destructive</option>
+                  <option value="link">Link</option>
+                </select>
+              </div>
+            );
+        }
+
+        return (
+          <div key={key}>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              {key}
+            </label>
+            <input
+              type="text"
+              value={stringVal}
+              onChange={(event) => updateProp(key, event.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-400"
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

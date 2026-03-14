@@ -1,241 +1,45 @@
 "use client";
 
 import React, { useMemo } from "react";
-import {
-  ArrowUpRight,
-  Box,
-  Layers3,
-  Rocket,
-  Sparkles,
-  Zap,
-} from "lucide-react";
-import { useDesignStore } from "@/state/useDesignStore";
+import { Sparkles, Trash2, Plus, FastForward, Clock, Wand2, ArrowRight } from "lucide-react";
+import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
-import {
-  POLYGLOT_INTERACTION_TRANSITION,
-} from "@/utils/motionStyles";
-
-type CssPreset = {
-  id: string;
-  label: string;
-  description: string;
-  icon: React.ElementType;
-  values: Record<string, string>;
-};
-
-const DEPTH_PRESETS: CssPreset[] = [
-  {
-    id: "flat",
-    label: "Flat",
-    description: "Reset depth and return to a clean plane.",
-    icon: Box,
-    values: {
-      transform: "",
-      transformStyle: "",
-      boxShadow: "",
-      filter: "",
-      transition: POLYGLOT_INTERACTION_TRANSITION,
-    },
-  },
-  {
-    id: "lifted",
-    label: "Lifted",
-    description: "A subtle premium card elevation.",
-    icon: ArrowUpRight,
-    values: {
-      transform: "translateY(-10px) scale(1.01)",
-      boxShadow: "0 28px 70px -38px rgba(15, 23, 42, 0.35)",
-      filter: "",
-      transformStyle: "",
-      transition: POLYGLOT_INTERACTION_TRANSITION,
-    },
-  },
-  {
-    id: "tilted",
-    label: "Tilted 3D",
-    description: "A strong angled presentation for hero sections.",
-    icon: Layers3,
-    values: {
-      transform: "perspective(1200px) rotateX(12deg) rotateY(-14deg)",
-      transformStyle: "preserve-3d",
-      boxShadow: "0 38px 110px -60px rgba(14, 165, 233, 0.45)",
-      filter: "",
-      transition: POLYGLOT_INTERACTION_TRANSITION,
-    },
-  },
-  {
-    id: "cinematic",
-    label: "Cinematic",
-    description: "High-drama depth for product and showcase blocks.",
-    icon: Sparkles,
-    values: {
-      transform: "perspective(1400px) rotateX(18deg) rotateY(-18deg) scale(0.98)",
-      transformStyle: "preserve-3d",
-      boxShadow: "0 42px 130px -60px rgba(15, 23, 42, 0.52)",
-      filter: "saturate(1.06)",
-      transition: POLYGLOT_INTERACTION_TRANSITION,
-    },
-  },
-];
-
-const MOTION_PRESETS: CssPreset[] = [
-  {
-    id: "still",
-    label: "Still",
-    description: "No ambient animation.",
-    icon: Box,
-    values: {
-      animation: "",
-      transition: POLYGLOT_INTERACTION_TRANSITION,
-    },
-  },
-  {
-    id: "float",
-    label: "Float",
-    description: "Soft ambient movement for cards and mockups.",
-    icon: Sparkles,
-    values: {
-      animation: "polyglot-float 6s ease-in-out infinite",
-      transition: POLYGLOT_INTERACTION_TRANSITION,
-    },
-  },
-  {
-    id: "pulse",
-    label: "Pulse",
-    description: "Light breathing effect for badges and calls to action.",
-    icon: Zap,
-    values: {
-      animation: "polyglot-pulse-soft 3.5s ease-in-out infinite",
-      transition: POLYGLOT_INTERACTION_TRANSITION,
-    },
-  },
-  {
-    id: "rise",
-    label: "Rise In",
-    description: "Launch-style reveal motion for sections and headlines.",
-    icon: Rocket,
-    values: {
-      animation: "polyglot-rise-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both",
-      transition: POLYGLOT_INTERACTION_TRANSITION,
-    },
-  },
-];
-
-function PresetGrid({
-  title,
-  subtitle,
-  presets,
-  isActive,
-  onSelect,
-}: {
-  title: string;
-  subtitle: string;
-  presets: CssPreset[];
-  isActive: (preset: CssPreset) => boolean;
-  onSelect: (preset: CssPreset) => void;
-}) {
-  return (
-    <section className="space-y-3">
-      <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-          {title}
-        </p>
-        <p className="mt-1 text-xs leading-5 text-slate-500">{subtitle}</p>
-      </div>
-
-      <div className="grid gap-2">
-        {presets.map((preset) => {
-          const Icon = preset.icon;
-          const active = isActive(preset);
-
-          return (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={() => onSelect(preset)}
-              className={`rounded-[20px] border px-4 py-3 text-left transition ${
-                active
-                  ? "border-sky-300 bg-sky-50 text-sky-950 shadow-[0_18px_40px_-34px_rgba(14,165,233,0.7)]"
-                  : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl ${
-                    active ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-500"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold">{preset.label}</p>
-                    {active ? (
-                      <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-700">
-                        Active
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">
-                    {preset.description}
-                  </p>
-                </div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
+import { ANIMATION_PRESETS, AnimationConfig, AnimationTrigger } from "@/config/animationPresets";
 
 export default function InteractionsPanel() {
-  const selectedElements = useDesignStore((state) => state.selectedElements);
-  const elements = useDesignStore((state) => state.elements);
-  const updateCSSProperty = useDesignStore((state) => state.updateCSSProperty);
-  const { activeBreakpoint } = useEditorStore();
-
+  const selectedElements = useEditorStore((state) => state.selectedElements);
+  const elements = useProjectStore((state) => state.currentProject?.components);
+  const updateComponent = useProjectStore((state) => state.updateComponent);
   const primaryId = selectedElements[0];
-  const element = primaryId ? elements[primaryId] : null;
+  const element = primaryId ? elements?.[primaryId] : null;
 
-  const css = useMemo(() => {
-    if (!element) {
-      return {};
-    }
+  const animations: AnimationConfig[] = useMemo(() => {
+    return element?.animations || [];
+  }, [element]);
 
-    const cssProperties = element.cssProperties;
-    if (activeBreakpoint === "mobile") {
-      return {
-        ...(cssProperties.base ?? {}),
-        ...(cssProperties.tablet ?? {}),
-        ...(cssProperties.mobile ?? {}),
-      };
-    }
+  const addAnimation = () => {
+    if (!element) return;
+    const newAnim: AnimationConfig = {
+      id: `anim-${Date.now()}`,
+      preset: Object.keys(ANIMATION_PRESETS)[0],
+      trigger: "scroll",
+      duration: 0.6,
+      delay: 0,
+      repeat: false,
+    };
+    updateComponent(element.id, { animations: [...animations, newAnim] });
+  };
 
-    if (activeBreakpoint === "tablet") {
-      return {
-        ...(cssProperties.base ?? {}),
-        ...(cssProperties.tablet ?? {}),
-      };
-    }
+  const updateAnimation = (id: string, updates: Partial<AnimationConfig>) => {
+    if (!element) return;
+    const newAnims = animations.map((a) => (a.id === id ? { ...a, ...updates } : a));
+    updateComponent(element.id, { animations: newAnims });
+  };
 
-    return { ...(cssProperties.base ?? {}) };
-  }, [activeBreakpoint, element]);
-
-  const isPresetActive = (preset: CssPreset) =>
-    Object.entries(preset.values).every(([key, expected]) => {
-      const value = css[key];
-      return String(value ?? "") === expected;
-    });
-
-  const applyPreset = (preset: CssPreset) => {
-    if (!primaryId) {
-      return;
-    }
-
-    Object.entries(preset.values).forEach(([property, value]) => {
-      updateCSSProperty(primaryId, property, value);
-    });
+  const removeAnimation = (id: string) => {
+    if (!element) return;
+    const newAnims = animations.filter((a) => a.id !== id);
+    updateComponent(element.id, { animations: newAnims });
   };
 
   if (!primaryId || !element) {
@@ -248,15 +52,14 @@ export default function InteractionsPanel() {
           Motion starts with a selection
         </p>
         <p className="mt-2 max-w-xs text-xs leading-6 text-slate-500">
-          Pick a layer on the canvas to add export-safe 3D depth, ambient motion,
-          and smoother transitions.
+          Pick a layer on the canvas to add beautiful Framer Motion animations and interactions.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,249,255,0.95))] p-5 shadow-[0_24px_60px_-40px_rgba(14,165,233,0.35)]">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -264,40 +67,156 @@ export default function InteractionsPanel() {
               Motion Studio
             </p>
             <p className="mt-2 text-sm font-semibold text-slate-950">
-              Add 3D depth and ambient motion to this layer.
+              Framer Motion Animations
             </p>
             <p className="mt-2 text-xs leading-5 text-slate-500">
-              Presets are applied at the current breakpoint and remain compatible
-              with preview, share, and export.
+              Stack multiple animations and triggers to build complex micro-interactions seamlessly.
             </p>
           </div>
-          <span className="rounded-full bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-700 ring-1 ring-sky-200">
-            {activeBreakpoint}
-          </span>
+          <div className="h-10 w-10 shrink-0 rounded-2xl bg-white shadow-sm flex items-center justify-center text-teal-600">
+            <Wand2 className="h-4 w-4" />
+          </div>
         </div>
       </div>
 
-      <PresetGrid
-        title="Depth"
-        subtitle="Shape how the selected block sits in space."
-        presets={DEPTH_PRESETS}
-        isActive={isPresetActive}
-        onSelect={applyPreset}
-      />
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            Active Animations
+          </h3>
+          <button 
+            onClick={addAnimation}
+            className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-slate-600 transition hover:bg-slate-200 hover:text-slate-900"
+          >
+            <Plus size={10} /> Add
+          </button>
+        </div>
 
-      <PresetGrid
-        title="Motion"
-        subtitle="Layer in ambient animation without leaving the builder."
-        presets={MOTION_PRESETS}
-        isActive={isPresetActive}
-        onSelect={applyPreset}
-      />
+        {animations.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center bg-slate-50">
+            <p className="text-xs font-semibold text-slate-600">No animations yet.</p>
+            <p className="text-[11px] text-slate-400 mt-1">Add an animation to bring this layer to life.</p>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {animations.map((anim, index) => (
+              <div key={anim.id} className="group relative rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
+                <button 
+                  onClick={() => removeAnimation(anim.id)} 
+                  className="absolute right-3 top-3 h-6 w-6 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-rose-100"
+                >
+                  <Trash2 size={12} />
+                </button>
+                
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="h-5 w-5 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-[10px] font-bold">
+                    {index + 1}
+                  </div>
+                  <p className="text-[11px] font-bold text-slate-900 uppercase tracking-widest">Animation Layer</p>
+                </div>
 
-      <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-xs leading-6 text-slate-500">
-        Motion is currently style-driven. Hover, click, and scroll-triggered logic
-        can be layered next, but these presets already let users craft richer,
-        more cinematic landing pages today.
+                <div className="space-y-4">
+                  {/* Preset Selection */}
+                  <div>
+                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Preset
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={anim.preset}
+                        onChange={(e) => updateAnimation(anim.id, { preset: e.target.value })}
+                        className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-3 pr-8 text-xs font-medium text-slate-700 outline-none transition focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/20"
+                      >
+                        {Object.entries(ANIMATION_PRESETS).map(([key, preset]) => (
+                          <option key={key} value={key}>{preset.name}</option>
+                        ))}
+                      </select>
+                      <ArrowRight className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none text-slate-400 rotate-90" />
+                    </div>
+                    <p className="mt-1.5 text-[10px] text-slate-500">
+                      {ANIMATION_PRESETS[anim.preset]?.description}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Trigger */}
+                    <div>
+                      <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Trigger
+                      </label>
+                      <select
+                        value={anim.trigger}
+                        onChange={(e) => updateAnimation(anim.id, { trigger: e.target.value as AnimationTrigger })}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-teal-500"
+                      >
+                        <option value="load">On Load</option>
+                        <option value="scroll">On Scroll In View</option>
+                        <option value="hover">While Hover</option>
+                        <option value="tap">While Tap</option>
+                      </select>
+                    </div>
+
+                    {/* Behavior toggles */}
+                    {anim.trigger === "scroll" && (
+                      <div className="flex flex-col justify-end pb-3">
+                        <label className="flex items-center gap-2 cursor-pointer group/toggle">
+                          <input 
+                            type="checkbox" 
+                            checked={anim.repeat || false}
+                            onChange={(e) => updateAnimation(anim.id, { repeat: e.target.checked })}
+                            className="hidden"
+                          />
+                          <div className={`h-4 w-7 rounded-full transition-colors flex items-center p-0.5 ${anim.repeat ? 'bg-teal-500' : 'bg-slate-200'}`}>
+                            <div className={`h-3 w-3 rounded-full bg-white transition-transform ${anim.repeat ? 'translate-x-3' : 'translate-x-0'}`} />
+                          </div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 group-hover/toggle:text-slate-900 transition-colors">Repeat</span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Timing for load/scroll */}
+                  {(anim.trigger === "load" || anim.trigger === "scroll") && (
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            <Clock size={10} /> Delay
+                          </label>
+                          <span className="text-[10px] text-slate-500 font-mono bg-slate-50 px-1 rounded">{anim.delay?.toFixed(1) || "0.0"}s</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0" max="2" step="0.1"
+                          value={anim.delay || 0}
+                          onChange={(e) => updateAnimation(anim.id, { delay: parseFloat(e.target.value) })}
+                          className="w-full accent-teal-500"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            <FastForward size={10} /> Duration
+                          </label>
+                          <span className="text-[10px] text-slate-500 font-mono bg-slate-50 px-1 rounded">{anim.duration?.toFixed(1) || "0.0"}s</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.1" max="3" step="0.1"
+                          value={anim.duration || 0.6}
+                          onChange={(e) => updateAnimation(anim.id, { duration: parseFloat(e.target.value) })}
+                          className="w-full accent-teal-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
     </div>
   );
 }

@@ -1,5 +1,4 @@
-import type { CanvasComponent } from "@/state/useCanvasStore";
-import type { Element } from "@/state/useDesignStore";
+import type { PolyglotComponent } from "@/state/useProjectStore";
 import { COMPONENT_LIBRARY } from "@/config/componentRegistry";
 import type { BlueprintNode } from "@/config/componentRegistry";
 
@@ -13,13 +12,21 @@ export interface GeneratedComponentNode {
 export interface GeneratedProjectPayload {
   projectName?: string;
   summary?: string;
+  designSystem?: {
+    colors: {
+      background: string;
+      surface: string;
+      primary: string;
+      secondary: string;
+      accent: string;
+    };
+  };
   roots: GeneratedComponentNode[];
 }
 
-interface MaterializedProject {
-  components: Record<string, CanvasComponent>;
+export interface MaterializedProject {
+  components: Record<string, PolyglotComponent>;
   rootOrder: string[];
-  designElements: Record<string, Element>;
 }
 
 const DEFAULT_COMPONENT_TYPE = "section";
@@ -59,8 +66,7 @@ function nextId(counter: { current: number }) {
 function materializeNode(
   node: GeneratedComponentNode,
   counter: { current: number },
-  components: Record<string, CanvasComponent>,
-  designElements: Record<string, Element>
+  components: Record<string, PolyglotComponent>
 ): string {
   const definition = getDefinition(node.type);
   const resolvedNode =
@@ -71,7 +77,7 @@ function materializeNode(
   const type = resolvedDefinition?.type || DEFAULT_COMPONENT_TYPE;
   const id = nextId(counter);
 
-  components[id] = {
+  const newComponent: PolyglotComponent = {
     id,
     type,
     props: {
@@ -80,13 +86,7 @@ function materializeNode(
         : {}),
       ...(resolvedNode.props || {}),
     },
-    children: [],
-  };
-
-  designElements[id] = {
-    id,
-    type,
-    cssProperties: {
+    cssOverrides: {
       base: {
         ...(resolvedDefinition?.defaultCss
           ? { ...resolvedDefinition.defaultCss }
@@ -94,11 +94,17 @@ function materializeNode(
         ...(resolvedNode.css || {}),
       },
     },
+    animations: [],
+    assets: [],
+    meta: {},
+    children: [], // Populated below
   };
 
+  components[id] = newComponent;
+
   const children = resolvedNode.children || [];
-  components[id].children = children.map((child) =>
-    materializeNode(child, counter, components, designElements)
+  newComponent.children = children.map((child) =>
+    materializeNode(child, counter, components)
   );
 
   return id;
@@ -107,17 +113,15 @@ function materializeNode(
 export function materializeGeneratedProject(
   payload: GeneratedProjectPayload
 ): MaterializedProject {
-  const components: Record<string, CanvasComponent> = {};
-  const designElements: Record<string, Element> = {};
+  const components: Record<string, PolyglotComponent> = {};
   const counter = { current: 0 };
 
   const rootOrder = payload.roots.map((node) =>
-    materializeNode(node, counter, components, designElements)
+    materializeNode(node, counter, components)
   );
 
   return {
     components,
     rootOrder,
-    designElements,
   };
 }

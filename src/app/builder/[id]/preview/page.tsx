@@ -4,7 +4,7 @@ import React from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import ProjectSurface from "@/components/project/ProjectSurface";
-import { useCanvasStore } from "@/state/useCanvasStore";
+import { useProjectStore } from "@/state/useProjectStore";
 import { getProjectRootIds } from "@/utils/projectModel";
 
 export default function CanvasPreviewPage() {
@@ -15,7 +15,7 @@ export default function CanvasPreviewPage() {
     currentProjectId,
     setCurrentProject,
     fetchProject,
-  } = useCanvasStore();
+  } = useProjectStore();
   const [isLoading, setIsLoading] = React.useState(true);
 
   const project =
@@ -96,7 +96,6 @@ export default function CanvasPreviewPage() {
           {hasContent ? (
             <ProjectSurface
               project={project}
-              designElements={project.designElements}
               className="space-y-4"
             />
           ) : (

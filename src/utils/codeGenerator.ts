@@ -1,4 +1,4 @@
-import { CanvasComponent } from "@/state/useCanvasStore";
+import {  CanvasComponent  } from "@/state/useProjectStore";
 
 const COMPONENT_IMPORTS: Record<string, string> = {
   Navbar: 'import Navbar from "@/components/Navbar";',
@@ -237,9 +237,9 @@ export function generateHTMLCode(components: CanvasComponent[]): string {
       case "ImageSection": {
         const title = props.title || "Gallery";
         const images = props.images || [
-          "https://via.placeholder.com/400x300?text=Image+1",
-          "https://via.placeholder.com/400x300?text=Image+2",
-          "https://via.placeholder.com/400x300?text=Image+3",
+          "https://source.unsplash.com/800x600/?hotel,luxury",
+          "https://source.unsplash.com/800x600/?room,luxury",
+          "https://source.unsplash.com/800x600/?dining,luxury",
         ];
         return `<section class="w-full py-12 px-6 bg-gray-50">
       <div class="max-w-6xl mx-auto">

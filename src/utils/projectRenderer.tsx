@@ -1,7 +1,6 @@
-
 import React from "react";
-import type { Project } from "@/state/useCanvasStore";
-import type { Breakpoint, Element } from "@/state/useDesignStore";
+import type { PolyglotProject, PolyglotComponent } from "@/state/useProjectStore";
+import type { Breakpoint } from "@/state/useEditorStore";
 import PrimitiveRenderer from "@/components/project/PrimitiveRenderer";
 import {
   getBreakpointCss,
@@ -9,7 +8,6 @@ import {
 } from "@/utils/projectModel";
 import { POLYGLOT_MOTION_CSS } from "@/utils/motionStyles";
 
-type DesignElements = Record<string, Element>;
 type ExportVariant = "tailwind" | "bootstrap";
 type LinkLike = { href?: string; label?: string };
 type ActionLike = { href?: string; text?: string };
@@ -73,37 +71,34 @@ function styleToHtml(style: React.CSSProperties) {
 
 function renderChildrenToReact(
   componentId: string,
-  project: Project,
-  designElements: DesignElements,
+  project: PolyglotProject,
   breakpoint: Breakpoint
 ) {
   return project.components[componentId].children.map((childId) =>
-    renderProjectNodeToReact(childId, project, designElements, breakpoint)
+    renderProjectNodeToReact(childId, project, breakpoint)
   );
 }
 
 function renderChildrenToJsx(
   componentId: string,
-  project: Project,
-  designElements: DesignElements,
+  project: PolyglotProject,
   level: number
 ) {
   return project.components[componentId].children
     .map((childId) =>
-      renderProjectNodeToJsx(childId, project, designElements, level + 1)
+      renderProjectNodeToJsx(childId, project, level + 1)
     )
     .join("\n");
 }
 
 function renderChildrenToHtml(
   componentId: string,
-  project: Project,
-  designElements: DesignElements,
+  project: PolyglotProject,
   level: number
 ) {
   return project.components[componentId].children
     .map((childId) =>
-      renderProjectNodeToHtml(childId, project, designElements, level + 1)
+      renderProjectNodeToHtml(childId, project, level + 1)
     )
     .join("\n");
 }
@@ -114,30 +109,26 @@ function indent(level: number) {
 
 function getNodeState(
   componentId: string,
-  project: Project,
-  designElements: DesignElements,
+  project: PolyglotProject,
   breakpoint: Breakpoint
 ) {
   const component = project.components[componentId];
-  const design = designElements[componentId];
 
   return {
     component,
     props: (component.props ?? {}) as ComponentProps,
-    style: getBreakpointCss(design, breakpoint),
+    style: getBreakpointCss(component, breakpoint),
   };
 }
 
 export function renderProjectNodeToReact(
   componentId: string,
-  project: Project,
-  designElements: DesignElements,
+  project: PolyglotProject,
   breakpoint: Breakpoint = "desktop"
 ): React.ReactNode {
   const { component, props, style } = getNodeState(
     componentId,
     project,
-    designElements,
     breakpoint
   );
 
@@ -148,7 +139,6 @@ export function renderProjectNodeToReact(
   const children = renderChildrenToReact(
     componentId,
     project,
-    designElements,
     breakpoint
   );
 
@@ -201,25 +191,95 @@ export function renderProjectNodeToReact(
 }
 
 export function renderProjectTreeToReact(
-  project: Project,
-  designElements: DesignElements,
+  project: PolyglotProject,
   breakpoint: Breakpoint = "desktop"
 ) {
   return getProjectRootIds(project).map((rootId) =>
-    renderProjectNodeToReact(rootId, project, designElements, breakpoint)
+    renderProjectNodeToReact(rootId, project, breakpoint)
   );
+}
+
+function buildMotionProps(component: PolyglotComponent): string {
+  if (!component.animations || component.animations.length === 0) return "";
+  const parts: string[] = [];
+  let hasHidden = false;
+  let hasVisible = false;
+  let hasScrollVisible = false;
+  let hasHover = false;
+  let hasTap = false;
+  const hiddenObj: Record<string, unknown> = {};
+  const visibleObj: Record<string, unknown> = {};
+  const scrollVisibleObj: Record<string, unknown> = {};
+  const hoverObj: Record<string, unknown> = {};
+  const tapObj: Record<string, unknown> = {};
+
+  const PRESETS: Record<string, any> = {
+    "fade-in": { hidden: { opacity: 0 }, visible: { opacity: 1 } },
+    "fade-up": { hidden: { opacity: 0, y: 40 }, visible: { opacity: 1, y: 0 } },
+    "slide-in-left": { hidden: { opacity: 0, x: -50 }, visible: { opacity: 1, x: 0 } },
+    "slide-in-right": { hidden: { opacity: 0, x: 50 }, visible: { opacity: 1, x: 0 } },
+    "scale-up": { hidden: { opacity: 0, scale: 0.8 }, visible: { opacity: 1, scale: 1 } },
+    "blur-in": { hidden: { opacity: 0, filter: "blur(10px)" }, visible: { opacity: 1, filter: "blur(0px)" } },
+    "rotate-in": { hidden: { opacity: 0, rotate: -15, scale: 0.9 }, visible: { opacity: 1, rotate: 0, scale: 1 } },
+    "hover-float": { hover: { y: -8 } },
+    "hover-scale": { hover: { scale: 1.05 } },
+    "hover-glow": { hover: { boxShadow: "0 20px 40px -10px rgba(0,0,0,0.2)", y: -2 } },
+    "tap-shrink": { tap: { scale: 0.95 } },
+  };
+
+  component.animations.forEach((anim: any) => {
+    const preset = PRESETS[anim.preset];
+    if (!preset) return;
+    const dur = anim.duration ?? 0.6;
+    const delay = anim.delay ?? 0;
+    const transition = JSON.stringify({ duration: dur, delay });
+
+    if ((anim.trigger === "load" || anim.trigger === "scroll") && preset.hidden && preset.visible) {
+      Object.assign(hiddenObj, preset.hidden);
+      const vis = { ...preset.visible, transition: { duration: dur, delay } };
+      if (anim.trigger === "scroll") {
+        hasScrollVisible = true;
+        Object.assign(scrollVisibleObj, vis);
+        hasHidden = true;
+      } else {
+        hasVisible = true;
+        hasHidden = true;
+        Object.assign(visibleObj, vis);
+      }
+    } else if (anim.trigger === "hover" && preset.hover) {
+      hasHover = true;
+      Object.assign(hoverObj, preset.hover);
+    } else if (anim.trigger === "tap" && preset.tap) {
+      hasTap = true;
+      Object.assign(tapObj, preset.tap);
+    }
+  });
+
+  if (hasHidden) parts.push(`initial={${JSON.stringify(hiddenObj)}}`);
+  if (hasVisible) parts.push(`animate={${JSON.stringify(visibleObj)}}`);
+  if (hasScrollVisible) {
+    parts.push(`whileInView={${JSON.stringify(scrollVisibleObj)}}`);
+    const repeatAnims = component.animations.find((a: any) => a.trigger === "scroll" && a.repeat);
+    parts.push(`viewport={{ once: ${repeatAnims ? "false" : "true"}, margin: "-50px" }}`);
+  }
+  if (hasHover) parts.push(`whileHover={${JSON.stringify(hoverObj)}}`);
+  if (hasTap) parts.push(`whileTap={${JSON.stringify(tapObj)}}`);
+
+  return parts.join(" ");
+}
+
+function hasAnimations(component: PolyglotComponent): boolean {
+  return Array.isArray(component.animations) && component.animations.length > 0;
 }
 
 function renderProjectNodeToJsx(
   componentId: string,
-  project: Project,
-  designElements: DesignElements,
+  project: PolyglotProject,
   level = 3
 ): string {
   const { component, props, style } = getNodeState(
     componentId,
     project,
-    designElements,
     "desktop"
   );
 
@@ -229,24 +289,27 @@ function renderProjectNodeToJsx(
 
   const pad = indent(level);
   const styleAttr = styleToJsx(style);
-  const children = renderChildrenToJsx(componentId, project, designElements, level);
+  const motionAttr = hasAnimations(component) ? ` ${buildMotionProps(component)}` : "";
+  const useMotion = hasAnimations(component);
+  const children = renderChildrenToJsx(componentId, project, level);
+
 
   switch (component.type) {
-    case "section":
-      return `${pad}<section${styleAttr}>
-${children}
-${pad}</section>`;
+    case "section": {
+      if (useMotion) return `${pad}<motion.section${motionAttr}${styleAttr}>\n${children}\n${pad}</motion.section>`;
+      return `${pad}<section${styleAttr}>\n${children}\n${pad}</section>`;
+    }
     case "container":
     case "flex-row":
     case "flex-column":
-    case "grid":
-      return `${pad}<div${styleAttr}>
-${children}
-${pad}</div>`;
-    case "card":
-      return `${pad}<article${styleAttr}>
-${children}
-${pad}</article>`;
+    case "grid": {
+      if (useMotion) return `${pad}<motion.div${motionAttr}${styleAttr}>\n${children}\n${pad}</motion.div>`;
+      return `${pad}<div${styleAttr}>\n${children}\n${pad}</div>`;
+    }
+    case "card": {
+      if (useMotion) return `${pad}<motion.article${motionAttr}${styleAttr}>\n${children}\n${pad}</motion.article>`;
+      return `${pad}<article${styleAttr}>\n${children}\n${pad}</article>`;
+    }
     case "form":
       return `${pad}<form${styleAttr}>
 ${children}
@@ -355,14 +418,12 @@ ${pad}</div>`;
 
 function renderProjectNodeToHtml(
   componentId: string,
-  project: Project,
-  designElements: DesignElements,
+  project: PolyglotProject,
   level = 2
 ): string {
   const { component, props, style } = getNodeState(
     componentId,
     project,
-    designElements,
     "desktop"
   );
 
@@ -372,7 +433,7 @@ function renderProjectNodeToHtml(
 
   const pad = indent(level);
   const styleAttr = styleToHtml(style);
-  const children = renderChildrenToHtml(componentId, project, designElements, level);
+  const children = renderChildrenToHtml(componentId, project, level);
 
   switch (component.type) {
     case "section":
@@ -492,16 +553,20 @@ ${pad}</div>`;
 }
 
 export function generateReactPageCode(
-  project: Project,
-  designElements: DesignElements,
+  project: PolyglotProject,
   variant: ExportVariant = "tailwind"
 ) {
   const componentName = sanitizeComponentName(project.name);
   const body = getProjectRootIds(project)
-    .map((rootId) => renderProjectNodeToJsx(rootId, project, designElements, 3))
+    .map((rootId) => renderProjectNodeToJsx(rootId, project, 3))
     .join("\n");
 
+  // check if framer-motion needed
+  const allComponents = Object.values(project.components);
+  const needsMotion = allComponents.some((c) => Array.isArray(c.animations) && c.animations.length > 0);
+
   const imports = ['import React from "react";'];
+  if (needsMotion) imports.push('import { motion } from "framer-motion";');
   if (variant === "bootstrap") {
     imports.push('import "bootstrap/dist/css/bootstrap.min.css";');
   }
@@ -532,11 +597,10 @@ ${wrapperClose}
 }
 
 export function generateHtmlPageCode(
-  project: Project,
-  designElements: DesignElements
+  project: PolyglotProject
 ) {
   const body = getProjectRootIds(project)
-    .map((rootId) => renderProjectNodeToHtml(rootId, project, designElements, 2))
+    .map((rootId) => renderProjectNodeToHtml(rootId, project, 2))
     .join("\n");
 
   return `<!DOCTYPE html>

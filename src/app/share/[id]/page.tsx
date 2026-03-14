@@ -4,14 +4,14 @@ import React, { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, Code2 } from "lucide-react";
-import type { Project } from "@/state/useCanvasStore";
+import type { PolyglotProject } from "@/state/useProjectStore";
 import ProjectSurface from "@/components/project/ProjectSurface";
 import { generateExport } from "@/utils/exportGenerators";
 import { normalizeProject } from "@/utils/projectModel";
 
 export default function SharePage() {
   const params = useParams() as { id: string };
-  const [project, setProject] = useState<Project | null>(null);
+  const [project, setProject] = useState<PolyglotProject | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showCode, setShowCode] = useState(false);
 
@@ -30,7 +30,7 @@ export default function SharePage() {
           return;
         }
 
-        const data = (await response.json()) as Project;
+        const data = (await response.json()) as PolyglotProject;
         if (mounted) {
           setProject(normalizeProject(data));
         }
@@ -55,7 +55,7 @@ export default function SharePage() {
 
   const exportedCode = useMemo(() => {
     if (!project) return "";
-    return generateExport(project, "react-tailwind", project.designElements).code;
+    return generateExport(project, "react-tailwind").code;
   }, [project]);
 
   if (isLoading) {
@@ -118,7 +118,6 @@ export default function SharePage() {
         >
           <ProjectSurface
             project={project}
-            designElements={project.designElements}
             className="space-y-4"
           />
         </div>

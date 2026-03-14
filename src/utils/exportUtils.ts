@@ -1,4 +1,4 @@
-import type { Project } from "@/state/useCanvasStore";
+import type {  Project  } from "@/state/useProjectStore";
 
 // We need the design state to get the styles (width, color, etc.)
 // Assuming your design store structure based on your CanvasElement code

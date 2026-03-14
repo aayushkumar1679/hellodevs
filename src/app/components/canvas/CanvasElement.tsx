@@ -9,8 +9,8 @@ import React, {
   useState,
   useEffect,
 } from "react";
-import { useDesignStore } from "@/state/useDesignStore";
-
+import { useProjectStore } from "@/state/useProjectStore";
+import { useEditorStore } from "@/state/useEditorStore";
 export interface CanvasElementProps {
   elementId: string;
   children?: React.ReactNode;
@@ -89,18 +89,20 @@ export default function CanvasElement({
 }: CanvasElementProps) {
   const elementRef = useRef<HTMLDivElement | null>(null);
 
-  const element = useDesignStore((s) => s.elements[elementId]);
-  const selectedElements = useDesignStore((s) => s.selectedElements);
-  const selectElement = useDesignStore((s) => s.selectElement);
-  const updateCSSProperty = useDesignStore((s) => s.updateCSSProperty);
-  const getResolvedCss = useDesignStore((s) => s.getResolvedCss);
+  const element = useProjectStore((s) => s.currentProject?.components[elementId]);
+  const updateCSSProperty = useProjectStore((s) => s.updateComponentCSSOverride);
+  const getResolvedCss = useProjectStore((s) => s.getResolvedCss);
+
+  const selectedElements = useEditorStore((s) => s.selectedElements);
+  const selectElement = useEditorStore((s) => s.selectElement);
+  const activeBreakpoint = useEditorStore((s) => s.activeBreakpoint);
 
   const [isResizing, setIsResizing] = useState(false);
 
   const isSelected = selectedElements.includes(elementId);
   const css = useMemo(
-    () => (element ? getResolvedCss(elementId) : ({} as Record<string, unknown>)),
-    [element, elementId, getResolvedCss]
+    () => (element ? getResolvedCss(elementId, activeBreakpoint) : ({} as Record<string, unknown>)),
+    [element, elementId, getResolvedCss, activeBreakpoint]
   );
 
   useLayoutEffect(() => {
@@ -245,18 +247,18 @@ export default function CanvasElement({
 
     if (onGuide) onGuide(guidesToEmit);
 
-    updateCSSProperty(elementId, "width", `${Math.round(snappedW)}px`);
-    updateCSSProperty(elementId, "height", `${Math.round(snappedH)}px`);
+    updateCSSProperty(elementId, activeBreakpoint, "width", `${Math.round(snappedW)}px`);
+    updateCSSProperty(elementId, activeBreakpoint, "height", `${Math.round(snappedH)}px`);
     if (dir.includes("w") || dir.includes("n") || altCenter) {
-      updateCSSProperty(elementId, "position", "absolute");
-      updateCSSProperty(elementId, "left", `${Math.round(snappedLeft)}px`);
-      updateCSSProperty(elementId, "top", `${Math.round(snappedTop)}px`);
+      updateCSSProperty(elementId, activeBreakpoint, "position", "absolute");
+      updateCSSProperty(elementId, activeBreakpoint, "left", `${Math.round(snappedLeft)}px`);
+      updateCSSProperty(elementId, activeBreakpoint, "top", `${Math.round(snappedTop)}px`);
     }
 
     if (onRect) {
       onRect(new DOMRect(snappedLeft, snappedTop, snappedW, snappedH));
     }
-  }, [elementId, getSnapTargets, onGuide, onRect, updateCSSProperty]);
+  }, [elementId, getSnapTargets, onGuide, onRect, updateCSSProperty, activeBreakpoint]);
 
   const stopResize = useCallback(function handleStopResize() {
     const el = elementRef.current;
@@ -327,13 +329,7 @@ export default function CanvasElement({
     return style;
   }, [css, isResizing]);
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      selectElement(elementId, e.ctrlKey || e.metaKey);
-    },
-    [selectElement, elementId]
-  );
+  // Selection logic removed here; now handled centrally by Canvas.tsx onMouseDown
 
   useEffect(() => {
     return () => {
@@ -347,14 +343,15 @@ export default function CanvasElement({
   return (
     <Component
       ref={elementRef}
-      onClick={handleClick}
       style={inlineStyle}
       data-resizing={isResizing ? "true" : "false"}
       data-element-id={elementId}
       className={`relative transition-shadow duration-150 will-change-transform ${
+        isResizing ? "pointer-events-none" : ""
+      } ${
         isSelected
-          ? "outline outline-2 outline-sky-500 outline-offset-2 shadow-[0_22px_44px_-28px_rgba(14,165,233,0.55)]"
-          : "hover:outline hover:outline-1 hover:outline-slate-300 hover:shadow-[0_20px_40px_-32px_rgba(15,23,42,0.3)]"
+          ? "outline outline-2 outline-blue-500 outline-offset-2 shadow-[0_22px_44px_-28px_rgba(59,130,246,0.55)]"
+          : "hover:outline hover:outline-1 hover:outline-slate-300 hover:shadow-[0_20_40px_-32px_rgba(15,23,42,0.3)]"
       } ${className}`}
     >
       {isSelected && (
@@ -375,7 +372,7 @@ export default function CanvasElement({
               key={dir}
               data-resize-handle="true"
               onMouseDown={(e) => startResize(e, dir)}
-              className={`absolute h-3.5 w-3.5 rounded-sm border border-sky-500 bg-white pointer-events-auto transform transition-transform duration-100 hover:scale-110 ${cls}`}
+              className={`absolute h-3.5 w-3.5 rounded-sm border border-blue-500 bg-white pointer-events-auto transform transition-transform duration-100 hover:scale-110 ${cls}`}
             />
           ))}
         </div>

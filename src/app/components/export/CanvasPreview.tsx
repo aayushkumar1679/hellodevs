@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CanvasComponent } from "@/state/useCanvasStore";
+import {  CanvasComponent  } from "@/state/useProjectStore";
 import {
   Navbar,
   Hero,

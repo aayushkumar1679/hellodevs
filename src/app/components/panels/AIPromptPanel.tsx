@@ -14,9 +14,14 @@ import {
   Code2,
   Cpu,
   Trash2,
+  Paintbrush,
+  LayoutTemplate,
+  ScanLine,
+  Globe,
+  Link as LinkIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useCanvasStore } from "@/state/useCanvasStore";
+import { useProjectStore } from "@/state/useProjectStore";
 import {
   materializeGeneratedProject,
   type GeneratedProjectPayload,
@@ -27,6 +32,7 @@ import {
 } from "@/config/openaiModels";
 import { motion, AnimatePresence } from "framer-motion";
 import NextImage from "next/image";
+import ScreenshotDropzone from "./ScreenshotDropzone";
 
 const PROMPT_IDEAS = [
   "A light-themed AI product landing page with a floating 3D hero illustration, strong typography, customer logos, pricing, and a final call-to-action.",
@@ -34,11 +40,20 @@ const PROMPT_IDEAS = [
   "A modern design studio site with asymmetric sections, case-study cards, testimonials, and bright editorial styling.",
 ];
 
-type ActiveTab = "layout" | "image";
+type ActiveTab = "layout" | "image" | "screenshot" | "clone";
 
 export default function AIPromptPanel() {
-  const currentProject = useCanvasStore((state) => state.currentProject);
-  const hydrateCurrentProject = useCanvasStore((state) => state.hydrateCurrentProject);
+  const currentProject = useProjectStore((state) => state.currentProject);
+  const bulkHydrate = (payload: { name: string; components: import("@/state/useProjectStore").PolyglotProject["components"]; rootOrder: string[]; rootComponent: string | null; generationPrompt?: string; generationModel?: string; generationSummary?: string; designSystem?: import("@/state/useProjectStore").PolyglotProject["designSystem"] }) => {
+    useProjectStore.setState((state) => {
+      if (!state.currentProject) return state;
+      const updated = { ...state.currentProject, ...payload };
+      return {
+        currentProject: updated,
+        projects: { ...state.projects, [updated.id]: updated },
+      };
+    });
+  };
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("layout");
   const [prompt, setPrompt] = useState(currentProject?.generationPrompt || PROMPT_IDEAS[0]);
@@ -49,12 +64,16 @@ export default function AIPromptPanel() {
   const [streamedContent, setStreamedContent] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [manifestingImages, setManifestingImages] = useState(false);
+  const [generationMode, setGenerationMode] = useState<"new" | "update">("new");
 
   // Image generation state
   const [imagePrompt, setImagePrompt] = useState("");
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+
+  const [cloneUrl, setCloneUrl] = useState("");
+  const [isCloning, setIsCloning] = useState(false);
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
@@ -74,10 +93,26 @@ export default function AIPromptPanel() {
     startTransition(() => {
       void (async () => {
         try {
+          const payload: any = { prompt, projectName: currentProject.name, model };
+          
+          if (generationMode === "update") {
+            payload.mode = "iterate";
+            // Compress layout to save tokens
+            const simplifiedComponents: Record<string, any> = {};
+            Object.entries(currentProject.components).forEach(([id, c]) => {
+              simplifiedComponents[id] = { type: c.type, props: c.props, css: c.cssOverrides?.base, children: c.children };
+            });
+            payload.currentLayout = JSON.stringify({
+              components: simplifiedComponents,
+              rootOrder: currentProject.rootOrder,
+              designSystem: currentProject.designSystem
+            });
+          }
+
           const response = await fetch("/api/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt, projectName: currentProject.name, model }),
+            body: JSON.stringify(payload),
           });
 
           if (!response.ok) {
@@ -114,15 +149,15 @@ export default function AIPromptPanel() {
           }
 
           const materialized = materializeGeneratedProject(data);
-          hydrateCurrentProject({
+          bulkHydrate({
             name: data.projectName || currentProject.name,
             components: materialized.components,
             rootOrder: materialized.rootOrder,
             rootComponent: materialized.rootOrder[0] || null,
-            designElements: materialized.designElements,
             generationPrompt: prompt,
             generationModel: model,
             generationSummary: data.summary,
+            designSystem: data.designSystem,
           });
           setSummary(data.summary || "Fresh layout generated.");
 
@@ -144,8 +179,15 @@ export default function AIPromptPanel() {
                  })
                  .then((imgData) => {
                    if (imgData.url) {
-                      useCanvasStore.getState().updateComponent(comp.id, {
+                      useProjectStore.getState().updateComponent(comp.id, {
                         props: { ...comp.props, src: imgData.url }
+                      });
+                      useProjectStore.getState().addAsset({
+                        id: `gen-auto-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                        name: promptToUse.slice(0, 30) + "...",
+                        url: imgData.url,
+                        type: "generation",
+                        date: new Date().toISOString(),
                       });
                    }
                  })
@@ -202,6 +244,12 @@ export default function AIPromptPanel() {
 
   const isWorking = isStreaming || isPending || manifestingImages;
 
+  // Streaming State Helpers
+  const hasStarted = isStreaming || streamedContent.length > 0;
+  const isBrandDone = streamedContent.includes('"roots"');
+  const isLayoutDone = !isStreaming && streamedContent.length > 10;
+  const isImagesDone = !manifestingImages && isLayoutDone;
+
   return (
     <div className="flex flex-col h-full relative overflow-hidden bg-white">
       {/* Ambient gradients */}
@@ -227,6 +275,8 @@ export default function AIPromptPanel() {
           {[
             { id: "layout" as ActiveTab, label: "Layout", icon: Code2 },
             { id: "image" as ActiveTab, label: "Image", icon: ImageIcon },
+            { id: "screenshot" as ActiveTab, label: "Vision", icon: ScanLine },
+            { id: "clone" as ActiveTab, label: "Clone", icon: Globe },
           ].map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -249,7 +299,7 @@ export default function AIPromptPanel() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10">
         <AnimatePresence mode="wait">
-          {activeTab === "layout" ? (
+          {activeTab === "layout" && (
             <motion.div
               key="layout"
               initial={{ opacity: 0, x: -10 }}
@@ -269,6 +319,7 @@ export default function AIPromptPanel() {
                       {OPENAI_MODEL_OPTIONS.map((option) => {
                         const active = model === option.id;
                         const isNvidia = option.provider === "nvidia";
+                        const isAnthropic = option.provider === "anthropic";
                         return (
                           <motion.button
                             key={option.id}
@@ -285,6 +336,8 @@ export default function AIPromptPanel() {
                             }`}>
                               {isNvidia ? (
                                 <Cpu className={`h-4 w-4 ${active ? "text-amber-400" : "text-slate-500"}`} />
+                              ) : isAnthropic ? (
+                                <Sparkles className={`h-4 w-4 ${active ? "text-amber-400" : "text-slate-500"}`} />
                               ) : (
                                 <Wand2 className={`h-4 w-4 ${active ? "text-amber-400" : "text-slate-500"}`} />
                               )}
@@ -295,6 +348,11 @@ export default function AIPromptPanel() {
                                 {isNvidia && (
                                   <span className="text-[8px] bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-full font-black uppercase">
                                     NVIDIA
+                                  </span>
+                                )}
+                                {isAnthropic && (
+                                  <span className="text-[8px] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase">
+                                    CLAUDE
                                   </span>
                                 )}
                               </p>
@@ -313,6 +371,28 @@ export default function AIPromptPanel() {
                       })}
                     </div>
                   </div>
+
+                  {/* Generation Mode Toggle */}
+                  {currentProject && Object.keys(currentProject.components).length > 0 && (
+                    <div className="flex bg-slate-100 rounded-xl p-1 mb-4">
+                      <button
+                        onClick={() => setGenerationMode("new")}
+                        className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wide rounded-lg transition-all ${
+                          generationMode === "new" ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                        }`}
+                      >
+                        New Layout
+                      </button>
+                      <button
+                        onClick={() => setGenerationMode("update")}
+                        className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wide rounded-lg transition-all ${
+                          generationMode === "update" ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                        }`}
+                      >
+                        Update Current
+                      </button>
+                    </div>
+                  )}
 
                   {/* Prompt */}
                   <div className="space-y-2">
@@ -399,45 +479,90 @@ export default function AIPromptPanel() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-xl bg-slate-950 text-white flex items-center justify-center">
-                        <Terminal size={14} className={isStreaming ? "animate-pulse" : ""} />
+                      <div className="h-8 w-8 rounded-xl bg-slate-950 text-white flex items-center justify-center shadow-lg">
+                        <Sparkles size={14} className={isStreaming ? "animate-pulse text-amber-400" : "text-amber-400"} />
                       </div>
                       <div>
-                        <h3 className="text-[11px] font-black text-slate-950 uppercase tracking-wide">Thinking</h3>
+                        <h3 className="text-[11px] font-black text-slate-950 uppercase tracking-wide">
+                          AI Engine Active
+                        </h3>
                         <p className="text-[9px] text-slate-400 font-bold">
-                          {isStreaming ? "STREAMING TOKENS..." : "SYNTHESIZING..."}
+                          {isStreaming && !isBrandDone ? (generationMode === "update" ? "ANALYZING CHANGES..." : "ANALYZING BRAND...") :
+                           isStreaming && isBrandDone ? (generationMode === "update" ? "APPLYING PATCHES..." : "ARCHITECTING LAYOUT...") :
+                           manifestingImages ? "GENERATING VISUALS..." : 
+                           "ASSEMBLING..."}
                         </p>
                       </div>
                     </div>
-                    {isStreaming && <Loader2 className="h-4 w-4 animate-spin text-amber-500" />}
+                    {isWorking && <Loader2 className="h-4 w-4 animate-spin text-amber-500" />}
                   </div>
 
-                  <div className="rounded-2xl bg-slate-950 p-4 font-mono text-[10px] leading-relaxed overflow-hidden shadow-xl border border-white/5 relative">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(245,158,11,0.08),transparent)] pointer-events-none" />
-                    <div className="h-52 overflow-y-auto no-scrollbar space-y-1 relative">
-                      <div className="text-emerald-400/50">&gt; INITIALIZING {model.toUpperCase()}...</div>
-                      <div className="text-emerald-400/50">&gt; ANALYZING CONSTRAINTS...</div>
-                      <div className="h-px bg-white/5 my-2" />
-                      <div className="text-slate-300 break-words whitespace-pre-wrap">
-                        {streamedContent || (isPending ? "Awaiting first token..." : "")}
+                  {/* Multi-Step Progress UI */}
+                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm space-y-1">
+                    {/* Step 1 */}
+                    <div className="flex items-center gap-3 p-2 rounded-lg transition-colors bg-white">
+                      <div className={`flex h-6 w-6 items-center justify-center rounded-full ${
+                        isBrandDone ? 'bg-emerald-100 text-emerald-600' : 
+                        hasStarted ? 'bg-amber-100 text-amber-600 animate-pulse' : 'bg-slate-100 text-slate-400'
+                      }`}>
+                        {isBrandDone ? <CheckCircle2 size={12} /> : <Paintbrush size={10} />}
                       </div>
-                      <div ref={terminalEndRef} />
+                      <div className="flex-1">
+                        <p className={`text-[10px] font-black uppercase tracking-wide ${isBrandDone || hasStarted ? 'text-slate-950' : 'text-slate-400'}`}>
+                          {generationMode === "update" ? "Analyzing Request" : "Designing Brand Identity"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Step 2 */}
+                    <div className="flex items-center gap-3 p-2 rounded-lg transition-colors bg-white">
+                      <div className={`flex h-6 w-6 items-center justify-center rounded-full ${
+                        isLayoutDone ? 'bg-emerald-100 text-emerald-600' : 
+                        (isBrandDone && !isLayoutDone) ? 'bg-amber-100 text-amber-600 animate-pulse' : 'bg-slate-100 text-slate-400'
+                      }`}>
+                        {isLayoutDone ? <CheckCircle2 size={12} /> : <LayoutTemplate size={10} />}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-[10px] font-black uppercase tracking-wide ${isLayoutDone || isBrandDone ? 'text-slate-950' : 'text-slate-400'}`}>
+                          {generationMode === "update" ? "Modifying Layout" : "Architecting Layout"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Step 3 */}
+                    <div className="flex items-center gap-3 p-2 rounded-lg transition-colors bg-white">
+                      <div className={`flex h-6 w-6 items-center justify-center rounded-full ${
+                        isImagesDone ? 'bg-emerald-100 text-emerald-600' : 
+                        manifestingImages ? 'bg-amber-100 text-amber-600 animate-pulse' : 'bg-slate-100 text-slate-400'
+                      }`}>
+                        {isImagesDone ? <CheckCircle2 size={12} /> : <ImageIcon size={10} />}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-[10px] font-black uppercase tracking-wide ${isImagesDone || manifestingImages ? 'text-slate-950' : 'text-slate-400'}`}>
+                          Generating Visuals
+                        </p>
+                      </div>
+                    </div>
+
+                     {/* Step 4 */}
+                     <div className="flex items-center gap-3 p-2 rounded-lg transition-colors bg-white">
+                      <div className={`flex h-6 w-6 items-center justify-center rounded-full ${
+                        isImagesDone && !isWorking ? 'bg-emerald-100 text-emerald-600' : 
+                        (isImagesDone && isWorking) ? 'bg-amber-100 text-amber-600 animate-pulse' : 'bg-slate-100 text-slate-400'
+                      }`}>
+                        {isImagesDone && !isWorking ? <CheckCircle2 size={12} /> : <Sparkles size={10} />}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-[10px] font-black uppercase tracking-wide ${isImagesDone ? 'text-slate-950' : 'text-slate-400'}`}>
+                          Assembling Website
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: "2%" }}
-                        animate={{ width: isStreaming ? "90%" : "100%" }}
-                        transition={{ duration: 28, ease: "linear" }}
-                        className="h-full bg-gradient-to-r from-amber-400 to-slate-950 rounded-full"
-                      />
-                    </div>
-                    <div className="flex justify-between text-[9px] font-black uppercase tracking-wide text-slate-400">
-                      <span>Logic Synthesis</span>
-                      <span>{isStreaming ? "Computing..." : "Complete"}</span>
-                    </div>
+                  {/* Hidden Terminal but we keep ref to not break auto-scroll if we wanted to show it */}
+                  <div className="hidden">
+                    <div ref={terminalEndRef} />
                   </div>
                 </motion.div>
               )}
@@ -459,8 +584,8 @@ export default function AIPromptPanel() {
                 </motion.div>
               )}
             </motion.div>
-          ) : (
-            /* Image Generation Tab */
+          )}
+          {activeTab === "image" && (
             <motion.div
               key="image"
               initial={{ opacity: 0, x: 10 }}
@@ -541,6 +666,123 @@ export default function AIPromptPanel() {
                   {imageError}
                 </div>
               )}
+            </motion.div>
+          )}
+          {activeTab === "screenshot" && (
+            /* Screenshot-to-Website Tab */
+            <motion.div
+              key="screenshot"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.2 }}
+              className="px-6 py-5 space-y-4"
+            >
+              <div className="rounded-2xl bg-violet-50 border border-violet-100 px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-violet-700">Screenshot → Website</p>
+                <p className="text-[11px] text-violet-600 mt-1 leading-5">Upload any webpage screenshot or wireframe. GPT-4o Vision will reconstruct it as a fully editable Polyglot layout.</p>
+              </div>
+              <ScreenshotDropzone
+                onResult={(json) => {
+                  try {
+                    const parsed = JSON.parse(json) as GeneratedProjectPayload;
+                    const materialized = materializeGeneratedProject(parsed);
+                    useProjectStore.setState((state) => {
+                      if (!state.currentProject) return state;
+                      const updated = {
+                        ...state.currentProject,
+                        components: materialized.components,
+                        rootOrder: materialized.rootOrder,
+                        rootComponent: materialized.rootOrder[0] ?? null,
+                        generationSummary: parsed.summary,
+                        designSystem: parsed.designSystem as any,
+                      };
+                      return {
+                        currentProject: updated,
+                        projects: { ...state.projects, [updated.id]: updated },
+                      };
+                    });
+                    setSummary(parsed.summary || "Layout reconstructed from screenshot");
+                    setActiveTab("layout");
+                    toast.success("Layout reconstructed! ✨");
+
+                  } catch (e) {
+                    toast.error("Failed to parse reconstructed layout");
+                    console.error(e);
+                  }
+                }}
+              />
+            </motion.div>
+          )}
+          {activeTab === "clone" && (
+            /* Competitor Clone Tab */
+            <motion.div
+              key="clone"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.2 }}
+              className="px-6 py-5 space-y-4"
+            >
+              <div className="rounded-2xl bg-sky-50 border border-sky-100 px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-sky-700">Competitor Clone</p>
+                <p className="text-[11px] text-sky-600 mt-1 leading-5">Paste a URL to reconstruct its structure and design. Note: Content is original, layout is cloned.</p>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400">Website URL</label>
+                <div className="relative rounded-2xl border border-slate-200 bg-white p-3 shadow-sm focus-within:border-sky-400 focus-within:ring-4 focus-within:ring-sky-400/5 transition-all flex items-center gap-3">
+                  <LinkIcon size={14} className="text-slate-400" />
+                  <input
+                    value={cloneUrl}
+                    onChange={(e) => setCloneUrl(e.target.value)}
+                    placeholder="https://example.com"
+                    className="flex-1 bg-transparent text-[12px] text-slate-800 outline-none placeholder:text-slate-400 font-medium"
+                  />
+                </div>
+              </div>
+
+              <motion.button
+                onClick={async () => {
+                  if (!cloneUrl.trim()) return;
+                  setIsCloning(true);
+                  try {
+                    const res = await fetch("/api/clone", {
+                      method: "POST",
+                      body: JSON.stringify({ url: cloneUrl }),
+                    });
+                    const data = await res.json();
+                    if (data.error) throw new Error(data.error);
+                    
+                    const materialized = materializeGeneratedProject(data as any);
+                    useProjectStore.setState((state) => {
+                      if (!state.currentProject) return state;
+                      const updated = {
+                        ...state.currentProject,
+                        components: materialized.components,
+                        rootOrder: materialized.rootOrder,
+                        rootComponent: materialized.rootOrder[0] ?? null,
+                      };
+                      return {
+                        currentProject: updated,
+                        projects: { ...state.projects, [updated.id]: updated },
+                      };
+                    });
+                    toast.success("Site successfully cloned! 🏗️");
+                    setActiveTab("layout");
+                  } catch (e: any) {
+                    toast.error(e.message || "Clone failed");
+                  } finally {
+                    setIsCloning(false);
+                  }
+                }}
+                disabled={isCloning || !cloneUrl.trim()}
+                className="group flex w-full h-12 items-center justify-center gap-2.5 rounded-2xl bg-sky-600 text-white shadow-lg transition-all hover:bg-sky-700 disabled:opacity-50"
+                whileTap={{ scale: 0.98 }}
+              >
+                {isCloning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
+                <span className="text-[11px] font-black uppercase tracking-[0.2em]">Clone URL</span>
+              </motion.button>
             </motion.div>
           )}
         </AnimatePresence>

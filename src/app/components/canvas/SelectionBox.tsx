@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { useDesignStore } from "@/state/useDesignStore";
+import {  useDesignStore  } from "@/state/useProjectStore";
 
 type SelectionBoxProps = {
   element: HTMLElement;
@@ -12,7 +12,7 @@ export default function SelectionBox({
   element,
   elementId,
 }: SelectionBoxProps) {
-  const { updateCSSProperty } = useDesignStore();
+  const { updateCSSProperty } = useProjectStore();
   const [isDragging, setIsDragging] = useState<string | null>(null);
   const startPos = useRef({ x: 0, y: 0, width: 0, height: 0 });
 

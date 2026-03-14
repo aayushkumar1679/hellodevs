@@ -1,5 +1,5 @@
-import { CanvasComponent } from "@/state/useCanvasStore";
-import { Element } from "@/state/useDesignStore";
+import {  CanvasComponent  } from "@/state/useProjectStore";
+import {  Element  } from "@/state/useProjectStore";
 
 export interface ExportOptions {
   format: "react" | "tailwind" | "css";

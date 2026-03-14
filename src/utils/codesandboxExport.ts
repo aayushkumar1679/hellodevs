@@ -1,5 +1,5 @@
 // src/utils/codesandboxExport.ts
-import { Project } from "@/state/useCanvasStore";
+import {  Project  } from "@/state/useProjectStore";
 
 export interface CodeSandboxPayload {
   files: {

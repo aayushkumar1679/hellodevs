@@ -2,12 +2,12 @@
 "use client";
 
 import React, { useRef, useState, useCallback, useEffect } from "react";
-import { useCanvasStore } from "@/state/useCanvasStore";
-import { useDesignStore } from "@/state/useDesignStore";
+import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import CanvasElement, { CanvasElementProps } from "./CanvasElement";
 import ComponentWrapper from "./ComponentWrapper";
-import { useSyncStores } from "@/hooks/useSyncStores";
+import ContextMenu from "./ContextMenu";
+
 import { getProjectRootIds } from "@/utils/projectModel";
 
 /* ----------------------------------------
@@ -44,16 +44,8 @@ type GroupChildRelation = {
 ======================================== */
 
 export default function Canvas() {
-  const { currentProject } = useCanvasStore();
-
-  // design helpers
-  const { deselectAll, selectElement, selectedElements, updateCSSProperty } =
-    useDesignStore();
-
-  /* ✅ SINGLE SOURCE OF TRUTH */
-  const { activeBreakpoint, breakpoints, previewEnabled } = useEditorStore();
-
-  useSyncStores();
+  const { currentProject, updateComponentCSSOverride } = useProjectStore();
+  const { activeBreakpoint, breakpoints, previewEnabled, deselectAll, selectElement, selectedElements } = useEditorStore();
 
   const viewportWidth = breakpoints[activeBreakpoint].width;
 
@@ -155,6 +147,9 @@ export default function Canvas() {
         target.closest('[data-resize-handle="true"]')
     );
   };
+
+  /* ---------------- Context Menu ---------------- */
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; elementId: string } | null>(null);
 
   /* ----------------
      Drag / Move
@@ -322,14 +317,15 @@ export default function Canvas() {
     const clickedId = elNode.getAttribute("data-element-id");
     if (!clickedId) return;
 
+    const isMultiSelect = (e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey;
     if (!selectedElements.includes(clickedId)) {
-      selectElement(clickedId, false);
+      selectElement(clickedId, isMultiSelect);
     }
 
     const movingIds = [
-      ...(selectedElements.includes(clickedId)
+      ...(isMultiSelect && selectedElements.includes(clickedId)
         ? selectedElements
-        : [clickedId]),
+        : selectedElements.includes(clickedId) ? selectedElements : [clickedId]),
     ];
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
@@ -461,12 +457,12 @@ export default function Canvas() {
 
       // Only move elements that are already absolutely positioned.
       // This prevents flex/grid children from being ripped out of their flow layout.
-      const currentCss = useDesignStore.getState().getResolvedCss(id);
+      const currentCss = useProjectStore.getState().getResolvedCss(id, activeBreakpoint);
       const isAlreadyAbsolute = currentCss?.position === "absolute";
       if (!isAlreadyAbsolute) return;
 
-      updateCSSProperty(id, "left", `${boundedLeft}px`);
-      updateCSSProperty(id, "top", `${boundedTop}px`);
+      updateComponentCSSOverride(id, activeBreakpoint, "left", `${boundedLeft}px`);
+      updateComponentCSSOverride(id, activeBreakpoint, "top", `${boundedTop}px`);
 
       const prevRect = elementRects.current[id];
       if (prevRect) {
@@ -515,6 +511,9 @@ export default function Canvas() {
 ------------------------------------- */
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    // hide context menu
+    if (contextMenu) setContextMenu(null);
+
     // don't start marquee if resizing
     if (isResizingElement(e.target)) return;
 
@@ -575,6 +574,31 @@ export default function Canvas() {
     setSelectionBox(null);
     setIsDragging(false);
   };
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+      e.preventDefault();
+      const target = e.target as HTMLElement;
+      const elNode = target?.closest("[data-element-id]") as HTMLElement | null;
+
+      if (!elNode) {
+        setContextMenu(null);
+        return;
+      }
+
+      const clickedId = elNode.getAttribute("data-element-id");
+      if (!clickedId) return;
+
+      // Select element if not already selected
+      if (!selectedElements.includes(clickedId)) {
+        selectElement(clickedId, false);
+      }
+
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        elementId: clickedId,
+      });
+  }, [selectedElements, selectElement]);
 
   /* ------------------------------------
    Snap wiring for CanvasElement
@@ -722,7 +746,7 @@ export default function Canvas() {
     const canvasRect = canvasRef.current.getBoundingClientRect();
 
     Object.entries(childrenRel).forEach(([id, rel]) => {
-      const currentCss = useDesignStore.getState().getResolvedCss(id);
+      const currentCss = useProjectStore.getState().getResolvedCss(id, activeBreakpoint);
       const isAlreadyAbsolute = currentCss?.position === "absolute";
       if (!isAlreadyAbsolute) return;
 
@@ -731,10 +755,10 @@ export default function Canvas() {
       const w = Math.round(rel.relW * newW);
       const h = Math.round(rel.relH * newH);
 
-      updateCSSProperty(id, "left", `${left}px`);
-      updateCSSProperty(id, "top", `${top}px`);
-      updateCSSProperty(id, "width", `${Math.max(10, w)}px`);
-      updateCSSProperty(id, "height", `${Math.max(10, h)}px`);
+      updateComponentCSSOverride(id, activeBreakpoint, "left", `${left}px`);
+      updateComponentCSSOverride(id, activeBreakpoint, "top", `${top}px`);
+      updateComponentCSSOverride(id, activeBreakpoint, "width", `${Math.max(10, w)}px`);
+      updateComponentCSSOverride(id, activeBreakpoint, "height", `${Math.max(10, h)}px`);
 
       elementRects.current[id] = new DOMRect(
         canvasRect.left + left,
@@ -826,7 +850,18 @@ export default function Canvas() {
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
+      onContextMenu={handleContextMenu}
     >
+      {/* Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          elementId={contextMenu.elementId}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.45)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.45)_1px,transparent_1px)] bg-[size:32px_32px] opacity-50" />
 
       {/* Marquee */}
@@ -886,11 +921,31 @@ export default function Canvas() {
 
       <div className="flex justify-center px-8 py-12">
         <div
-          className="relative min-h-screen overflow-hidden rounded-[36px] border border-white/70 bg-white/92 shadow-[0_45px_120px_-65px_rgba(15,23,42,0.55)] transition-[width] duration-200"
-          style={{ width: previewEnabled ? viewportWidth : Math.max(viewportWidth, 1320) }}
+          className={`relative overflow-hidden transition-[width] duration-300 ease-in-out ${
+             activeBreakpoint !== "desktop"
+              ? "rounded-[40px] border-[12px] border-slate-900 shadow-2xl ring-1 ring-slate-900/5"
+              : "rounded-[36px] border border-white/70 shadow-[0_45px_120px_-65px_rgba(15,23,42,0.55)]"
+          } bg-white`}
+          style={{ width: previewEnabled ? viewportWidth : Math.max(viewportWidth, 1320), minHeight: activeBreakpoint !== "desktop" ? "80vh" : "100vh" }}
         >
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.14),transparent_65%)]" />
-          <div className="relative space-y-4 p-8">
+          {activeBreakpoint !== "desktop" && (
+            <div className="absolute top-0 inset-x-0 h-6 bg-slate-900 flex justify-center items-center z-50">
+               <div className="w-24 h-4 bg-black rounded-b-xl flex justify-center items-start pt-1">
+                 <div className="w-12 h-1 rounded-full bg-slate-800"></div>
+               </div>
+            </div>
+          )}
+          <div className={`pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.14),transparent_65%)] ${activeBreakpoint !== "desktop" ? "top-6" : ""}`} />
+          <div 
+            className={`relative space-y-4 ${activeBreakpoint !== "desktop" ? "p-4 pt-10" : "p-8"}`}
+            style={currentProject?.designSystem ? {
+              "--poly-color-background": currentProject.designSystem.colors.background,
+              "--poly-color-surface": currentProject.designSystem.colors.surface,
+              "--poly-color-primary": currentProject.designSystem.colors.primary,
+              "--poly-color-secondary": currentProject.designSystem.colors.secondary,
+              "--poly-color-accent": currentProject.designSystem.colors.accent,
+            } as React.CSSProperties : undefined}
+          >
             {rootComponentIds.length === 0 ? (
               <div className="flex min-h-[60vh] items-center justify-center">
                 <div className="max-w-md rounded-[32px] border border-dashed border-slate-300 bg-slate-50/90 px-8 py-10 text-center shadow-inner">

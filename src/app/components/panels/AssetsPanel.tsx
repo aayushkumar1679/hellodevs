@@ -16,21 +16,8 @@ import {
   Cpu,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-interface Asset {
-  id: string;
-  name: string;
-  url: string;
-  type: "image" | "generation";
-  date: string;
-}
-
-const MOCK_ASSETS: Asset[] = [
-  { id: "1", name: "Modern Hero", url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=800&auto=format&fit=crop", type: "image", date: "2024-03-10" },
-  { id: "2", name: "Glass Card", url: "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=800&auto=format&fit=crop", type: "generation", date: "2024-03-11" },
-  { id: "3", name: "Mesh BG", url: "https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800&auto=format&fit=crop", type: "image", date: "2024-03-12" },
-  { id: "4", name: "Tech UI", url: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=800&auto=format&fit=crop", type: "generation", date: "2024-03-13" },
-];
+import { useProjectStore } from "@/state/useProjectStore";
+import { useEditorStore } from "@/state/useEditorStore";
 
 export default function AssetsPanel() {
   const [search, setSearch] = useState("");
@@ -40,7 +27,13 @@ export default function AssetsPanel() {
   const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const filteredAssets = MOCK_ASSETS.filter((a) =>
+  const { currentProject, addAsset, updateComponent } = useProjectStore();
+  const { selectedElements } = useEditorStore();
+  
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const assets = currentProject?.assets || [];
+  const filteredAssets = assets.filter((a) =>
     a.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -64,10 +57,41 @@ export default function AssetsPanel() {
 
       const data = await response.json();
       setGeneratedUrl(data.url);
+      
+      // Add to project assets
+      addAsset({
+        id: `gen-${Date.now()}`,
+        name: imagePrompt.slice(0, 30) + "...",
+        url: data.url,
+        type: "generation",
+        date: new Date().toISOString(),
+      });
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate image");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Simulate upload for now (in a real app, post to /api/assets/upload)
+    const url = URL.createObjectURL(file);
+    addAsset({
+      id: `img-${Date.now()}`,
+      name: file.name,
+      url,
+      type: "image",
+      date: new Date().toISOString(),
+    });
+  };
+
+  const handleInsert = (url: string) => {
+    if (selectedElements.length === 1) {
+       updateComponent(selectedElements[0], { props: { src: url }});
     }
   };
 
@@ -85,9 +109,19 @@ export default function AssetsPanel() {
               <h3 className="text-[12px] font-black text-slate-950 leading-tight">Assets</h3>
             </div>
           </div>
-          <button className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-slate-950 hover:bg-slate-950 hover:text-white transition-all">
+          <button 
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-slate-950 hover:bg-slate-950 hover:text-white transition-all"
+            onClick={() => fileInputRef.current?.click()}
+          >
             <Upload className="h-3 w-3" />
           </button>
+          <input
+            type="file"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleUpload}
+            accept="image/*"
+          />
         </div>
 
         {/* Tab Switcher */}
@@ -154,7 +188,10 @@ export default function AssetsPanel() {
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-slate-950/50 opacity-0 transition-opacity group-hover:opacity-100 flex flex-col items-center justify-end p-2">
-                      <button className="w-full rounded-lg bg-white py-1.5 text-[9px] font-black uppercase tracking-wide text-slate-950 hover:bg-slate-50 transition-all">
+                      <button 
+                        className="w-full rounded-lg bg-white py-1.5 text-[9px] font-black uppercase tracking-wide text-slate-950 hover:bg-slate-50 transition-all"
+                        onClick={() => handleInsert(asset.url)}
+                      >
                         Insert
                       </button>
                     </div>
@@ -166,8 +203,10 @@ export default function AssetsPanel() {
                   </motion.div>
                 ))}
 
-                {/* Upload Button */}
-                <button className="flex aspect-square flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white transition-all hover:border-slate-400 hover:bg-slate-50 group">
+                <button 
+                  className="flex aspect-square flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white transition-all hover:border-slate-400 hover:bg-slate-50 group"
+                  onClick={() => fileInputRef.current?.click()}
+                >
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-400 group-hover:bg-slate-950 group-hover:text-white transition-all">
                     <Plus className="h-4 w-4" />
                   </div>
@@ -228,7 +267,10 @@ export default function AssetsPanel() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <NextImage src={generatedUrl} alt="Generated" className="object-cover" fill sizes="(max-width: 768px) 100vw, 300px" />
                     <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3">
-                      <button className="w-full py-2 bg-white rounded-xl text-slate-950 text-[9px] font-black uppercase tracking-wide hover:bg-slate-50 flex items-center justify-center gap-1.5 transition">
+                      <button 
+                        className="w-full py-2 bg-white rounded-xl text-slate-950 text-[9px] font-black uppercase tracking-wide hover:bg-slate-50 flex items-center justify-center gap-1.5 transition"
+                        onClick={() => handleInsert(generatedUrl)}
+                      >
                         <Plus size={10} /> Insert to Canvas
                       </button>
                       <button className="w-full py-2 bg-white/20 backdrop-blur-sm rounded-xl text-white text-[9px] font-black uppercase tracking-wide flex items-center justify-center gap-1.5 hover:bg-white/30 transition">

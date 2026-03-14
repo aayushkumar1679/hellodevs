@@ -11,7 +11,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useCanvasStore } from "@/state/useCanvasStore";
+import { useProjectStore } from "@/state/useProjectStore";
 import { materializeGeneratedProject } from "@/utils/projectHydration";
 import {
   DEFAULT_OPENAI_MODEL,
@@ -25,8 +25,7 @@ const PROMPT_EXAMPLES = [
 ];
 
 export default function NewProjectPage() {
-  const createProject = useCanvasStore((state) => state.createProject);
-  const hydrateCurrentProject = useCanvasStore((state) => state.hydrateCurrentProject);
+  const createProject = useProjectStore((state) => state.createProject);
   const router = useRouter();
 
   const [name, setName] = useState("Polyglot Test Website");
@@ -68,16 +67,21 @@ export default function NewProjectPage() {
 
       const materialized = materializeGeneratedProject(data);
       const projectId = createProject(trimmedName);
-
-      hydrateCurrentProject({
-        name: data.projectName || trimmedName,
-        components: materialized.components,
-        rootOrder: materialized.rootOrder,
-        rootComponent: materialized.rootOrder[0] || null,
-        designElements: materialized.designElements,
-        generationPrompt: trimmedPrompt,
-        generationModel: model,
-        generationSummary: data.summary,
+      
+      // Directly set project components in the store
+      useProjectStore.setState((state) => {
+        if (!state.currentProject) return state;
+        const updated = {
+          ...state.currentProject,
+          name: data.projectName || trimmedName,
+          components: materialized.components,
+          rootOrder: materialized.rootOrder,
+          rootComponent: materialized.rootOrder[0] || null,
+          generationPrompt: trimmedPrompt,
+          generationModel: model,
+          generationSummary: data.summary,
+        };
+        return { currentProject: updated, projects: { ...state.projects, [updated.id]: updated } };
       });
 
       router.push(`/builder/${projectId}`);

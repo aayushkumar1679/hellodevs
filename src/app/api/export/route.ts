@@ -6,8 +6,7 @@ import { generateNextJsProject } from "@/utils/exporter";
 import { generateExport, type TechStack } from "@/utils/exportGenerators";
 import { normalizeProject } from "@/utils/projectModel";
 import JSZip from "jszip";
-import type { Project } from "@/state/useCanvasStore";
-import type { Element } from "@/state/useDesignStore";
+import type { PolyglotProject } from "@/state/useProjectStore";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -39,22 +38,20 @@ export async function POST(req: Request) {
     const canvasProject = normalizeProject({
       id: project.id,
       name: project.name,
-      components: (project.components ?? {}) as unknown as Project["components"],
-      designElements: (project.designElements ?? {}) as unknown as Record<string, Element>,
+      components: (project.components ?? {}) as unknown as PolyglotProject["components"],
       rootOrder: (project.rootOrder ?? []) as unknown as string[],
       rootComponent: project.rootComponent || null,
       createdAt: project.createdAt.toISOString(),
       updatedAt: project.updatedAt.toISOString(),
-    } as Project);
+    } as PolyglotProject);
 
     const files =
       format === "react-tailwind"
-        ? generateNextJsProject(canvasProject, canvasProject.designElements)
+        ? generateNextJsProject(canvasProject)
         : (() => {
             const exported = generateExport(
               canvasProject,
-              format,
-              canvasProject.designElements
+              format
             );
 
             return [

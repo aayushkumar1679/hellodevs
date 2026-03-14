@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { useCanvasStore } from "@/state/useCanvasStore";
+import { useProjectStore } from "@/state/useProjectStore";
 
 export default function CollaborationPanel() {
-  const { currentProjectId } = useCanvasStore();
+  const { currentProjectId } = useProjectStore();
   const [copied, setCopied] = useState(false);
 
   const shareLink = currentProjectId

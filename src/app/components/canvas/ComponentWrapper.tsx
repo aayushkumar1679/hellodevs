@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useRef, useState } from "react";
-import { useCanvasStore } from "@/state/useCanvasStore";
+import React, { useRef, useState, useMemo } from "react";
+import { useProjectStore } from "@/state/useProjectStore";
 import { Trash2 } from "lucide-react";
 import ComponentRenderer from "./ComponentRenderer";
+import { motion } from "framer-motion";
+import { ANIMATION_PRESETS } from "@/config/animationPresets";
 
 interface ComponentWrapperProps {
   component: {
@@ -14,14 +16,9 @@ interface ComponentWrapperProps {
 }
 
 export default function ComponentWrapper({ component }: ComponentWrapperProps) {
-  const { updateComponent, removeComponent } = useCanvasStore();
-
-  const isTextComponent =
-    component.type === "text" ||
-    component.type === "heading" ||
-    component.type === "button" ||
-    component.type === "badge" ||
-    component.type === "alert";
+  const { updateComponent, removeComponent } = useProjectStore();
+  const comp = useProjectStore((s) => s.currentProject?.components[component.id]);
+  const inlineStyles = (comp?.cssOverrides?.base ?? {}) as React.CSSProperties;
 
   const [isEditing, setIsEditing] = useState(false);
   const [draftText, setDraftText] = useState(String(component.props?.text ?? ""));
@@ -50,16 +47,57 @@ export default function ComponentWrapper({ component }: ComponentWrapperProps) {
   };
 
   const handleDoubleClick = () => {
+    const isTextComponent =
+      component.type === "text" ||
+      component.type === "heading" ||
+      component.type === "button" ||
+      component.type === "badge" ||
+      component.type === "alert";
     if (isTextComponent) {
       setDraftText(String(component.props?.text ?? ""));
       setIsEditing(true);
     }
   };
 
+  // Build motion props based on component animations
+  const motionProps = useMemo(() => {
+    const props: any = {};
+    if (comp?.animations && Array.isArray(comp.animations) && comp.animations.length > 0) {
+      comp.animations.forEach((anim) => {
+        const preset = ANIMATION_PRESETS[anim.preset];
+        if (!preset) return;
+
+        if (anim.trigger === "load" || anim.trigger === "scroll") {
+          props.initial = { ...props.initial, ...preset.variants.hidden };
+          const target = { ...preset.variants.visible };
+          
+          if (anim.delay || anim.duration) {
+            target.transition = { ...target.transition };
+            if (anim.delay) target.transition.delay = anim.delay;
+            if (anim.duration) target.transition.duration = anim.duration;
+          }
+
+          if (anim.trigger === "scroll") {
+            props.whileInView = { ...props.whileInView, ...target };
+            props.viewport = { once: !anim.repeat, margin: "-50px" };
+          } else {
+            props.animate = { ...props.animate, ...target };
+          }
+        } else if (anim.trigger === "hover" && preset.variants.hover) {
+          props.whileHover = { ...props.whileHover, ...preset.variants.hover };
+        } else if (anim.trigger === "tap" && preset.variants.tap) {
+          props.whileTap = { ...props.whileTap, ...preset.variants.tap };
+        }
+      });
+    }
+    return props;
+  }, [comp?.animations]);
+
   return (
-    <div
+    <motion.div
+      {...motionProps}
       onDoubleClick={handleDoubleClick}
-      className={`relative group rounded-sm transition-all ${
+      className={`relative group rounded-sm transition-all h-full w-full ${
         isEditing ? "ring-1 ring-sky-400/60" : ""
       }`}
     >
@@ -95,6 +133,6 @@ export default function ComponentWrapper({ component }: ComponentWrapperProps) {
       >
         <Trash2 size={12} />
       </button>
-    </div>
+    </motion.div>
   );
 }

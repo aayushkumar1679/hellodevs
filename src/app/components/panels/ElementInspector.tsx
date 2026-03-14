@@ -1,16 +1,16 @@
 "use client";
 
 import React from "react";
-import { useDesignStore } from "@/state/useDesignStore";
-import { useCanvasStore } from "@/state/useCanvasStore";
+import { useProjectStore } from "@/state/useProjectStore";
+import { useEditorStore } from "@/state/useEditorStore";
 import { X, Trash2, Eye, EyeOff } from "lucide-react";
 
 export default function ElementInspector() {
-  const selectedElements = useDesignStore((state) => state.selectedElements);
-  const elements = useDesignStore((state) => state.elements);
-  const deselectAll = useDesignStore((state) => state.deselectAll);
-  const updateCSSProperty = useDesignStore((state) => state.updateCSSProperty);
-  const { currentProject, removeComponent } = useCanvasStore();
+  const selectedElements = useEditorStore((state) => state.selectedElements);
+  const deselectAll = useEditorStore((state) => state.deselectAll);
+  const activeBreakpoint = useEditorStore((state) => state.activeBreakpoint);
+  const updateCSSProperty = useProjectStore((state) => state.updateComponentCSSOverride);
+  const { currentProject, removeComponent } = useProjectStore();
 
   if (selectedElements.length === 0) {
     return (
@@ -36,9 +36,9 @@ export default function ElementInspector() {
 
   const handleToggleVisibility = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    const element = elements[id];
-    const currentDisplay = element?.cssProperties?.base?.display || "block";
-    updateCSSProperty(id, "display", currentDisplay === "none" ? "block" : "none");
+    const element = currentProject?.components[id];
+    const currentDisplay = element?.cssOverrides?.base?.display || "block";
+    updateCSSProperty(id, activeBreakpoint, "display", currentDisplay === "none" ? "block" : "none");
   };
 
   return (
@@ -65,8 +65,8 @@ export default function ElementInspector() {
       <div className="space-y-2">
         {selectedElements.map((id) => {
           const info = getElementInfo(id);
-          const element = elements[id];
-          const isHidden = element?.cssProperties?.base?.display === "none";
+          const element = currentProject?.components[id];
+          const isHidden = element?.cssOverrides?.base?.display === "none";
 
           return (
             <div

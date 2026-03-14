@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { useDesignStore } from "@/state/useDesignStore";
+import { useProjectStore } from "@/state/useProjectStore";
+import { useEditorStore } from "@/state/useEditorStore";
 
 export default function ElementTree() {
-  const { elements, selectedElements, selectElement, removeElement } =
-    useDesignStore();
+  const { currentProject, removeComponent: removeElement } = useProjectStore();
+  const elements = currentProject?.components || {};
+  const { selectedElements, selectElement } = useEditorStore();
   const [expandedElements, setExpandedElements] = useState<Set<string>>(
     new Set()
   );
@@ -83,8 +85,7 @@ export default function ElementTree() {
     );
   };
 
-  // Get root elements
-  const rootElements = Object.values(elements).filter((el) => !el.parentId);
+  const rootElements = (currentProject?.rootOrder || []).map(id => elements[id]).filter(Boolean);
 
   return (
     <div className="p-4 space-y-2 h-full overflow-y-auto">

@@ -2,10 +2,9 @@
 
 import React from "react";
 import { Clock3, RotateCcw, Sparkles, User, History as HistoryIcon } from "lucide-react";
-import { useCanvasStore } from "@/state/useCanvasStore";
-import { useDesignStore } from "@/state/useDesignStore";
+import { useProjectStore } from "@/state/useProjectStore";
 export default function HistoryPanel() {
-  const { history } = useCanvasStore();
+  const { history } = useProjectStore();
 
 
   const snapshots = [...history].reverse();
@@ -81,7 +80,7 @@ export default function HistoryPanel() {
                        onClick={() => {
                          // Roll back the history by calling undo multiple times
                          for (let i = 0; i < idx; i++) {
-                           useCanvasStore.getState().undo();
+                           useProjectStore.getState().undo();
                          }
                        }}
                        className="opacity-0 group-hover:opacity-100 flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-white shadow-lg transition hover:bg-slate-800"

@@ -1,9 +1,6 @@
-import type { Project } from "@/state/useCanvasStore";
-import type { Element } from "@/state/useDesignStore";
-
+import type { PolyglotProject } from "@/state/useProjectStore";
+import { designSystemToStyleBlock } from "@/config/DesignSystem";
 import { getProjectRootIds } from "@/utils/projectModel";
-
-type DesignElements = Record<string, Element>;
 
 interface FileRecord {
   name: string;
@@ -27,15 +24,13 @@ function sanitizeComponentName(name: string) {
 // Generate a single component's JSX body (for decomposed multi-file export)
 function generateComponentBody(
   componentId: string,
-  project: Project,
-  designElements: DesignElements,
+  project: PolyglotProject,
   level = 2
 ): string {
   const component = project.components[componentId];
   if (!component) return "";
 
-  const element = designElements[componentId];
-  const css: Record<string, unknown> = element?.cssProperties?.base ?? {};
+  const css: Record<string, unknown> = component.cssOverrides?.base ?? {};
 
   const styleStr =
     Object.keys(css).length > 0
@@ -43,7 +38,7 @@ function generateComponentBody(
       : "";
 
   const childrenJsx = component.children
-    .map((cid) => generateComponentBody(cid, project, designElements, level + 1))
+    .map((cid) => generateComponentBody(cid, project, level + 1))
     .join("\n");
 
   const indent = "  ".repeat(level);
@@ -179,8 +174,7 @@ This project uses the following fonts loaded via Google Fonts CDN:
 }
 
 export function generateNextJsProject(
-  project: Project,
-  designElements: DesignElements
+  project: PolyglotProject
 ): FileRecord[] {
   const projectName = sanitizeComponentName(project.name);
   const rootIds = getProjectRootIds(project);
@@ -189,7 +183,7 @@ export function generateNextJsProject(
   const componentFiles: FileRecord[] = rootIds.map((rootId) => {
     const comp = project.components[rootId];
     const compName = toPascalCase(comp?.type ?? "Section");
-    const body = generateComponentBody(rootId, project, designElements, 2);
+    const body = generateComponentBody(rootId, project, 2);
 
     return {
       name: `src/components/${compName}_${rootId.slice(-6)}.tsx`,
@@ -247,6 +241,7 @@ ${componentUsages}
   --font-dm-sans: "DM Sans", sans-serif;
   --font-sora: "Sora", sans-serif;
   --font-space-grotesk: "Space Grotesk", sans-serif;
+${project.designSystem ? Object.entries({ "--poly-color-background": project.designSystem.colors.background, "--poly-color-surface": project.designSystem.colors.surface, "--poly-color-primary": project.designSystem.colors.primary, "--poly-color-secondary": project.designSystem.colors.secondary, "--poly-color-accent": project.designSystem.colors.accent }).map(([k, v]) => `  ${k}: ${v};`).join("\n") : ""}
 }
 
 * {
@@ -297,7 +292,11 @@ export default function RootLayout({
 }
 `;
 
-  // package.json with correct versions
+  // check if framer-motion needed
+  const needsMotion = Object.values(project.components).some(
+    (c) => Array.isArray(c.animations) && c.animations.length > 0
+  );
+
   const packageJson = JSON.stringify(
     {
       name: project.name.toLowerCase().replace(/[^a-z0-9-]/g, "-") || "polyglot-export",
@@ -313,6 +312,7 @@ export default function RootLayout({
         react: "^19.0.0",
         "react-dom": "^19.0.0",
         next: "^15.3.0",
+        ...(needsMotion ? { "framer-motion": "^11.0.0" } : {}),
       },
       devDependencies: {
         typescript: "^5",

@@ -1,5 +1,4 @@
-import type { Project } from "@/state/useCanvasStore";
-import type { Element } from "@/state/useDesignStore";
+import type { PolyglotProject } from "@/state/useProjectStore";
 import {
   generateHtmlPageCode,
   generateReactPageCode,
@@ -12,7 +11,7 @@ export interface ExportResult {
   code: string;
 }
 
-type DesignElements = Record<string, Element>;
+
 
 function slugify(name: string) {
   return name
@@ -22,26 +21,25 @@ function slugify(name: string) {
 }
 
 export function generateExport(
-  project: Project,
-  tech: TechStack,
-  designElements: DesignElements = {}
+  project: PolyglotProject,
+  tech: TechStack
 ): ExportResult {
   switch (tech) {
     case "react-bootstrap":
       return {
         fileName: `${slugify(project.name) || "page"}-react-bootstrap.tsx`,
-        code: generateReactPageCode(project, designElements, "bootstrap"),
+        code: generateReactPageCode(project, "bootstrap"),
       };
     case "html-css":
       return {
         fileName: `${slugify(project.name) || "page"}.html`,
-        code: generateHtmlPageCode(project, designElements),
+        code: generateHtmlPageCode(project),
       };
     case "react-tailwind":
     default:
       return {
         fileName: `${slugify(project.name) || "page"}-react-tailwind.tsx`,
-        code: generateReactPageCode(project, designElements, "tailwind"),
+        code: generateReactPageCode(project, "tailwind"),
       };
   }
 }

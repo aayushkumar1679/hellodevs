@@ -1,0 +1,183 @@
+src/app/api/export/route.ts(9,16): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'Project'.
+src/app/api/export/route.ts(10,16): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'Element'.
+src/app/api/export/route.ts(52,62): error TS2339: Property 'designElements' does not exist on type 'PolyglotProject'.
+src/app/api/export/route.ts(57,29): error TS2339: Property 'designElements' does not exist on type 'PolyglotProject'.
+src/app/builder/[id]/page.tsx(17,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useCanvasStore'.
+src/app/builder/[id]/page.tsx(18,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useDesignStore'.
+src/app/builder/[id]/page.tsx(24,77): error TS2304: Cannot find name 'useProjectStore'.
+src/app/builder/[id]/page.tsx(25,27): error TS2304: Cannot find name 'useProjectStore'.
+src/app/builder/[id]/page.tsx(35,33): error TS2304: Cannot find name 'useProjectStore'.
+src/app/builder/[id]/preview/page.tsx(7,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useCanvasStore'.
+src/app/builder/[id]/preview/page.tsx(18,7): error TS2304: Cannot find name 'useProjectStore'.
+src/app/builder/new/page.tsx(14,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useCanvasStore'.
+src/app/builder/new/page.tsx(28,25): error TS2304: Cannot find name 'useProjectStore'.
+src/app/builder/new/page.tsx(28,42): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/app/builder/new/page.tsx(29,33): error TS2304: Cannot find name 'useProjectStore'.
+src/app/builder/new/page.tsx(29,50): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/app/builder/new/page.tsx(77,38): error TS2339: Property 'designElements' does not exist on type 'MaterializedProject'.
+src/app/components/canvas/ComponentWrapper.tsx(4,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useCanvasStore'.
+src/app/components/canvas/ComponentWrapper.tsx(7,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useDesignStore'.
+src/app/components/canvas/ComponentWrapper.tsx(18,48): error TS2304: Cannot find name 'useProjectStore'.
+src/app/components/canvas/ComponentWrapper.tsx(27,24): error TS2304: Cannot find name 'useProjectStore'.
+src/app/components/canvas/ContextMenu.tsx(4,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useDesignStore'.
+src/app/components/canvas/ContextMenu.tsx(19,47): error TS2304: Cannot find name 'useProjectStore'.
+src/app/components/dashboard/DashboardClient.tsx(7,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useCanvasStore'.
+src/app/components/dashboard/DashboardClient.tsx(7,32): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'Project'.
+src/app/components/dashboard/DashboardClient.tsx(21,69): error TS2304: Cannot find name 'useProjectStore'.
+src/app/components/dashboard/DashboardClient.tsx(35,11): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(36,13): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(37,18): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(38,18): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(39,43): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(39,78): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(158,21): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+src/app/components/dashboard/ExportModal.tsx(7,16): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'Project'.
+src/app/components/editor/ElementTree.tsx(4,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useDesignStore'.
+src/app/components/editor/ElementTree.tsx(8,5): error TS2304: Cannot find name 'useProjectStore'.
+src/app/components/editor/ElementTree.tsx(77,37): error TS7006: Parameter 'childId' implicitly has an 'any' type.
+src/app/components/editor/ElementTree.tsx(87,64): error TS18046: 'el' is of type 'unknown'.
+src/app/components/editor/ElementTree.tsx(95,48): error TS18046: 'el' is of type 'unknown'.
+src/app/components/layout/BuilderHeader.tsx(24,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useCanvasStore'.
+src/app/components/layout/BuilderHeader.tsx(26,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useDesignStore'.
+src/app/components/layout/BuilderHeader.tsx(31,16): error TS2304: Cannot find name 'useProjectStore'.
+src/app/components/layout/BuilderHeader.tsx(31,33): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/app/components/layout/BuilderHeader.tsx(32,16): error TS2304: Cannot find name 'useProjectStore'.
+src/app/components/layout/BuilderHeader.tsx(32,33): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/app/components/layout/BuilderHeader.tsx(33,23): error TS2304: Cannot find name 'useProjectStore'.
+src/app/components/layout/BuilderHeader.tsx(33,40): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/app/components/layout/BuilderHeader.tsx(34,26): error TS2304: Cannot find name 'useProjectStore'.
+src/app/components/layout/BuilderHeader.tsx(34,43): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/app/components/layout/BuilderHeader.tsx(35,31): error TS2304: Cannot find name 'useProjectStore'.
+src/app/components/layout/BuilderHeader.tsx(35,48): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/app/components/layout/RightPanel.tsx(8,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useDesignStore'.
+src/app/components/layout/RightPanel.tsx(26,28): error TS2304: Cannot find name 'useProjectStore'.
+src/app/components/layout/RightPanel.tsx(26,45): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/app/components/panels/AIPromptPanel.tsx(41,66): error TS2551: Property 'hydrateCurrentProject' does not exist on type 'ProjectStoreState'. Did you mean 'currentProject'?
+src/app/components/panels/AIPromptPanel.tsx(122,42): error TS2339: Property 'designElements' does not exist on type 'MaterializedProject'.
+src/app/components/panels/CollaborationPanel.tsx(4,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useCanvasStore'.
+src/app/components/panels/CollaborationPanel.tsx(7,32): error TS2304: Cannot find name 'useProjectStore'.
+src/app/components/panels/ComponentLibrary.tsx(4,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useCanvasStore'.
+src/app/components/panels/ComponentLibrary.tsx(61,28): error TS2304: Cannot find name 'useProjectStore'.
+src/app/share/[id]/page.tsx(7,16): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'Project'.
+src/components/project/ProjectSurface.tsx(4,16): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'Project'.
+src/components/project/ProjectSurface.tsx(5,16): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'Element'.
+src/components/project/ProjectSurface.tsx(19,72): error TS2345: Argument of type 'Record<string, Element>' is not assignable to parameter of type 'Breakpoint | undefined'.
+src/hooks/useSyncStores.ts(4,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useCanvasStore'.
+src/hooks/useSyncStores.ts(5,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useDesignStore'.
+src/hooks/useSyncStores.ts(6,10): error TS2305: Module '"@/utils/projectModel"' has no exported member 'mergeProjectDesignElements'.
+src/hooks/useSyncStores.ts(19,26): error TS2304: Cannot find name 'useProjectStore'.
+src/hooks/useSyncStores.ts(19,43): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/hooks/useSyncStores.ts(20,27): error TS2304: Cannot find name 'useProjectStore'.
+src/hooks/useSyncStores.ts(20,44): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/hooks/useSyncStores.ts(21,20): error TS2304: Cannot find name 'useProjectStore'.
+src/hooks/useSyncStores.ts(21,37): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/hooks/useSyncStores.ts(22,44): error TS2304: Cannot find name 'useProjectStore'.
+src/hooks/useSyncStores.ts(23,6): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/state/__tests__/store.test.ts(2,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useCanvasStore'.
+src/state/__tests__/store.test.ts(3,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useDesignStore'.
+src/state/__tests__/store.test.ts(23,5): error TS2304: Cannot find name 'useProjectStore'.
+src/state/__tests__/store.test.ts(51,5): error TS2304: Cannot find name 'useProjectStore'.
+src/state/__tests__/store.test.ts(64,50): error TS2304: Cannot find name 'useProjectStore'.
+src/state/__tests__/store.test.ts(67,5): error TS2304: Cannot find name 'useProjectStore'.
+src/state/__tests__/store.test.ts(81,19): error TS2304: Cannot find name 'useProjectStore'.
+src/state/__tests__/store.test.ts(87,56): error TS2304: Cannot find name 'useProjectStore'.
+src/state/__tests__/store.test.ts(90,5): error TS2304: Cannot find name 'useProjectStore'.
+src/state/__tests__/store.test.ts(104,12): error TS2304: Cannot find name 'useProjectStore'.
+src/state/__tests__/store.test.ts(109,19): error TS2304: Cannot find name 'useProjectStore'.
+src/state/__tests__/store.test.ts(112,12): error TS2304: Cannot find name 'useProjectStore'.
+src/state/useCanvasStore.ts(7,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useDesignStore'.
+src/state/useCanvasStore.ts(7,32): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'Element'.
+src/state/useCanvasStore.ts(9,3): error TS2305: Module '"@/utils/projectModel"' has no exported member 'mergeProjectDesignElements'.
+src/state/useCanvasStore.ts(156,5): error TS2345: Argument of type '(set: { (partial: CanvasState | Partial<CanvasState> | ((state: CanvasState) => CanvasState | Partial<CanvasState>), replace?: false | undefined): unknown; (state: CanvasState | ((state: CanvasState) => CanvasState), replace: true): unknown; }, get: () => CanvasState) => { ...; }' is not assignable to parameter of type 'StateCreator<CanvasState, [["zustand/persist", unknown]], []>'.
+  Type '(set: { (partial: CanvasState | Partial<CanvasState> | ((state: CanvasState) => CanvasState | Partial<CanvasState>), replace?: false | undefined): unknown; (state: CanvasState | ((state: CanvasState) => CanvasState), replace: true): unknown; }, get: () => CanvasState) => { ...; }' is not assignable to type '(setState: { (partial: CanvasState | Partial<CanvasState> | ((state: CanvasState) => CanvasState | Partial<CanvasState>), replace?: false | undefined): unknown; (state: CanvasState | ((state: CanvasState) => CanvasState), replace: true): unknown; }, getState: () => CanvasState, store: WithPersist<...>) => CanvasState'.
+    Call signature return types '{ projects: {}; currentProjectId: null; currentProject: null; history: never[]; future: never[]; createProject: (name: string) => string; deleteProject: (id: string) => void; hydrateCurrentProject: (payload: ProjectHydrationPayload) => void; ... 11 more ...; fetchProjects: () => Promise<...>; }' and 'CanvasState' are incompatible.
+      The types returned by 'fetchProject(...)' are incompatible between these types.
+        Type 'Promise<PolyglotProject | null>' is not assignable to type 'Promise<Project | null>'.
+          Type 'PolyglotProject | null' is not assignable to type 'Project | null'.
+            Property 'designElements' is missing in type 'PolyglotProject' but required in type 'Project'.
+src/state/useCanvasStore.ts(185,15): error TS2345: Argument of type '(state: CanvasState) => { projects: { [x: string]: PolyglotProject | Project; }; currentProjectId: string; currentProject: PolyglotProject; history: never[]; future: never[]; }' is not assignable to parameter of type 'CanvasState | Partial<CanvasState> | ((state: CanvasState) => CanvasState | Partial<CanvasState>)'.
+  Type '(state: CanvasState) => { projects: { [x: string]: PolyglotProject | Project; }; currentProjectId: string; currentProject: PolyglotProject; history: never[]; future: never[]; }' is not assignable to type '(state: CanvasState) => CanvasState | Partial<CanvasState>'.
+    Type '{ projects: { [x: string]: PolyglotProject | Project; }; currentProjectId: string; currentProject: PolyglotProject; history: never[]; future: never[]; }' is not assignable to type 'CanvasState | Partial<CanvasState>'.
+      Type '{ projects: { [x: string]: PolyglotProject | Project; }; currentProjectId: string; currentProject: PolyglotProject; history: never[]; future: never[]; }' is not assignable to type 'Partial<CanvasState>'.
+        Types of property 'projects' are incompatible.
+          Type '{ [x: string]: PolyglotProject | Project; }' is not assignable to type 'Record<string, Project>'.
+            'string' index signatures are incompatible.
+              Type 'PolyglotProject | Project' is not assignable to type 'Project'.
+                Property 'designElements' is missing in type 'PolyglotProject' but required in type 'Project'.
+src/state/useCanvasStore.ts(220,15): error TS2304: Cannot find name 'useProjectStore'.
+src/state/useCanvasStore.ts(241,15): error TS2345: Argument of type '(state: CanvasState) => CanvasState | { history: Project[]; future: never[]; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; }' is not assignable to parameter of type 'CanvasState | Partial<CanvasState> | ((state: CanvasState) => CanvasState | Partial<CanvasState>)'.
+  Type '(state: CanvasState) => CanvasState | { history: Project[]; future: never[]; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; }' is not assignable to type '(state: CanvasState) => CanvasState | Partial<CanvasState>'.
+    Type 'CanvasState | { history: Project[]; future: never[]; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; }' is not assignable to type 'CanvasState | Partial<CanvasState>'.
+      Type '{ history: Project[]; future: never[]; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; }' is not assignable to type 'CanvasState | Partial<CanvasState>'.
+        Type '{ history: Project[]; future: never[]; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; }' is not assignable to type 'Partial<CanvasState>'.
+          Types of property 'projects' are incompatible.
+            Type '{ [x: string]: PolyglotProject | Project; }' is not assignable to type 'Record<string, Project>'.
+              'string' index signatures are incompatible.
+                Type 'PolyglotProject | Project' is not assignable to type 'Project'.
+                  Property 'designElements' is missing in type 'PolyglotProject' but required in type 'Project'.
+src/state/useCanvasStore.ts(263,15): error TS2304: Cannot find name 'useProjectStore'.
+src/state/useCanvasStore.ts(275,26): error TS2345: Argument of type 'PolyglotProject' is not assignable to parameter of type 'Project'.
+  Property 'designElements' is missing in type 'PolyglotProject' but required in type 'Project'.
+src/state/useCanvasStore.ts(281,15): error TS2345: Argument of type '(state: CanvasState) => CanvasState | { currentProjectId: string; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; history: never[]; future: never[]; }' is not assignable to parameter of type 'CanvasState | Partial<CanvasState> | ((state: CanvasState) => CanvasState | Partial<CanvasState>)'.
+  Type '(state: CanvasState) => CanvasState | { currentProjectId: string; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; history: never[]; future: never[]; }' is not assignable to type '(state: CanvasState) => CanvasState | Partial<CanvasState>'.
+    Type 'CanvasState | { currentProjectId: string; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; history: never[]; future: never[]; }' is not assignable to type 'CanvasState | Partial<CanvasState>'.
+      Type '{ currentProjectId: string; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; history: never[]; future: never[]; }' is not assignable to type 'CanvasState | Partial<CanvasState>'.
+        Type '{ currentProjectId: string; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; history: never[]; future: never[]; }' is not assignable to type 'Partial<CanvasState>'.
+          Types of property 'projects' are incompatible.
+            Type '{ [x: string]: PolyglotProject | Project; }' is not assignable to type 'Record<string, Project>'.
+              'string' index signatures are incompatible.
+                Type 'PolyglotProject | Project' is not assignable to type 'Project'.
+                  Property 'designElements' is missing in type 'PolyglotProject' but required in type 'Project'.
+src/state/useCanvasStore.ts(310,17): error TS2345: Argument of type '(state: CanvasState) => { projects: { [x: string]: PolyglotProject | Project; }; currentProjectId: string; currentProject: PolyglotProject; history: never[]; future: never[]; }' is not assignable to parameter of type 'CanvasState | Partial<CanvasState> | ((state: CanvasState) => CanvasState | Partial<CanvasState>)'.
+  Type '(state: CanvasState) => { projects: { [x: string]: PolyglotProject | Project; }; currentProjectId: string; currentProject: PolyglotProject; history: never[]; future: never[]; }' is not assignable to type '(state: CanvasState) => CanvasState | Partial<CanvasState>'.
+    Type '{ projects: { [x: string]: PolyglotProject | Project; }; currentProjectId: string; currentProject: PolyglotProject; history: never[]; future: never[]; }' is not assignable to type 'CanvasState | Partial<CanvasState>'.
+      Type '{ projects: { [x: string]: PolyglotProject | Project; }; currentProjectId: string; currentProject: PolyglotProject; history: never[]; future: never[]; }' is not assignable to type 'Partial<CanvasState>'.
+        Types of property 'projects' are incompatible.
+          Type '{ [x: string]: PolyglotProject | Project; }' is not assignable to type 'Record<string, Project>'.
+            'string' index signatures are incompatible.
+              Type 'PolyglotProject | Project' is not assignable to type 'Project'.
+                Property 'designElements' is missing in type 'PolyglotProject' but required in type 'Project'.
+src/state/useCanvasStore.ts(411,31): error TS2304: Cannot find name 'useProjectStore'.
+src/state/useCanvasStore.ts(474,13): error TS2304: Cannot find name 'useProjectStore'.
+src/state/useCanvasStore.ts(591,15): error TS2345: Argument of type '(state: CanvasState) => CanvasState | { history: Project[]; future: never[]; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; }' is not assignable to parameter of type 'CanvasState | Partial<CanvasState> | ((state: CanvasState) => CanvasState | Partial<CanvasState>)'.
+  Type '(state: CanvasState) => CanvasState | { history: Project[]; future: never[]; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; }' is not assignable to type '(state: CanvasState) => CanvasState | Partial<CanvasState>'.
+    Type 'CanvasState | { history: Project[]; future: never[]; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; }' is not assignable to type 'CanvasState | Partial<CanvasState>'.
+      Type '{ history: Project[]; future: never[]; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; }' is not assignable to type 'CanvasState | Partial<CanvasState>'.
+        Type '{ history: Project[]; future: never[]; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; }' is not assignable to type 'Partial<CanvasState>'.
+          Types of property 'projects' are incompatible.
+            Type '{ [x: string]: PolyglotProject | Project; }' is not assignable to type 'Record<string, Project>'.
+              'string' index signatures are incompatible.
+                Type 'PolyglotProject | Project' is not assignable to type 'Project'.
+                  Property 'designElements' is missing in type 'PolyglotProject' but required in type 'Project'.
+src/state/useCanvasStore.ts(616,26): error TS2345: Argument of type 'PolyglotProject' is not assignable to parameter of type 'Project'.
+  Property 'designElements' is missing in type 'PolyglotProject' but required in type 'Project'.
+src/state/useCanvasStore.ts(623,15): error TS2345: Argument of type '(state: CanvasState) => CanvasState | { history: Project[]; future: Project[]; currentProject: PolyglotProject; projects: { ...; }; }' is not assignable to parameter of type 'CanvasState | Partial<CanvasState> | ((state: CanvasState) => CanvasState | Partial<CanvasState>)'.
+  Type '(state: CanvasState) => CanvasState | { history: Project[]; future: Project[]; currentProject: PolyglotProject; projects: { ...; }; }' is not assignable to type '(state: CanvasState) => CanvasState | Partial<CanvasState>'.
+    Type 'CanvasState | { history: Project[]; future: Project[]; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; }' is not assignable to type 'CanvasState | Partial<CanvasState>'.
+      Type '{ history: Project[]; future: Project[]; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; }' is not assignable to type 'CanvasState | Partial<CanvasState>'.
+        Type '{ history: Project[]; future: Project[]; currentProject: PolyglotProject; projects: { [x: string]: PolyglotProject | Project; }; }' is not assignable to type 'Partial<CanvasState>'.
+          Types of property 'projects' are incompatible.
+            Type '{ [x: string]: PolyglotProject | Project; }' is not assignable to type 'Record<string, Project>'.
+              'string' index signatures are incompatible.
+                Type 'PolyglotProject | Project' is not assignable to type 'Project'.
+                  Property 'designElements' is missing in type 'PolyglotProject' but required in type 'Project'.
+src/state/useCanvasStore.ts(647,26): error TS2345: Argument of type 'PolyglotProject' is not assignable to parameter of type 'Project'.
+  Property 'designElements' is missing in type 'PolyglotProject' but required in type 'Project'.
+src/state/useCanvasStore.ts(683,15): error TS2304: Cannot find name 'useProjectStore'.
+src/state/useCanvasStore.ts(708,15): error TS2304: Cannot find name 'useProjectStore'.
+src/state/useCanvasStore.ts(752,15): error TS2741: Property 'designElements' is missing in type 'PolyglotProject' but required in type 'Project'.
+src/state/useDesignStore.ts(3,10): error TS2305: Module '"@/utils/projectModel"' has no exported member 'createElementRecord'.
+src/state/useDesignStore.ts(4,11): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'useCanvasStore'.
+src/state/useDesignStore.ts(265,23): error TS2304: Cannot find name 'useProjectStore'.
+src/state/useDesignStore.ts(273,23): error TS2304: Cannot find name 'useProjectStore'.
+src/state/useDesignStore.ts(280,1): error TS2304: Cannot find name 'useProjectStore'.
+src/state/useDesignStore.ts(280,28): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/state/useDesignStore.ts(280,35): error TS7006: Parameter 'prevState' implicitly has an 'any' type.
+src/utils/exporter.ts(1,16): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'Project'.
+src/utils/exporter.ts(2,16): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'Element'.
+src/utils/exporter.ts(46,11): error TS7006: Parameter 'cid' implicitly has an 'any' type.
+src/utils/exportGenerators.ts(1,16): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'Project'.
+src/utils/exportGenerators.ts(2,16): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'Element'.
+src/utils/exportGenerators.ts(33,62): error TS2554: Expected 1-2 arguments, but got 3.
+src/utils/exportGenerators.ts(38,45): error TS2554: Expected 1 arguments, but got 2.
+src/utils/exportGenerators.ts(44,62): error TS2554: Expected 1-2 arguments, but got 3.

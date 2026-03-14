@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { useDesignStore } from "@/state/useDesignStore";
+import { useProjectStore } from "@/state/useProjectStore";
+import { useEditorStore } from "@/state/useEditorStore";
 
 type ContextMenuProps = {
   x: number;
@@ -16,7 +17,8 @@ export default function ContextMenu({
   elementId,
   onClose,
 }: ContextMenuProps) {
-  const { removeElement, selectedElements } = useDesignStore();
+  const removeElement = useProjectStore((s) => s.removeComponent);
+  const selectedElements = useEditorStore((s) => s.selectedElements);
 
   const menuItems = [
     {

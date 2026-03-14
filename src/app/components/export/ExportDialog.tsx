@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { X, Download, Copy, Check, Sparkles, Loader2 } from "lucide-react";
-import { useCanvasStore } from "../../../state/useCanvasStore";
+import {  useCanvasStore  } from "@/state/useProjectStore";
 import { useDesignStore } from "../../../state/useDesignStore";
 import { generateNextJsProject } from "../../../utils/exporter";
 import type { TechStack } from "../../../utils/exportGenerators";
@@ -14,8 +14,8 @@ type ExportDialogProps = {
 };
 
 export default function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
-  const currentProject = useCanvasStore((state) => state.currentProject);
-  const elements = useDesignStore((state) => state.elements);
+  const currentProject = useProjectStore((state) => state.currentProject);
+  const elements = useProjectStore((state) => state.elements);
   const [format, setFormat] = useState<TechStack>("react-tailwind");
   const [copied, setCopied] = useState(false);
   const [isExporting, setIsExporting] = useState(false);

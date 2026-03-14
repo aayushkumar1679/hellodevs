@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { useCanvasStore } from "@/state/useCanvasStore";
-import { useDesignStore } from "@/state/useDesignStore";
+import { useProjectStore } from "@/state/useProjectStore";
+import { useEditorStore } from "@/state/useEditorStore";
 import {
   ChevronRight,
   Layers,
@@ -24,9 +24,9 @@ export default function LayersPanel() {
     currentProject,
     moveComponent,
     updateComponent,
-  } = useCanvasStore();
+  } = useProjectStore();
 
-  const { selectElement, selectedElements, deselectAll } = useDesignStore();
+  const { selectElement, selectedElements, deselectAll } = useEditorStore();
 
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
   const [draggedId, setDraggedId] = React.useState<string | null>(null);

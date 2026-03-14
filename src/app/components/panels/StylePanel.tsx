@@ -15,12 +15,12 @@ import {
   ArrowRight,
   ArrowDown,
 } from "lucide-react";
-import { useDesignStore, type ResponsiveCss } from "@/state/useDesignStore";
-import { useCanvasStore } from "@/state/useCanvasStore";
+import { useProjectStore, type CSSProperties } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import UnitInput from "../ui/UnitInput";
 import ColorInput from "../ui/ColorInput";
 import VisualSelect from "../ui/VisualSelect";
+import SpacingDiagram from "../ui/SpacingDiagram";
 import { motion, AnimatePresence } from "framer-motion";
 
 type BreakpointKey = "desktop" | "tablet" | "mobile";
@@ -75,21 +75,23 @@ function Section({
 }
 
 export default function StylePanel() {
-  const selectedElements = useDesignStore((state) => state.selectedElements);
-  const elements = useDesignStore((state) => state.elements);
-  const updateCSSProperty = useDesignStore((state) => state.updateCSSProperty);
-  const { currentProject } = useCanvasStore();
+  const selectedElements = useEditorStore((state) => state.selectedElements);
   const { activeBreakpoint } = useEditorStore();
+  const { currentProject } = useProjectStore();
+  const _updateCSS = useProjectStore((state) => state.updateComponentCSSOverride);
+  const updateCSSProperty = (id: string, key: string, value: unknown) => {
+    _updateCSS(id, activeBreakpoint, key, value);
+  };
 
-  const [expanded, setExpanded] = useState<string[]>(["layout", "surface"]);
+  const [expanded, setExpanded] = useState<string[]>(["position", "layout", "surface"]);
 
   const hasSelection = selectedElements.length > 0;
   const primaryId = hasSelection ? selectedElements[0] : null;
-  const element = primaryId ? elements[primaryId] : null;
+  const element = primaryId ? currentProject?.components[primaryId] : null;
   const bucket = toBucket(activeBreakpoint as BreakpointKey);
 
   const css = useMemo(() => {
-    const cssAll: ResponsiveCss = element?.cssProperties ?? { base: {} };
+    const cssAll = element?.cssOverrides ?? { base: {} };
     return { ...(cssAll.base ?? {}), ...(cssAll[bucket] ?? {}) };
   }, [bucket, element]);
 
@@ -142,6 +144,40 @@ export default function StylePanel() {
         </div>
       </div>
 
+      <Section id="position" title="Position" icon={Move} open={expanded.includes("position")} onToggle={toggleSection}>
+        <VisualSelect
+          label="Position"
+          value={getCssValue("position", "static")}
+          onChange={(val) => updateCSSProperty(primaryId, "position", val)}
+          options={[
+            { value: "static", label: "Static", icon: Layout },
+            { value: "relative", label: "Relative", icon: Layout },
+            { value: "absolute", label: "Absolute", icon: Layout },
+            { value: "fixed", label: "Fixed", icon: Layout },
+            { value: "sticky", label: "Sticky", icon: Layout },
+          ]}
+        />
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <UnitInput label="Top" value={getCssValue("top")} onChange={(val) => updateCSSProperty(primaryId, "top", val)} placeholder="auto" />
+          <UnitInput label="Right" value={getCssValue("right")} onChange={(val) => updateCSSProperty(primaryId, "right", val)} placeholder="auto" />
+          <UnitInput label="Bottom" value={getCssValue("bottom")} onChange={(val) => updateCSSProperty(primaryId, "bottom", val)} placeholder="auto" />
+          <UnitInput label="Left" value={getCssValue("left")} onChange={(val) => updateCSSProperty(primaryId, "left", val)} placeholder="auto" />
+        </div>
+        <div className="mt-2">
+           <VisualSelect
+            label="Overflow"
+            value={getCssValue("overflow", "visible")}
+            onChange={(val) => updateCSSProperty(primaryId, "overflow", val)}
+            options={[
+              { value: "visible", label: "Visible", icon: Layout },
+              { value: "hidden", label: "Hidden", icon: Layout },
+              { value: "auto", label: "Auto", icon: Layout },
+              { value: "scroll", label: "Scroll", icon: Layout },
+            ]}
+          />
+        </div>
+      </Section>
+
       <Section id="layout" title="Layout" icon={Layout} open={expanded.includes("layout")} onToggle={toggleSection}>
         <VisualSelect
           label="Display"
@@ -175,9 +211,31 @@ export default function StylePanel() {
       </Section>
 
       <Section id="spacing" title="Spacing" icon={Move} open={expanded.includes("spacing")} onToggle={toggleSection}>
-        <div className="grid grid-cols-2 gap-2">
-          <UnitInput label="Padding" value={getCssValue("padding")} onChange={(val) => updateCSSProperty(primaryId, "padding", val)} placeholder="0px" />
-          <UnitInput label="Margin" value={getCssValue("margin")} onChange={(val) => updateCSSProperty(primaryId, "margin", val)} placeholder="0px" />
+        <SpacingDiagram
+          margin={{
+            top: getCssValue("marginTop") || getCssValue("margin") || "0px",
+            right: getCssValue("marginRight") || getCssValue("margin") || "0px",
+            bottom: getCssValue("marginBottom") || getCssValue("margin") || "0px",
+            left: getCssValue("marginLeft") || getCssValue("margin") || "0px",
+          }}
+          padding={{
+            top: getCssValue("paddingTop") || getCssValue("padding") || "0px",
+            right: getCssValue("paddingRight") || getCssValue("padding") || "0px",
+            bottom: getCssValue("paddingBottom") || getCssValue("padding") || "0px",
+            left: getCssValue("paddingLeft") || getCssValue("padding") || "0px",
+          }}
+          onMarginChange={(side, val) => {
+            const key = `margin${side.charAt(0).toUpperCase() + side.slice(1)}`;
+            updateCSSProperty(primaryId, key, val.includes("px") || val === "auto" ? val : `${val}px`);
+          }}
+          onPaddingChange={(side, val) => {
+            const key = `padding${side.charAt(0).toUpperCase() + side.slice(1)}`;
+            updateCSSProperty(primaryId, key, val.includes("px") ? val : `${val}px`);
+          }}
+        />
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <UnitInput label="Padding (All)" value={getCssValue("padding")} onChange={(val) => updateCSSProperty(primaryId, "padding", val)} placeholder="0px" />
+          <UnitInput label="Margin (All)" value={getCssValue("margin")} onChange={(val) => updateCSSProperty(primaryId, "margin", val)} placeholder="0px" />
         </div>
       </Section>
 

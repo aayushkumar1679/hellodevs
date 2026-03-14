@@ -2,10 +2,16 @@ export interface OpenAIModelOption {
   id: string;
   label: string;
   description: string;
-  provider?: "openai" | "nvidia";
+  provider?: "openai" | "nvidia" | "anthropic";
 }
 
 export const OPENAI_MODEL_OPTIONS: OpenAIModelOption[] = [
+  {
+    id: "claude-3-5-sonnet-20241022",
+    label: "Claude 3.5 Sonnet (Best Layouts)",
+    description: "Anthropic's flagship model. Unmatched logic and design aesthetics.",
+    provider: "anthropic",
+  },
   {
     id: "gpt-4o",
     label: "GPT-4o (Premium)",

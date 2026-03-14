@@ -1,39 +1,63 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Palette, Settings2, Zap } from "lucide-react";
+import { X, Palette, Settings2, Zap, Layers } from "lucide-react";
 import StylePanel from "../panels/StylePanel";
 import SettingsPanel from "../panels/SettingsPanel";
 import InteractionsPanel from "../panels/InteractionsPanel";
-import { useDesignStore } from "@/state/useDesignStore";
+import PropertyPanel from "../panels/PropertyPanel";
+import ElementInspector from "../panels/ElementInspector";
+import DesignSystemPanel from "../panels/DesignSystemPanel";
+import { useEditorStore } from "@/state/useEditorStore";
+import { useProjectStore } from "@/state/useProjectStore";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface RightPanelProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-type Tab = "style" | "settings" | "interactions";
+type Tab = "content" | "style" | "settings" | "interactions" | "design-system";
 
 const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
+  { id: "content", label: "Content", icon: Settings2 },
   { id: "style", label: "Style", icon: Palette },
-  { id: "settings", label: "Settings", icon: Settings2 },
   { id: "interactions", label: "Motion", icon: Zap },
+  { id: "design-system", label: "Tokens", icon: Layers },
+  { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
-export default function RightPanel({ isOpen, onClose }: RightPanelProps) {
+export default function RightPanel({ isOpen = true, onClose }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>("style");
-  const selectedElements = useDesignStore((state) => state.selectedElements || []);
+  const selectedElements = useEditorStore((state) => state.selectedElements || []);
+  const currentProject = useProjectStore((state) => state.currentProject);
+
+  // Auto-switch to content tab when selecting a text/interactive element
+  React.useEffect(() => {
+    if (selectedElements.length === 1) {
+      const component = currentProject?.components[selectedElements[0]];
+      const type = component?.type;
+      if (type === "text" || type === "heading1" || type === "heading2" || type === "heading3" || type === "button" || type === "paragraph") {
+        setActiveTab("content");
+      } else {
+        setActiveTab("style");
+      }
+    }
+  }, [selectedElements, currentProject]);
 
   if (!isOpen) return null;
 
+  // If onClose is provided, it's likely a mobile slide-over or a toggleable sidebar
+  // If not, it's an embedded panel in the resizable layout
+  const isFixed = !!onClose;
+
   return (
     <aside
-      className="fixed right-0 z-40 flex flex-col border-l bg-white/90 backdrop-blur-2xl"
+      className={`${isFixed ? "fixed right-0 z-40" : "relative flex-1"} flex flex-col border-l bg-white/95 backdrop-blur-2xl h-full`}
       style={{
-        top: "var(--header-h)",
+        top: isFixed ? "var(--header-h)" : 0,
         bottom: 0,
-        width: "var(--right-panel-w)",
+        width: isFixed ? "var(--right-panel-w)" : "100%",
         borderColor: "rgba(226,232,240,0.6)",
       }}
     >
@@ -69,6 +93,20 @@ export default function RightPanel({ isOpen, onClose }: RightPanelProps) {
       {/* Panel Content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
         <AnimatePresence mode="wait">
+          {activeTab === "content" && (
+            <motion.div
+              key="content"
+              initial={{ opacity: 0, x: 6 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -6 }}
+              transition={{ duration: 0.15 }}
+              className="p-3 space-y-4"
+            >
+              <PropertyPanel />
+              <hr className="border-slate-100" />
+              <ElementInspector />
+            </motion.div>
+          )}
           {activeTab === "style" && (
             <motion.div
               key="style"
@@ -103,6 +141,18 @@ export default function RightPanel({ isOpen, onClose }: RightPanelProps) {
               className="p-3"
             >
               <InteractionsPanel />
+            </motion.div>
+          )}
+          {activeTab === "design-system" && (
+            <motion.div
+              key="design-system"
+              initial={{ opacity: 0, x: 6 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -6 }}
+              transition={{ duration: 0.15 }}
+              className="p-3"
+            >
+              <DesignSystemPanel />
             </motion.div>
           )}
         </AnimatePresence>

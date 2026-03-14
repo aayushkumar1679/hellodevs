@@ -20,8 +20,8 @@ export async function POST(req: Request) {
       throw new Error("NVIDIA Image API key not configured");
     }
 
-    // NVIDIA NIM stable-diffusion-xl API (or flux if available, using the standard structure for their ai.api endpoints)
-    const response = await fetch("https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-xl", {
+    // NVIDIA FLUX.1 API using the specific model ID provided by the user
+    const response = await fetch("https://ai.api.nvidia.com/v1/genai/nvidia/flux.2-klein-4b", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -29,16 +29,12 @@ export async function POST(req: Request) {
         Accept: "application/json",
       },
       body: JSON.stringify({
-        text_prompts: [
-          {
-            text: prompt,
-            weight: 1
-          }
-        ],
-        seed: Math.floor(Math.random() * 100000),
-        cfg_scale: 5,
-        sampler: "K_EULER_ANCESTRAL",
-        steps: 25
+        prompt: prompt,
+        model: "flux.2-klein-4b-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",
+        infer_steps: 25,
+        guidance_scale: 3.5,
+        width: 1024,
+        height: 768,
       }),
     });
 

@@ -1,44 +1,15 @@
-import type { CSSProperties as ReactCssProperties } from "react";
 import { COMPONENT_LIBRARY } from "@/config/componentRegistry";
-import type { Project, CanvasComponent } from "@/state/useCanvasStore";
-import type { Breakpoint, Element, ResponsiveCss } from "@/state/useDesignStore";
+import type { PolyglotProject, PolyglotComponent, CSSProperties } from "@/state/useProjectStore";
+import type { Breakpoint } from "@/state/useEditorStore";
 
-type CssRecord = Record<string, unknown>;
-
-function getComponentDefinition(type: string) {
-  return COMPONENT_LIBRARY.find((component) => component.type === type);
-}
-
-function createDefaultResponsiveCss(
-  initialCss: CssRecord = {}
-): ResponsiveCss {
-  return {
-    base: {
-      ...initialCss,
-    },
-  };
-}
-
-export function createElementRecord(
-  id: string,
-  type: string,
-  initialCss: CssRecord = {}
-): Element {
-  return {
-    id,
-    type,
-    cssProperties: createDefaultResponsiveCss(initialCss),
-  };
-}
-
-export function getProjectRootIds(project: Pick<Project, "components" | "rootOrder">) {
+export function getProjectRootIds(project: Pick<PolyglotProject, "components" | "rootOrder">) {
   if (Array.isArray(project.rootOrder) && project.rootOrder.length > 0) {
     return project.rootOrder.filter((id) => Boolean(project.components[id]));
   }
 
   const childIds = new Set<string>();
   Object.values(project.components ?? {}).forEach((component) => {
-    component.children.forEach((childId) => childIds.add(childId));
+    (component.children || []).forEach((childId) => childIds.add(childId));
   });
 
   return Object.values(project.components ?? {})
@@ -46,72 +17,16 @@ export function getProjectRootIds(project: Pick<Project, "components" | "rootOrd
     .map((component) => component.id);
 }
 
-export function normalizeProject(project: Project): Project {
-  const components: Record<string, CanvasComponent> = {};
-  Object.entries(project.components ?? {}).forEach(([id, component]) => {
-    components[id] = {
-      id,
-      type: component.type,
-      props: component.props ?? {},
-      children: Array.isArray(component.children) ? component.children : [],
-    };
-  });
-
-  const rootOrder = getProjectRootIds({
-    components,
-    rootOrder: Array.isArray(project.rootOrder) ? project.rootOrder : [],
-  });
-
-  const designElements: Record<string, Element> = {};
-  Object.values(components).forEach((component) => {
-    const existing = project.designElements?.[component.id];
-    if (existing) {
-      designElements[component.id] = {
-        ...existing,
-        id: component.id,
-        type: component.type,
-        cssProperties: {
-          base: {
-            ...(existing.cssProperties?.base ?? {}),
-          },
-          ...(existing.cssProperties?.tablet
-            ? { tablet: { ...existing.cssProperties.tablet } }
-            : {}),
-          ...(existing.cssProperties?.mobile
-            ? { mobile: { ...existing.cssProperties.mobile } }
-            : {}),
-        },
-      };
-      return;
-    }
-
-    const definition = getComponentDefinition(component.type);
-    designElements[component.id] = createElementRecord(
-      component.id,
-      component.type,
-      definition?.defaultCss ?? {}
-    );
-  });
-
-  return {
-    ...project,
-    components,
-    designElements,
-    rootOrder,
-    rootComponent: project.rootComponent ?? rootOrder[0] ?? null,
-  };
-}
-
 export function getBreakpointCss(
-  element: Element | undefined,
+  component: PolyglotComponent | undefined,
   breakpoint: Breakpoint = "desktop"
-): ReactCssProperties {
-  if (!element) {
+): React.CSSProperties {
+  if (!component) {
     return {};
   }
 
-  const { base, tablet, mobile } = element.cssProperties;
-  const merged: CssRecord =
+  const { base, tablet, mobile } = component.cssOverrides;
+  const merged: CSSProperties =
     breakpoint === "mobile"
       ? { ...base, ...(tablet ?? {}), ...(mobile ?? {}) }
       : breakpoint === "tablet"
@@ -122,30 +37,45 @@ export function getBreakpointCss(
     Object.entries(merged).filter(
       ([, value]) => value !== undefined && value !== null && value !== ""
     )
-  ) as ReactCssProperties;
+  ) as React.CSSProperties;
 }
 
-export function mergeProjectDesignElements(
-  project: Project,
-  elements: Record<string, Element>
-) {
-  const normalizedProject = normalizeProject(project);
-  const merged: Record<string, Element> = {};
-
-  Object.values(normalizedProject.components).forEach((component) => {
-    merged[component.id] =
-      elements[component.id] ??
-      normalizedProject.designElements[component.id];
+export function normalizeProject(project: any): PolyglotProject {
+  const components: Record<string, PolyglotComponent> = {};
+  Object.entries(project.components ?? {}).forEach(([id, c]: [string, any]) => {
+    components[id] = {
+      id,
+      type: c.type,
+      props: c.props ?? {},
+      children: Array.isArray(c.children) ? c.children : [],
+      cssOverrides: c.cssOverrides ?? c.cssProperties ?? { base: {} }, // Fallback to handle old shapes
+      animations: c.animations ?? [],
+      assets: c.assets ?? [],
+      meta: c.meta ?? {},
+    };
     
-    if (!merged[component.id]) {
-       const def = getComponentDefinition(component.type);
-       merged[component.id] = createElementRecord(
-         component.id, 
-         component.type, 
-         def?.defaultCss ?? {}
-       );
+    // Attempt to merge old designElements if they exist in the project payload
+    if (project.designElements && project.designElements[id]) {
+        const d = project.designElements[id];
+        components[id].cssOverrides = d.cssProperties || { base: {} };
     }
   });
 
-  return merged;
+  const rootOrder = getProjectRootIds({
+    components,
+    rootOrder: Array.isArray(project.rootOrder) ? project.rootOrder : [],
+  });
+
+  return {
+    id: project.id,
+    name: project.name,
+    components,
+    rootOrder,
+    rootComponent: project.rootComponent ?? rootOrder[0] ?? null,
+    createdAt: project.createdAt,
+    updatedAt: project.updatedAt,
+    generationPrompt: project.generationPrompt,
+    generationModel: project.generationModel,
+    generationSummary: project.generationSummary,
+  };
 }

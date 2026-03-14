@@ -21,18 +21,17 @@ import {
 import { toast } from "sonner";
 import { useSession, signOut } from "next-auth/react";
 import Image from "next/image";
-import { useCanvasStore } from "@/state/useCanvasStore";
+import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
-import { useDesignStore } from "@/state/useDesignStore";
 import type { TechStack } from "@/utils/exportGenerators";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function BuilderHeader() {
-  const undo = useCanvasStore((state) => state.undo);
-  const redo = useCanvasStore((state) => state.redo);
-  const saveProject = useCanvasStore((state) => state.saveProject);
-  const currentProject = useCanvasStore((state) => state.currentProject);
-  const setDesignBreakpoint = useDesignStore((state) => state.setActiveBreakpoint);
+  const undo = useProjectStore((state) => state.undo);
+  const redo = useProjectStore((state) => state.redo);
+  const saveProject = useProjectStore((state) => state.saveProject);
+  const currentProject = useProjectStore((state) => state.currentProject);
+  const setDesignBreakpoint = () => {}; // Replaced by useEditorStore hook
 
   const {
     activeBreakpoint,
@@ -109,7 +108,7 @@ export default function BuilderHeader() {
             {(["desktop", "tablet", "mobile"] as const).map((d) => (
               <motion.button
                 key={d}
-                onClick={() => { setBreakpoint(d); setDesignBreakpoint(d); }}
+                onClick={() => { setBreakpoint(d); }}
                 className={`flex h-7 w-8 items-center justify-center rounded-lg transition-all duration-200 ${
                   activeBreakpoint === d
                     ? "bg-slate-950 text-white shadow-[0_6px_16px_-4px_rgba(15,23,42,0.5)]"

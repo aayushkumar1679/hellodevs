@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { useCanvasStore } from "@/state/useCanvasStore";
+import { useProjectStore } from "@/state/useProjectStore";
 import {
   Plus,
   Search,
@@ -58,7 +58,7 @@ const COMPONENT_ICONS: Record<string, React.ReactNode> = {
 const FALLBACK_ICON = <Square size={13} />;
 
 export default function ComponentLibrary({ categories, onComponentAdd }: ComponentLibraryProps) {
-  const { addComponent } = useCanvasStore();
+  const { addComponent } = useProjectStore();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<ComponentCategory | "all">("all");
 
