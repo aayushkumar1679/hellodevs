@@ -7,7 +7,7 @@ import { Eye, Code2 } from "lucide-react";
 import type { PolyglotProject } from "@/state/useProjectStore";
 import ProjectSurface from "@/components/project/ProjectSurface";
 import { generateExport } from "@/utils/exportGenerators";
-import { normalizeProject } from "@/utils/projectModel";
+import { normalizeProjectData } from "@/utils/projectModel";
 
 export default function SharePage() {
   const params = useParams() as { id: string };
@@ -32,7 +32,7 @@ export default function SharePage() {
 
         const data = (await response.json()) as PolyglotProject;
         if (mounted) {
-          setProject(normalizeProject(data));
+          setProject(normalizeProjectData(data));
         }
       } catch (error) {
         console.error("Failed to load shared project", error);

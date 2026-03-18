@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-type LeftPanelId =
+export type LeftPanelId =
   | "ai"
   | "components"
   | "custom"
@@ -51,13 +51,14 @@ export default function LeftSidebar({
      * It sits in the flex row alongside the canvas.
      * Width is w-10 (40px) — just the icon strip.
      */
-    <aside className="flex h-full w-10 flex-shrink-0 flex-col items-center gap-1 border-r border-white/[0.06] bg-[#0A0A0D] py-2">
+    <aside className="relative flex h-full w-10 flex-shrink-0 flex-col items-center gap-1 border-r border-white/[0.06] bg-gradient-to-b from-[#0b0b11] via-[#0d0d13] to-[#111117] py-2">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.18),transparent_45%)] opacity-70" />
       {PANELS.map(({ id, icon: Icon, label, accent }, i) => {
         const active = activeLeftPanel === id;
         return (
           <motion.div
             key={id}
-            className="group relative"
+            className="group relative z-10"
             initial={{ opacity: 0, x: -6 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.03, duration: 0.2 }}
@@ -121,7 +122,7 @@ export default function LeftSidebar({
       <div className="mt-auto">
         <motion.button
           whileTap={{ scale: 0.88 }}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-white/20 transition hover:bg-white/[0.05] hover:text-white/50"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-white/20 transition hover:bg-violet-500/10 hover:text-violet-300"
           title="Settings"
         >
           <Settings className="h-3.5 w-3.5" />

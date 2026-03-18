@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Sparkles, Loader2, Minimize2 } from "lucide-react";
+import { X, Send, Sparkles, Loader2 } from "lucide-react";
 import { useProjectStore } from "@/state/useProjectStore";
+import type { PolyglotComponent, PolyglotProject } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import { toast } from "sonner";
 
@@ -11,6 +12,24 @@ interface Message {
   role: "user" | "assistant";
   content: string;
 }
+
+type PolyglotAction =
+  | {
+      action: "updateDesignSystem";
+      updates: PolyglotProject["designSystem"];
+    }
+  | {
+      action: "updateComponent";
+      id: string;
+      updates: Partial<PolyglotComponent> & {
+        cssOverrides?: { base?: Record<string, unknown> };
+      };
+    }
+  | {
+      action: "addComponent";
+      type: string;
+      parentId?: string | null;
+    };
 
 const SUGGESTED_PROMPTS = [
   "Why does my hero look cramped?",
@@ -56,7 +75,7 @@ export default function AIChatWidget() {
             selectedComponent: selectedElements[0]
               ? currentProject.components[selectedElements[0]]?.type
               : null,
-            colorPalette: (currentProject as any).designSystem?.colors ?? null,
+            colorPalette: currentProject?.designSystem?.colors ?? null,
             rootComponents: currentProject.rootOrder.map(
               (id) => currentProject.components[id]?.type
             ),
@@ -112,7 +131,8 @@ export default function AIChatWidget() {
 
       // Final check for actions in the complete response
       executeActions(fullContent);
-    } catch (e) {
+    } catch (error) {
+      console.error("AI chat request failed:", error);
       setMessages((m) => [
         ...m,
         { id: `err-${Date.now()}`, role: "assistant", content: "Sorry, I couldn't process that. Please try again." },
@@ -135,23 +155,31 @@ export default function AIChatWidget() {
     }
   };
 
-  const processAction = (data: any) => {
-    const { action, updates, id, type, parentId } = data;
+  const processAction = (data: unknown) => {
+    if (!data || typeof data !== "object") return;
+    const action = (data as { action?: string }).action;
     const store = useProjectStore.getState();
 
     switch (action) {
-      case "updateDesignSystem":
-        store.updateProject({ designSystem: updates });
+      case "updateDesignSystem": {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const payload = data as { action: "updateDesignSystem"; updates: any };
+        if (!payload.updates) return;
+        store.updateProject({ designSystem: payload.updates });
         toast.success("AI updated the design system ✨");
         break;
-      case "updateComponent":
-        const targetId = id === "selected" ? selectedElements[0] : id;
+      }
+      case "updateComponent": {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const payload = data as { action: "updateComponent"; id: string; updates: any };
+        const targetId =
+          payload.id === "selected" ? selectedElements[0] : payload.id;
         if (targetId) {
           // Convert kebab-case props to camelCase for React
-          const mappedUpdates = { ...updates };
+          const mappedUpdates = { ...(payload.updates || {}) };
           if (mappedUpdates.cssOverrides?.base) {
             const base = mappedUpdates.cssOverrides.base;
-            const normalizedBase: any = {};
+            const normalizedBase: Record<string, unknown> = {};
             Object.entries(base).forEach(([key, val]) => {
               const camelKey = key.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
               normalizedBase[camelKey] = val;
@@ -162,10 +190,16 @@ export default function AIChatWidget() {
           toast.success("AI modified a component 🛠️");
         }
         break;
-      case "addComponent":
+      }
+      case "addComponent": {
+        const payload = data as { action: "addComponent"; type: string; parentId?: string };
+        if (!payload.type) return;
+        const type = payload.type;
+        const parentId = payload.parentId;
         store.addComponent(type, parentId || undefined);
         toast.success(`AI added a ${type} component ➕`);
         break;
+      }
       default:
         console.warn("Unknown AI action:", action);
     }

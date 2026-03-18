@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import JSZip from "jszip";
 
 // We re-use the same generateNextJsProject from exporter server-side
 // The exporter module is client-safe (no browser apis) so this works.
@@ -85,9 +84,11 @@ export async function POST(req: Request) {
       deploymentUrl: `https://${data.url}`,
       readyState: data.readyState,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Deploy error:", error);
-    return NextResponse.json({ error: error.message || "Internal error" }, { status: 500 });
+    const message =
+      error instanceof Error ? error.message : "Internal error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

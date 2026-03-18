@@ -4,19 +4,18 @@ import React, { useState, useTransition, useRef, useEffect } from "react";
 import {
   Sparkles,
   Wand2,
-  ArrowRight,
   Loader2,
   X,
-  RefreshCw,
   Image as ImageIcon,
   Globe,
   Link as LinkIcon,
   ScanLine,
-  ChevronDown,
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useProjectStore } from "@/state/useProjectStore";
+import { useEditorStore } from "@/state/useEditorStore";
+import type { PolyglotProject } from "@/state/useProjectStore";
 import {
   materializeGeneratedProject,
   type GeneratedProjectPayload,
@@ -25,6 +24,7 @@ import {
   DEFAULT_OPENAI_MODEL,
   OPENAI_MODEL_OPTIONS,
 } from "@/config/openaiModels";
+import { DEFAULT_DESIGN_SYSTEM } from "@/config/DesignSystem";
 import { motion, AnimatePresence } from "framer-motion";
 import NextImage from "next/image";
 import ScreenshotDropzone from "./ScreenshotDropzone";
@@ -55,16 +55,10 @@ const BTN =
 export default function AIPromptPanel() {
   const currentProject = useProjectStore((s) => s.currentProject);
 
-  const bulkHydrate = (
-    payload: Parameters<typeof useProjectStore.setState>[0] extends (
-      s: infer S,
-    ) => infer R
-      ? never
-      : any,
-  ) => {
+  const bulkHydrate = (payload: Partial<PolyglotProject>) => {
     useProjectStore.setState((state) => {
       if (!state.currentProject) return state;
-      const updated = { ...state.currentProject, ...(payload as any) };
+      const updated = { ...state.currentProject, ...payload };
       return {
         currentProject: updated,
         projects: { ...state.projects, [updated.id]: updated },
@@ -104,6 +98,23 @@ export default function AIPromptPanel() {
     logRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [streamLog]);
 
+  const resolveDesignSystem = (
+    incoming?: GeneratedProjectPayload["designSystem"],
+  ) => {
+    if (incoming?.colors) {
+      return {
+        ...DEFAULT_DESIGN_SYSTEM,
+        ...(currentProject?.designSystem ?? {}),
+        colors: {
+          ...DEFAULT_DESIGN_SYSTEM.colors,
+          ...(currentProject?.designSystem?.colors ?? {}),
+          ...incoming.colors,
+        },
+      };
+    }
+    return currentProject?.designSystem ?? DEFAULT_DESIGN_SYSTEM;
+  };
+
   const handleGenerate = () => {
     if (!currentProject) return;
     setError(null);
@@ -113,10 +124,24 @@ export default function AIPromptPanel() {
     startTransition(() => {
       void (async () => {
         try {
-          const body: any = { prompt, projectName: currentProject.name, model };
+          const body: {
+            prompt: string;
+            projectName: string;
+            model: string;
+            mode?: "iterate";
+            currentLayout?: string;
+          } = { prompt, projectName: currentProject.name, model };
           if (mode === "update") {
             body.mode = "iterate";
-            const slim: any = {};
+            const slim: Record<
+              string,
+              {
+                type: string;
+                props: Record<string, unknown>;
+                css?: Record<string, unknown>;
+                children: string[];
+              }
+            > = {};
             Object.entries(currentProject.components).forEach(([id, c]) => {
               slim[id] = {
                 type: c.type,
@@ -170,7 +195,7 @@ export default function AIPromptPanel() {
             generationPrompt: prompt,
             generationModel: model,
             generationSummary: data.summary,
-            designSystem: data.designSystem,
+            designSystem: resolveDesignSystem(data.designSystem),
           });
           setSummary(data.summary || "Layout generated.");
 
@@ -493,11 +518,12 @@ export default function AIPromptPanel() {
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/50 opacity-0 transition-opacity hover:opacity-100 p-3">
                     <button
                       onClick={() => {
-                        if (useProjectStore.getState().selectedElements?.[0])
+                        const { selectedElements } = useEditorStore.getState();
+                        if (selectedElements?.[0])
                           useProjectStore
                             .getState()
                             .updateComponent(
-                              useProjectStore.getState().selectedElements[0],
+                              selectedElements[0],
                               { props: { src: genImgUrl } },
                             );
                         toast.success("Inserted");
@@ -548,7 +574,7 @@ export default function AIPromptPanel() {
                         rootOrder: m.rootOrder,
                         rootComponent: m.rootOrder[0] ?? null,
                         generationSummary: parsed.summary,
-                        designSystem: parsed.designSystem as any,
+                        designSystem: resolveDesignSystem(parsed.designSystem),
                       };
                       return {
                         currentProject: u,
@@ -606,7 +632,8 @@ export default function AIPromptPanel() {
                     });
                     const data = await res.json();
                     if (data.error) throw new Error(data.error);
-                    const m = materializeGeneratedProject(data as any);
+                    const parsed = data as GeneratedProjectPayload;
+                    const m = materializeGeneratedProject(parsed);
                     useProjectStore.setState((state) => {
                       if (!state.currentProject) return state;
                       const u = {
@@ -614,6 +641,8 @@ export default function AIPromptPanel() {
                         components: m.components,
                         rootOrder: m.rootOrder,
                         rootComponent: m.rootOrder[0] ?? null,
+                        generationSummary: parsed.summary,
+                        designSystem: resolveDesignSystem(parsed.designSystem),
                       };
                       return {
                         currentProject: u,
@@ -622,8 +651,9 @@ export default function AIPromptPanel() {
                     });
                     toast.success("Site cloned! 🏗️");
                     setTab("generate");
-                  } catch (e: any) {
-                    toast.error(e.message);
+                  } catch (e: unknown) {
+                    const msg = e instanceof Error ? e.message : "Clone failed";
+                    toast.error(msg);
                   } finally {
                     setIsCloning(false);
                   }

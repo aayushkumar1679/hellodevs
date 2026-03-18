@@ -1,12 +1,12 @@
-// src/app/components/canvas/Canvas.tsx
 "use client";
 
-import React, { useRef, useState, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import CanvasElement, { CanvasElementProps } from "./CanvasElement";
 import ComponentWrapper from "./ComponentWrapper";
 import ContextMenu from "./ContextMenu";
+import ThreeBackdrop from "./ThreeBackdrop";
 
 import { getProjectRootIds } from "@/utils/projectModel";
 
@@ -38,16 +38,36 @@ type GroupChildRelation = {
   relW: number;
   relH: number;
 };
-
 /* ========================================
  Canvas
 ======================================== */
 
 export default function Canvas() {
   const { currentProject, updateComponentCSSOverride } = useProjectStore();
-  const { activeBreakpoint, breakpoints, previewEnabled, deselectAll, selectElement, selectedElements } = useEditorStore();
+  const {
+    activeBreakpoint,
+    breakpoints,
+    previewEnabled,
+    threeEnabled,
+    threeSpeed,
+    threeDensity,
+    deselectAll,
+    selectElement,
+    selectedElements,
+  } = useEditorStore();
 
   const viewportWidth = breakpoints[activeBreakpoint].width;
+
+  const threePalette = useMemo(() => {
+    const fallback: [string, string, string] = ["#60a5fa", "#a78bfa", "#fbbf24"];
+    const colors = currentProject?.designSystem?.colors;
+    if (!colors) return fallback;
+    return [
+      colors.accent || fallback[0],
+      colors.secondary || fallback[1],
+      colors.primary || fallback[2],
+    ] as [string, string, string];
+  }, [currentProject?.designSystem]);
 
   /* ------------------------------------
    Selection & rect registry
@@ -846,12 +866,24 @@ export default function Canvas() {
   return (
     <div
       ref={canvasRef}
-      className="relative h-full w-full overflow-auto select-none bg-[radial-gradient(circle_at_top_left,rgba(125,211,252,0.15),transparent_20%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.16),transparent_18%),linear-gradient(180deg,#f8fafc_0%,#e2e8f0_100%)]"
+      className="relative h-full w-full overflow-auto select-none bg-[#0b0d13]"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onContextMenu={handleContextMenu}
     >
+      <div className="pointer-events-none absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.22),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.18),transparent_36%),radial-gradient(circle_at_top,rgba(251,191,36,0.12),transparent_45%)]" />
+        {threeEnabled && (
+          <ThreeBackdrop
+            className="absolute inset-0 opacity-70"
+            speed={threeSpeed}
+            density={threeDensity}
+            palette={threePalette}
+          />
+        )}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.1)_0%,rgba(2,6,23,0.4)_100%)]" />
+      </div>
       {/* Context Menu */}
       {contextMenu && (
         <ContextMenu
@@ -862,7 +894,7 @@ export default function Canvas() {
         />
       )}
 
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.45)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.45)_1px,transparent_1px)] bg-[size:32px_32px] opacity-50" />
+      <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(rgba(255,255,255,0.32)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.32)_1px,transparent_1px)] bg-[size:32px_32px] opacity-35" />
 
       {/* Marquee */}
       {selectionBox && canvasRectForRender && (
@@ -919,14 +951,19 @@ export default function Canvas() {
         </div>
       ))}
 
-      <div className="flex justify-center px-8 py-12">
+      <div className="relative z-20 flex justify-center px-8 py-12">
         <div
           className={`relative overflow-hidden transition-[width] duration-300 ease-in-out ${
              activeBreakpoint !== "desktop"
               ? "rounded-[40px] border-[12px] border-slate-900 shadow-2xl ring-1 ring-slate-900/5"
-              : "rounded-[36px] border border-white/70 shadow-[0_45px_120px_-65px_rgba(15,23,42,0.55)]"
-          } bg-white`}
-          style={{ width: previewEnabled ? viewportWidth : Math.max(viewportWidth, 1320), minHeight: activeBreakpoint !== "desktop" ? "80vh" : "100vh" }}
+              : "rounded-[36px] border border-white/70 shadow-[0_45px_120px_-65px_rgba(15,23,42,0.55)] ring-1 ring-white/40"
+          } bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_60%,#eef2f7_100%)]`}
+          style={{ 
+            width: "100%",
+            maxWidth: previewEnabled ? viewportWidth : Math.max(viewportWidth, 1320), 
+            minHeight: activeBreakpoint !== "desktop" ? "80vh" : "100vh",
+            transformOrigin: "top center",
+          }}
         >
           {activeBreakpoint !== "desktop" && (
             <div className="absolute top-0 inset-x-0 h-6 bg-slate-900 flex justify-center items-center z-50">
@@ -935,7 +972,7 @@ export default function Canvas() {
                </div>
             </div>
           )}
-          <div className={`pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.14),transparent_65%)] ${activeBreakpoint !== "desktop" ? "top-6" : ""}`} />
+          <div className={`pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.18),transparent_70%)] ${activeBreakpoint !== "desktop" ? "top-6" : ""}`} />
           <div 
             className={`relative space-y-4 ${activeBreakpoint !== "desktop" ? "p-4 pt-10" : "p-8"}`}
             style={currentProject?.designSystem ? {
@@ -948,7 +985,7 @@ export default function Canvas() {
           >
             {rootComponentIds.length === 0 ? (
               <div className="flex min-h-[60vh] items-center justify-center">
-                <div className="max-w-md rounded-[32px] border border-dashed border-slate-300 bg-slate-50/90 px-8 py-10 text-center shadow-inner">
+                <div className="max-w-md rounded-[32px] border border-dashed border-white/60 bg-white/80 px-8 py-10 text-center shadow-[0_20px_60px_-40px_rgba(15,23,42,0.4)] backdrop-blur">
                   <p className="text-sm font-semibold text-slate-900">
                     Your canvas is ready.
                   </p>

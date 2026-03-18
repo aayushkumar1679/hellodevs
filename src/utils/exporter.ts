@@ -1,5 +1,4 @@
 import type { PolyglotProject } from "@/state/useProjectStore";
-import { designSystemToStyleBlock } from "@/config/DesignSystem";
 import { getProjectRootIds } from "@/utils/projectModel";
 
 interface FileRecord {

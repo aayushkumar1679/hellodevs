@@ -1,82 +1,74 @@
 "use client";
 
 import React from "react";
-import { Clock3, RotateCcw, Sparkles, User } from "lucide-react";
+import {
+  RotateCcw,
+  History,
+  CheckCircle2,
+  AlertCircle,
+  Layout,
+  MessageSquare,
+} from "lucide-react";
 import { useProjectStore } from "@/state/useProjectStore";
+import { formatDistanceToNow } from "date-fns";
 
 export default function HistoryPanel() {
-  const { history } = useProjectStore();
-  const snapshots = [...history].reverse();
+  const { history, currentProject, undo } = useProjectStore();
+  const snapshots = history || [];
 
-  if (snapshots.length === 0) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center p-6 text-center bg-[#111114]">
-        <Clock3 className="mb-3 h-8 w-8 text-white/10" />
-        <p className="text-[10px] font-semibold text-white/30">
-          No history yet
-        </p>
-        <p className="mt-1 text-[9px] leading-5 text-white/15">
-          Make edits to start building your timeline. Ctrl+Z to undo.
-        </p>
-      </div>
-    );
-  }
+  if (!currentProject) return null;
 
   return (
-    <div className="flex h-full flex-col bg-[#111114] text-white">
-      <div className="flex-shrink-0 border-b border-white/[0.06] px-3 py-2">
-        <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/25">
-          History
-        </p>
-        <p className="mt-0.5 text-[8px] text-white/15">
-          {snapshots.length} snapshots
-        </p>
+    <div className="flex h-full flex-col bg-[#0b0b0f] text-white">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
+        <div className="flex items-center gap-2">
+          <History className="h-4 w-4 text-violet-400" />
+          <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/90">
+            History
+          </h2>
+        </div>
+        <div className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[9px] font-bold text-violet-400 border border-violet-500/20">
+          {snapshots.length} Snapshots
+        </div>
       </div>
 
+      {/* History List */}
       <div
-        className="relative flex-1 overflow-y-auto p-3"
+        className="flex-1 overflow-y-auto p-3"
         style={{
           scrollbarWidth: "thin",
           scrollbarColor: "#2a2a30 transparent",
         }}
       >
-        {/* Vertical timeline line */}
-        <div className="absolute left-6 top-3 bottom-3 w-px bg-white/[0.06]" />
+        {snapshots.length === 0 ? (
+          <div className="flex h-40 flex-col items-center justify-center text-center">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.03] border border-white/[0.06]">
+              <History className="h-5 w-5 text-white/10" />
+            </div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/20">
+              No History Yet
+            </p>
+            <p className="mt-1 text-[9px] text-white/10 max-w-[120px]">
+              Changes will appear here as you build.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {[...snapshots].reverse().map((snapshot, revIdx) => {
+              const idx = snapshots.length - 1 - revIdx;
+              const isLatest = revIdx === 0;
+              const isAI = snapshot.generationPrompt !== undefined;
+              const time = formatDistanceToNow(new Date(), { addSuffix: true });
 
-        <div className="space-y-2">
-          {snapshots.slice(0, 20).map((snapshot, idx) => {
-            const isAI = !!snapshot.generationPrompt;
-            const isLatest = idx === 0;
-            const time = snapshot.updatedAt
-              ? new Date(snapshot.updatedAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "–";
-
-            return (
-              <div
-                key={`${snapshot.id}-${idx}`}
-                className="group relative flex gap-3 pl-6"
-              >
-                {/* Timeline dot */}
+              return (
                 <div
-                  className={`absolute left-0 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 z-10 ${
+                  key={idx}
+                  className={`group relative rounded-xl border p-3 transition-all ${
                     isLatest
-                      ? "border-violet-500/50 bg-violet-600/20 text-violet-400"
-                      : "border-white/[0.08] bg-[#111114] text-white/20"
+                      ? "border-violet-500/30 bg-violet-500/5 shadow-[0_8px_24px_-12px_rgba(124,58,237,0.3)]"
+                      : "border-white/[0.05] bg-white/[0.02] hover:border-white/[0.1] hover:bg-white/[0.04]"
                   }`}
-                >
-                  {isAI ? (
-                    <Sparkles className="h-2.5 w-2.5" />
-                  ) : (
-                    <User className="h-2.5 w-2.5" />
-                  )}
-                </div>
-
-                {/* Card */}
-                <div
-                  className={`flex-1 rounded-xl border p-2.5 transition-all hover:border-white/10 ${isLatest ? "border-violet-500/15 bg-violet-500/6" : "border-white/[0.05] bg-white/[0.02]"}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -95,8 +87,7 @@ export default function HistoryPanel() {
                     {idx > 0 && (
                       <button
                         onClick={() => {
-                          for (let i = 0; i < idx; i++)
-                            useProjectStore.getState().undo();
+                          for (let i = 0; i < revIdx; i++) undo();
                         }}
                         className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-white/[0.05] text-white/25 opacity-0 transition-all group-hover:opacity-100 hover:bg-violet-600/20 hover:text-violet-400"
                         title="Restore this version"
@@ -110,26 +101,45 @@ export default function HistoryPanel() {
                       &ldquo;{snapshot.generationPrompt}&rdquo;
                     </p>
                   )}
+                  <div className="mt-2 flex items-center gap-3 border-t border-white/[0.04] pt-2">
+                    <div className="flex items-center gap-1 text-[9px] text-white/30">
+                      <Layout className="h-2.5 w-2.5" />
+                      {Object.keys(snapshot.components).length} Elements
+                    </div>
+                    {isAI && (
+                      <div className="flex items-center gap-1 text-[9px] text-violet-400/50">
+                        <MessageSquare className="h-2.5 w-2.5" />
+                        AI Pipeline
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
 
-        {snapshots.length > 20 && (
-          <p className="mt-3 pl-6 text-[9px] italic text-white/20">
-            +{snapshots.length - 20} more snapshots
-          </p>
+            <div className="flex items-center justify-center py-4">
+              <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-white/[0.05]" />
+              <div className="mx-3 flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-2.5 py-1">
+                <CheckCircle2 className="h-2.5 w-2.5 text-emerald-500/50" />
+                <span className="text-[9px] font-bold uppercase tracking-wider text-white/20">
+                  History Origin
+                </span>
+              </div>
+              <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-white/[0.05]" />
+            </div>
+          </div>
         )}
       </div>
 
-      <div className="flex-shrink-0 border-t border-white/[0.06] px-3 py-2">
-        <p className="text-[9px] text-white/20">
-          <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-0.5 font-mono text-[8px] text-white/30">
-            Ctrl+Z
-          </kbd>{" "}
-          steps back through snapshots
-        </p>
+      {/* Footer Info */}
+      <div className="border-t border-white/[0.06] bg-black/20 p-3">
+        <div className="flex items-center gap-2 rounded-lg border border-amber-500/10 bg-amber-500/5 px-2.5 py-2">
+          <AlertCircle className="h-3 w-3 text-amber-500/50" />
+          <p className="text-[9px] leading-relaxed text-amber-500/60">
+            Snapshots are stored per session. Persistent versioning is coming
+            soon to Polyglot.
+          </p>
+        </div>
       </div>
     </div>
   );

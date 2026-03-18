@@ -15,11 +15,18 @@ interface EditorState {
 
   /* Preview / canvas frame */
   previewEnabled: boolean;
+  threeEnabled: boolean;
+  threeSpeed: number;
+  threeDensity: number;
 
   /* Selection State */
   selectedElements: string[];
   selectElement: (id: string, multiSelect?: boolean) => void;
   deselectAll: () => void;
+
+  /* Drag and Drop State */
+  draggedId: string | null;
+  setDraggedId: (id: string | null) => void;
 
   /* Breakpoint configs */
   breakpoints: Record<Breakpoint, BreakpointConfig>;
@@ -27,6 +34,9 @@ interface EditorState {
   /* Actions */
   setBreakpoint: (bp: Breakpoint) => void;
   togglePreview: () => void;
+  toggleThree: () => void;
+  setThreeSpeed: (value: number) => void;
+  setThreeDensity: (value: number) => void;
 }
 
 /* ---------------- Store ---------------- */
@@ -35,7 +45,11 @@ export const useEditorStore = create<EditorState>((set) => ({
   /* Default state */
   activeBreakpoint: "desktop",
   previewEnabled: true,
+  threeEnabled: true,
+  threeSpeed: 1,
+  threeDensity: 1,
   selectedElements: [],
+  draggedId: null,
 
   breakpoints: {
     mobile: {
@@ -63,6 +77,21 @@ export const useEditorStore = create<EditorState>((set) => ({
       previewEnabled: !state.previewEnabled,
     })),
 
+  toggleThree: () =>
+    set((state) => ({
+      threeEnabled: !state.threeEnabled,
+    })),
+
+  setThreeSpeed: (value) =>
+    set(() => ({
+      threeSpeed: Math.min(2.5, Math.max(0.2, value)),
+    })),
+
+  setThreeDensity: (value) =>
+    set(() => ({
+      threeDensity: Math.min(2.5, Math.max(0.4, value)),
+    })),
+
   selectElement: (id, multiSelect = false) =>
     set((state) => ({
       selectedElements: multiSelect
@@ -73,4 +102,6 @@ export const useEditorStore = create<EditorState>((set) => ({
     })),
 
   deselectAll: () => set({ selectedElements: [] }),
+
+  setDraggedId: (id) => set({ draggedId: id }),
 }));

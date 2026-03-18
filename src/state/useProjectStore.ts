@@ -5,6 +5,7 @@ import { COMPONENT_LIBRARY, BlueprintNode } from "@/config/componentRegistry";
 import { toast } from "sonner";
 import type { Breakpoint } from "@/state/useEditorStore";
 import { AnimationConfig } from "@/config/animationPresets";
+import type { DesignSystemTokens } from "@/config/DesignSystem";
 
 export type CSSProperties = Record<string, unknown>;
 
@@ -53,15 +54,8 @@ export interface PolyglotProject {
   generationPrompt?: string;
   generationModel?: string;
   generationSummary?: string;
-  designSystem?: {
-    colors: {
-      background: string;
-      surface: string;
-      primary: string;
-      secondary: string;
-      accent: string;
-    };
-  };
+  designSystem?: DesignSystemTokens;
+  isPublic?: boolean;
 }
 
 export interface ProjectStoreState {
@@ -82,7 +76,7 @@ export interface ProjectStoreState {
   saveProject: () => Promise<void>;
 
   // Component CRUD
-  addComponent: (type: string, parentId?: string, overrideProps?: Record<string, any>) => string;
+  addComponent: (type: string, parentId?: string, overrideProps?: Record<string, unknown>, blueprint?: BlueprintNode) => string;
   removeComponent: (id: string) => void;
   updateComponent: (id: string, updates: Partial<PolyglotComponent>) => void;
   moveComponent: (id: string, newParentId: string | null, index?: number) => void;
@@ -340,7 +334,7 @@ export const useProjectStore = create<ProjectStoreState>()(
         );
       },
 
-      addComponent: (type: string, parentId?: string, overrideProps?: Record<string, any>) => {
+      addComponent: (type: string, parentId?: string, overrideProps?: Record<string, unknown>, blueprint?: BlueprintNode) => {
         get().pushHistory();
         
         const def = getComponentDef(type);
@@ -371,7 +365,7 @@ export const useProjectStore = create<ProjectStoreState>()(
           return id;
         };
 
-        const topLevelBlueprint: BlueprintNode = def?.blueprint || { type };
+        const topLevelBlueprint: BlueprintNode = blueprint || def?.blueprint || { type };
         rootId = recursiveAdd(topLevelBlueprint);
 
         set((state) => {
@@ -556,7 +550,8 @@ export const useProjectStore = create<ProjectStoreState>()(
       removeCustomComponent: (id) => {
         set((state) => {
           if (!state.currentProject || !state.currentProject.customComponents) return state;
-          const { [id]: _, ...rest } = state.currentProject.customComponents;
+          const { [id]: removed, ...rest } = state.currentProject.customComponents;
+          void removed;
           const updated = { ...state.currentProject, customComponents: rest };
           return {
             currentProject: updated,
@@ -570,3 +565,13 @@ export const useProjectStore = create<ProjectStoreState>()(
     { name: "polyglot-project-store" }
   )
 );
+
+// Backward compatible aliases for older imports.
+export const useCanvasStore = useProjectStore;
+export const useDesignStore = useProjectStore;
+
+export type Project = PolyglotProject;
+export type CanvasComponent = PolyglotComponent;
+export type Element = PolyglotComponent & {
+  cssProperties?: Record<string, unknown>;
+};

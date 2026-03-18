@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import NextImage from "next/image";
 import { Upload, ImageIcon, Loader2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -73,7 +74,14 @@ export default function ScreenshotDropzone({ onResult }: ScreenshotDropzoneProps
         />
         {preview ? (
           <div className="relative">
-            <img src={preview} alt="Screenshot preview" className="mx-auto max-h-48 rounded-xl object-contain" />
+            <NextImage
+              src={preview}
+              alt="Screenshot preview"
+              width={640}
+              height={360}
+              className="mx-auto max-h-48 w-auto rounded-xl object-contain"
+              unoptimized
+            />
             <p className="mt-3 text-[11px] text-slate-500">Click to change screenshot</p>
           </div>
         ) : (

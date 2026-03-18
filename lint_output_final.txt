@@ -1,0 +1,26 @@
+
+> my-dev-builder@0.1.0 lint
+> eslint
+
+
+E:\products\all in one\my-dev-builder\src\app\api\generate\route.ts
+  109:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\products\all in one\my-dev-builder\src\app\builder\[id]\page.tsx
+   5:22  warning  'PanelRightOpen' is defined but never used             @typescript-eslint/no-unused-vars
+   5:38  warning  'Sparkles' is defined but never used                   @typescript-eslint/no-unused-vars
+   5:55  warning  'X' is defined but never used                          @typescript-eslint/no-unused-vars
+   6:18  warning  'AnimatePresence' is defined but never used            @typescript-eslint/no-unused-vars
+  30:11  warning  'currentProject' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  34:11  warning  'selectedElements' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\products\all in one\my-dev-builder\src\app\components\AIChatWidget.tsx
+  16:6  warning  'PolyglotAction' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\products\all in one\my-dev-builder\src\utils\projectModel.ts
+   6:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:63  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  34:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 11 problems (4 errors, 7 warnings)
+

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Code2, Plus, Trash2, Package, Sparkles, X } from "lucide-react";
+import { Code2, Plus, Trash2, Sparkles, X } from "lucide-react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -15,7 +15,7 @@ export default function CustomComponentPanel() {
 
   const [isAdding, setIsAdding] = useState(false);
   const [name, setName] = useState("");
-  const [category, setCategory] = useState("custom");
+  const category = "custom";
   const [code, setCode] = useState("");
 
   const handleRegister = () => {

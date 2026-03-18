@@ -71,3 +71,17 @@ model Project {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model ComponentVariation {
+  id          String   @id @default(cuid())
+  baseType    String
+  designData  Json
+  checksum    String   @unique // SHA-256 of designData to prevent duplicates
+  modelUsed   String?
+  archetype   String?
+  tags        String[] @default([])
+  createdAt   DateTime @default(now())
+
+  @@index([baseType])
+  @@index([checksum])
+}

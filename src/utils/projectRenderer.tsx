@@ -7,6 +7,7 @@ import {
   getProjectRootIds,
 } from "@/utils/projectModel";
 import { POLYGLOT_MOTION_CSS } from "@/utils/motionStyles";
+import type { AnimationConfig } from "@/config/animationPresets";
 
 type ExportVariant = "tailwind" | "bootstrap";
 type LinkLike = { href?: string; label?: string };
@@ -213,7 +214,15 @@ function buildMotionProps(component: PolyglotComponent): string {
   const hoverObj: Record<string, unknown> = {};
   const tapObj: Record<string, unknown> = {};
 
-  const PRESETS: Record<string, any> = {
+  const PRESETS: Record<
+    string,
+    {
+      hidden?: Record<string, unknown>;
+      visible?: Record<string, unknown>;
+      hover?: Record<string, unknown>;
+      tap?: Record<string, unknown>;
+    }
+  > = {
     "fade-in": { hidden: { opacity: 0 }, visible: { opacity: 1 } },
     "fade-up": { hidden: { opacity: 0, y: 40 }, visible: { opacity: 1, y: 0 } },
     "slide-in-left": { hidden: { opacity: 0, x: -50 }, visible: { opacity: 1, x: 0 } },
@@ -227,12 +236,11 @@ function buildMotionProps(component: PolyglotComponent): string {
     "tap-shrink": { tap: { scale: 0.95 } },
   };
 
-  component.animations.forEach((anim: any) => {
+  component.animations.forEach((anim: AnimationConfig) => {
     const preset = PRESETS[anim.preset];
     if (!preset) return;
     const dur = anim.duration ?? 0.6;
     const delay = anim.delay ?? 0;
-    const transition = JSON.stringify({ duration: dur, delay });
 
     if ((anim.trigger === "load" || anim.trigger === "scroll") && preset.hidden && preset.visible) {
       Object.assign(hiddenObj, preset.hidden);
@@ -259,7 +267,9 @@ function buildMotionProps(component: PolyglotComponent): string {
   if (hasVisible) parts.push(`animate={${JSON.stringify(visibleObj)}}`);
   if (hasScrollVisible) {
     parts.push(`whileInView={${JSON.stringify(scrollVisibleObj)}}`);
-    const repeatAnims = component.animations.find((a: any) => a.trigger === "scroll" && a.repeat);
+    const repeatAnims = component.animations.find(
+      (a: AnimationConfig) => a.trigger === "scroll" && a.repeat
+    );
     parts.push(`viewport={{ once: ${repeatAnims ? "false" : "true"}, margin: "-50px" }}`);
   }
   if (hasHover) parts.push(`whileHover={${JSON.stringify(hoverObj)}}`);

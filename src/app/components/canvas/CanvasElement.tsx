@@ -1,349 +1,129 @@
-// src/app/components/canvas/CanvasElement.tsx
 "use client";
 
-import React, {
-  useCallback,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  useEffect,
-} from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
+import DesignerStyles from "@/utils/designerStyles";
+import { motion, AnimatePresence } from "framer-motion";
+
 export interface CanvasElementProps {
   elementId: string;
-  children?: React.ReactNode;
+  as?: string;
   className?: string;
+  children?: React.ReactNode;
   onRect?: (rect: DOMRect) => void;
-  /** optional: returns snap targets in client coordinates (xs, ys) */
-  getSnapTargets?: () => { xs: number[]; ys: number[] } | null;
-  /** optional: called with guide lines (client coords) while resizing/moving */
+  getSnapTargets?: () => { xs: number[]; ys: number[] };
   onGuide?: (guides: Array<{ x?: number; y?: number }>) => void;
-  /** The HTML tag to render as (e.g. 'section', 'nav', 'div') */
-  as?: keyof React.JSX.IntrinsicElements;
 }
-
-type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
-
-/* ---------------------------------------------
-  Helpers / constants
----------------------------------------------- */
-
-const GRID = 8;
-const SNAP_THRESHOLD = 8; 
-
-const snapToGrid = (v: number) => Math.round(v / GRID) * GRID;
-
-function resolveBackground(css: Record<string, unknown>) {
-  if (css.background) return css.background;
-
-  if (
-    css.backgroundGradient &&
-    typeof css.backgroundGradient === "object" &&
-    !Array.isArray(css.backgroundGradient)
-  ) {
-    const g = css.backgroundGradient;
-    if ("type" in g && "colors" in g && Array.isArray(g.colors)) {
-      if (g.type === "solid") return g.colors[0];
-      if (g.type === "linear") {
-        const angle = "angle" in g ? g.angle : 90;
-        return `linear-gradient(${angle ?? 90}deg, ${g.colors.join(", ")})`;
-      }
-      if (g.type === "radial") {
-        return `radial-gradient(circle, ${g.colors.join(", ")})`;
-      }
-    }
-  }
-
-  return css.backgroundColor;
-}
-
-function findClosest(targets: number[] | undefined, value: number) {
-  if (!targets || targets.length === 0)
-    return { best: null as number | null, dist: Infinity };
-  let best: number | null = null;
-  let dist = Infinity;
-  for (const t of targets) {
-    const d = Math.abs(t - value);
-    if (d < dist) {
-      dist = d;
-      best = t;
-    }
-  }
-  return { best, dist };
-}
-
-/* =============================================
-  CanvasElement
-============================================= */
 
 export default function CanvasElement({
   elementId,
-  children,
+  as,
   className = "",
+  children,
   onRect,
   getSnapTargets,
   onGuide,
-  as,
 }: CanvasElementProps) {
-  const elementRef = useRef<HTMLDivElement | null>(null);
-
-  const element = useProjectStore((s) => s.currentProject?.components[elementId]);
-  const updateCSSProperty = useProjectStore((s) => s.updateComponentCSSOverride);
-  const getResolvedCss = useProjectStore((s) => s.getResolvedCss);
-
-  const selectedElements = useEditorStore((s) => s.selectedElements);
-  const selectElement = useEditorStore((s) => s.selectElement);
+  const component = useProjectStore((s) => s.currentProject?.components[elementId]);
+  const isSelected = useEditorStore((s) => s.selectedElements.includes(elementId));
+  const updateComponentCSSOverride = useProjectStore((s) => s.updateComponentCSSOverride);
   const activeBreakpoint = useEditorStore((s) => s.activeBreakpoint);
 
   const [isResizing, setIsResizing] = useState(false);
+  const [resizeDir, setResizeDir] = useState<string | null>(null);
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [startSize, setStartSize] = useState({ w: 0, h: 0 });
 
-  const isSelected = selectedElements.includes(elementId);
-  const css = useMemo(
-    () => (element ? getResolvedCss(elementId, activeBreakpoint) : ({} as Record<string, unknown>)),
-    [element, elementId, getResolvedCss, activeBreakpoint]
+  const elementRef = React.useRef<HTMLDivElement>(null);
+
+  const inlineStyle = useMemo(() => {
+    if (!component) return {};
+    return DesignerStyles.resolveForBreakpoint(component.cssOverrides, activeBreakpoint);
+  }, [component, activeBreakpoint]);
+
+  const onResizeStart = useCallback(
+    (e: React.MouseEvent, dir: string) => {
+      e.stopPropagation();
+      e.preventDefault();
+      setIsResizing(true);
+      setResizeDir(dir);
+      setStartPos({ x: e.clientX, y: e.clientY });
+      const rect = elementRef.current?.getBoundingClientRect();
+      if (rect) {
+        setStartSize({ w: rect.width, h: rect.height });
+      }
+    },
+    [],
   );
 
-  useLayoutEffect(() => {
-    if (!elementRef.current || !onRect) return;
-    onRect(elementRef.current.getBoundingClientRect());
-  }, [elementId, onRect]);
+  const onResizeMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isResizing || !resizeDir) return;
+      const dx = e.clientX - startPos.x;
+      const dy = e.clientY - startPos.y;
 
-  useEffect(() => {
-    if (!elementRef.current || !onRect) return;
-    const id = window.setTimeout(() => {
-      onRect(elementRef.current!.getBoundingClientRect());
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [css?.width, css?.height, css?.left, css?.top, onRect]);
-
-  const resizeRef = useRef<{
-    startX: number;
-    startY: number;
-    startW: number;
-    startH: number;
-    startLeft: number;
-    startTop: number;
-    dir: ResizeDir;
-    aspect?: number;
-    canvasRectLeft?: number;
-  } | null>(null);
-
-  const onResizeMove = useCallback((ev: MouseEvent) => {
-    ev.preventDefault();
-    const state = resizeRef.current;
-    if (!state || !elementRef.current) return;
-
-    const { startX, startY, startW, startH, startLeft, startTop, dir, aspect } = state;
-    const dx = ev.clientX - startX;
-    const dy = ev.clientY - startY;
-
-    const shiftLock = (ev as MouseEvent & { shiftKey?: boolean }).shiftKey ?? false;
-    const altCenter = (ev as MouseEvent & { altKey?: boolean }).altKey ?? false;
-
-    let newW = startW;
-    let newH = startH;
-    let newLeft = startLeft;
-    let newTop = startTop;
-
-    if (dir.includes("e")) {
-      newW = startW + dx;
-      if (altCenter) newLeft = startLeft - dx / 2;
-    }
-    if (dir.includes("w")) {
-      newW = startW - dx;
-      if (altCenter) {
-        newLeft = startLeft - dx / 2;
-      } else {
-        newLeft = startLeft + dx;
+      if (resizeDir.includes("e")) {
+        const newW = Math.max(20, startSize.w + dx);
+        updateComponentCSSOverride(elementId, activeBreakpoint, "width", `${newW}px`);
       }
-    }
-    if (dir.includes("s")) {
-      newH = startH + dy;
-      if (altCenter) newTop = startTop - dy / 2;
-    }
-    if (dir.includes("n")) {
-      newH = startH - dy;
-      if (altCenter) {
-        newTop = startTop - dy / 2;
-      } else {
-        newTop = startTop + dy;
+      if (resizeDir.includes("s")) {
+        const newH = Math.max(20, startSize.h + dy);
+        updateComponentCSSOverride(elementId, activeBreakpoint, "height", `${newH}px`);
       }
-    }
-
-    newW = Math.max(10, newW);
-    newH = Math.max(10, newH);
-
-    if (shiftLock && aspect && aspect > 0) {
-      if (Math.abs(newW - startW) >= Math.abs(newH - startH)) {
-        newH = Math.max(10, newW / aspect);
-        if (dir.includes("n") && !altCenter) newTop = startTop + (startH - newH);
-      } else {
-        newW = Math.max(10, newH * aspect);
-        if (dir.includes("w") && !altCenter) newLeft = startLeft + (startW - newW);
+      if (resizeDir.includes("w")) {
+        const newW = Math.max(20, startSize.w - dx);
+        updateComponentCSSOverride(elementId, activeBreakpoint, "width", `${newW}px`);
       }
-    }
-
-    let snappedLeft = snapToGrid(newLeft);
-    let snappedTop = snapToGrid(newTop);
-    let snappedW = snapToGrid(newW);
-    let snappedH = snapToGrid(newH);
-
-    const snapTargets = getSnapTargets ? getSnapTargets() : null;
-    const guidesToEmit: Array<{ x?: number; y?: number }> = [];
-
-    if (snapTargets) {
-      const { best: bestLeft, dist: distLeft } = findClosest(
-        snapTargets.xs,
-        Math.round(snappedLeft)
-      );
-      const { best: bestRight, dist: distRight } = findClosest(
-        snapTargets.xs,
-        Math.round(snappedLeft + snappedW)
-      );
-      const { best: bestCenterX, dist: distCenterX } = findClosest(
-        snapTargets.xs,
-        Math.round(snappedLeft + snappedW / 2)
-      );
-
-      if (bestLeft !== null && distLeft <= SNAP_THRESHOLD) {
-        snappedLeft = bestLeft;
-        snappedW = Math.max(10, Math.round(snappedLeft + snappedW - snappedLeft));
-        guidesToEmit.push({ x: bestLeft });
-      } else if (bestRight !== null && distRight <= SNAP_THRESHOLD) {
-        snappedLeft = bestRight - snappedW;
-        guidesToEmit.push({ x: bestRight });
-      } else if (bestCenterX !== null && distCenterX <= SNAP_THRESHOLD) {
-        snappedLeft = bestCenterX - Math.round(snappedW / 2);
-        guidesToEmit.push({ x: bestCenterX });
+      if (resizeDir.includes("n")) {
+        const newH = Math.max(20, startSize.h - dy);
+        updateComponentCSSOverride(elementId, activeBreakpoint, "height", `${newH}px`);
       }
+    },
+    [
+      isResizing,
+      resizeDir,
+      elementId,
+      startPos,
+      startSize,
+      activeBreakpoint,
+      updateComponentCSSOverride,
+    ],
+  );
 
-      const { best: bestTop, dist: distTop } = findClosest(
-        snapTargets.ys,
-        Math.round(snappedTop)
-      );
-      const { best: bestBottom, dist: distBottom } = findClosest(
-        snapTargets.ys,
-        Math.round(snappedTop + snappedH)
-      );
-      const { best: bestCenterY, dist: distCenterY } = findClosest(
-        snapTargets.ys,
-        Math.round(snappedTop + snappedH / 2)
-      );
-
-      if (bestTop !== null && distTop <= SNAP_THRESHOLD) {
-        snappedTop = bestTop;
-        snappedH = Math.max(10, Math.round(snappedTop + snappedH - snappedTop));
-        guidesToEmit.push({ y: bestTop });
-      } else if (bestBottom !== null && distBottom <= SNAP_THRESHOLD) {
-        snappedTop = bestBottom - snappedH;
-        guidesToEmit.push({ y: bestBottom });
-      } else if (bestCenterY !== null && distCenterY <= SNAP_THRESHOLD) {
-        snappedTop = bestCenterY - Math.round(snappedH / 2);
-        guidesToEmit.push({ y: bestCenterY });
-      }
-    }
-
-    if (onGuide) onGuide(guidesToEmit);
-
-    updateCSSProperty(elementId, activeBreakpoint, "width", `${Math.round(snappedW)}px`);
-    updateCSSProperty(elementId, activeBreakpoint, "height", `${Math.round(snappedH)}px`);
-    if (dir.includes("w") || dir.includes("n") || altCenter) {
-      updateCSSProperty(elementId, activeBreakpoint, "position", "absolute");
-      updateCSSProperty(elementId, activeBreakpoint, "left", `${Math.round(snappedLeft)}px`);
-      updateCSSProperty(elementId, activeBreakpoint, "top", `${Math.round(snappedTop)}px`);
-    }
-
-    if (onRect) {
-      onRect(new DOMRect(snappedLeft, snappedTop, snappedW, snappedH));
-    }
-  }, [elementId, getSnapTargets, onGuide, onRect, updateCSSProperty, activeBreakpoint]);
-
-  const stopResize = useCallback(function handleStopResize() {
-    const el = elementRef.current;
-    if (el) el.removeAttribute("data-resizing");
+  const stopResize = useCallback(() => {
     setIsResizing(false);
-    resizeRef.current = null;
-    if (onGuide) onGuide([]);
-    window.removeEventListener("mousemove", onResizeMove);
-    window.removeEventListener("mouseup", handleStopResize);
-  }, [onGuide, onResizeMove]);
-
-  const startResize = useCallback((e: React.MouseEvent, dir: ResizeDir) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-
-    const el = elementRef.current;
-    if (!el) return;
-
-    const rect = el.getBoundingClientRect();
-    const numericLeft = css && css.left ? parseFloat(String(css.left)) || rect.left : rect.left;
-    const numericTop = css && css.top ? parseFloat(String(css.top)) || rect.top : rect.top;
-
-    resizeRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startW: rect.width,
-      startH: rect.height,
-      startLeft: numericLeft,
-      startTop: numericTop,
-      dir,
-      aspect: rect.width / Math.max(1, rect.height),
-    };
-
-    el.setAttribute("data-resizing", "true");
-    setIsResizing(true);
-    window.addEventListener("mousemove", onResizeMove);
-    window.addEventListener("mouseup", stopResize);
-  }, [css, onResizeMove, stopResize]);
-
-  const inlineStyle = useMemo<React.CSSProperties>(() => {
-    const style: React.CSSProperties = {
-      transition: isResizing
-        ? "none"
-        : "box-shadow 120ms ease, outline 120ms ease, transform 120ms ease",
-      boxSizing: "border-box",
-    };
-
-    if (!css) return style;
-
-    Object.entries(css).forEach(([key, val]) => {
-      if (key === "background" || key === "backgroundColor" || key === "backgroundGradient") return;
-      const styleRecord = style as Record<string, unknown>;
-      styleRecord[key] = val;
-    });
-
-    const bg = resolveBackground(css);
-    if (bg) style.background = bg;
-
-    if (css.zIndex !== undefined) {
-      style.zIndex = typeof css.zIndex === "number" ? css.zIndex : Number(css.zIndex) || undefined;
-    }
-
-    if (isResizing) {
-      style.willChange = "width, height, left, top";
-    }
-
-    return style;
-  }, [css, isResizing]);
+    setResizeDir(null);
+  }, []);
 
   // Selection logic removed here; now handled centrally by Canvas.tsx onMouseDown
 
   useEffect(() => {
+    if (isResizing) {
+      window.addEventListener("mousemove", onResizeMove);
+      window.addEventListener("mouseup", stopResize);
+    }
     return () => {
       window.removeEventListener("mousemove", onResizeMove);
       window.removeEventListener("mouseup", stopResize);
     };
-  }, [onResizeMove, stopResize]);
+  }, [isResizing, onResizeMove, stopResize]);
+
+  useEffect(() => {
+    if (elementRef.current && onRect) {
+      onRect(elementRef.current.getBoundingClientRect());
+    }
+  }, [onRect, inlineStyle, children]);
+
+  if (!component) return null;
 
   const Component = (as || "div") as React.ElementType;
 
   return (
     <Component
       ref={elementRef}
-      style={inlineStyle}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      style={inlineStyle as any}
       data-resizing={isResizing ? "true" : "false"}
       data-element-id={elementId}
       className={`relative transition-shadow duration-150 will-change-transform ${
@@ -366,17 +146,32 @@ export default function CanvasElement({
               ["s", "bottom-0 left-1/2 -translate-x-1/2 cursor-s-resize"],
               ["sw", "bottom-0 left-0 cursor-sw-resize"],
               ["w", "top-1/2 left-0 -translate-y-1/2 cursor-w-resize"],
-            ] as [ResizeDir, string][]
-          ).map(([dir, cls]) => (
+            ] as const
+          ).map(([dir, classes]) => (
             <div
               key={dir}
-              data-resize-handle="true"
-              onMouseDown={(e) => startResize(e, dir)}
-              className={`absolute h-3.5 w-3.5 rounded-sm border border-blue-500 bg-white pointer-events-auto transform transition-transform duration-100 hover:scale-110 ${cls}`}
+              onMouseDown={(e) => onResizeStart(e, dir)}
+              className={`absolute z-50 h-2 w-2 rounded-full border border-blue-500 bg-white pointer-events-auto ${classes}`}
             />
           ))}
         </div>
       )}
+
+      {/* Label for selected element */}
+      <AnimatePresence>
+        {isSelected && !isResizing && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="absolute -top-6 left-0 z-50 flex items-center gap-1.5 whitespace-nowrap rounded bg-blue-500 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-lg"
+          >
+            {component.type.toUpperCase()}
+            <span className="opacity-60 font-mono text-[8px]">{elementId.slice(0, 4)}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {children}
     </Component>
   );

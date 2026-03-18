@@ -3,6 +3,11 @@ import { generateText } from "ai";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import {
+  getNimApiKeyForModel,
+  normalizeNimModelId,
+  NIM_BASE_URL,
+} from "@/config/nimModels";
 
 export const maxDuration = 60;
 
@@ -14,14 +19,30 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { imageBase64, mimeType = "image/png", prompt = "" } = body;
+    const {
+      imageBase64,
+      mimeType = "image/png",
+      prompt = "",
+      model = "qwen/qwen3.5-397b-a17b",
+    } = body;
 
     if (!imageBase64) {
       return NextResponse.json({ error: "imageBase64 is required" }, { status: 400 });
     }
 
-    const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const model = openai("gpt-4o");
+    const modelId = normalizeNimModelId(model);
+    const nimKey = getNimApiKeyForModel(modelId) || process.env.NVIDIA_API_KEY;
+    if (!nimKey) {
+      return NextResponse.json(
+        { error: "NVIDIA API key not configured" },
+        { status: 500 }
+      );
+    }
+
+    const nim = createOpenAI({
+      apiKey: nimKey,
+      baseURL: process.env.NVIDIA_NIM_BASE_URL || NIM_BASE_URL,
+    });
 
     const systemPrompt = `You are Polyglot AI Vision, a world-class UX/UI designer specialized in reconstructing website layouts from screenshots.
 Given a screenshot of a website or wireframe, you will:
@@ -66,7 +87,7 @@ Be thorough. Reconstruct every visible section faithfully while mapping to Polyg
 ${prompt ? `\nAdditional user instructions: ${prompt}` : ""}`;
 
     const result = await generateText({
-      model,
+      model: nim(modelId),
       system: systemPrompt,
       messages: [
         {
@@ -83,6 +104,7 @@ ${prompt ? `\nAdditional user instructions: ${prompt}` : ""}`;
           ],
         },
       ],
+      temperature: 0.4,
     });
 
     // Clean the response

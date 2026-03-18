@@ -1,8 +1,38 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
+import { COMPONENT_LIBRARY } from "@/config/componentRegistry";
+import {
+  getNimApiKeyForModel,
+  normalizeNimModelId,
+  NIM_BASE_URL,
+} from "@/config/nimModels";
+
+const MAX_HTML_CHARS = 12000;
+
+const getComponentSchema = () => {
+  return JSON.stringify(
+    COMPONENT_LIBRARY.map((c) => ({
+      type: c.type,
+      category: c.category,
+      defaultProps: c.defaultProps,
+      schema: c.blueprint ? "composite" : "primitive",
+    })),
+    null,
+    2
+  );
+};
+
+function stripHtml(raw: string) {
+  return raw
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -11,46 +41,83 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { url } = await req.json();
+    const { url, model = "qwen/qwen3.5-397b-a17b" } = await req.json();
 
     if (!url) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
 
-    // Phase 5.5: Competitor Website Clone
-    // In a full production implementation, we would use Puppeteer/Playwright here
-    // to screenshot the URL and extract the DOM structure.
-    // For this implementation, we use AI to "imagine" the reconstruction based on 
-    // the site's likely structure and modern design patterns, or fetching metadata.
-    
-    const systemPrompt = `You are Polyglot AI Cloner. Your task is to analyze a website URL and suggest a reconstructed version using the Polyglot Component JSON schema.
+    let html = "";
+    let pageTitle = "";
+    let pageDescription = "";
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0 PolyglotBuilder" },
+      });
+      html = await res.text();
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      pageTitle = titleMatch?.[1]?.trim() || "";
+      const descMatch = html.match(
+        /<meta[^>]+name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i
+      );
+      pageDescription = descMatch?.[1]?.trim() || "";
+    } catch {
+      html = "";
+    }
+
+    const cleanedHtml = html ? stripHtml(html) : "";
+    const htmlSnippet = cleanedHtml.slice(0, MAX_HTML_CHARS);
+
+    const modelId = normalizeNimModelId(model);
+    const nimKey = getNimApiKeyForModel(modelId) || process.env.NVIDIA_API_KEY;
+    if (!nimKey) {
+      return NextResponse.json(
+        { error: "NVIDIA API key not configured" },
+        { status: 500 }
+      );
+    }
+
+    const nim = createOpenAI({
+      apiKey: nimKey,
+      baseURL: process.env.NVIDIA_NIM_BASE_URL || NIM_BASE_URL,
+    });
+
+    const systemPrompt = `You are Polyglot AI Cloner. Analyze a website URL and reconstruct it into Polyglot component JSON.
 Focus on recreating the structure, sections, and mood.
 
-URL to clone: ${url}
+URL: ${url}
+TITLE: ${pageTitle || "Unknown"}
+META DESCRIPTION: ${pageDescription || "Not provided"}
+
+HTML SNIPPET (truncated):
+${htmlSnippet || "HTML not available; infer from URL only."}
 
 Return a JSON object that matches the Polyglot Generation Schema:
 {
-  "name": "Cloned Site",
+  "projectName": "Cloned Site",
   "summary": "Reconstructed version of ${url}",
-  "roots": [
-    {
-      "type": "Navbar",
-      "props": { "logo": "Brand", "links": ["Features", "Pricing", "About"] }
-    },
-    {
-      "type": "Hero",
-      "props": { "title": "Reconstructed Hero", "subtitle": "Visual analysis complete.", "cta": "Get Started" }
-    },
-    { "type": "Features", "props": { "title": "What they offer", "count": 3 } }
-  ]
+  "designSystem": {
+    "colors": {
+      "background": "#hex",
+      "surface": "#hex",
+      "primary": "#hex",
+      "secondary": "#hex",
+      "accent": "#hex"
+    }
+  },
+  "roots": [ ... ]
 }
 
-Only return valid JSON.`;
+COMPONENT LIBRARY (only use these types):
+${getComponentSchema()}
+
+Only return valid JSON. Do not wrap in code blocks.`;
 
     const { text } = await generateText({
-      model: openai("gpt-4o"),
+      model: nim(modelId),
       system: systemPrompt,
-      prompt: `Analyze ${url} and return the reconstruction JSON.`,
+      prompt: "Reconstruct this site into Polyglot JSON.",
+      temperature: 0.5,
     });
 
     // Extract JSON if AI included markdown blocks

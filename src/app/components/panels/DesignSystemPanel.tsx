@@ -65,23 +65,34 @@ export default function DesignSystemPanel() {
   const currentProject = useProjectStore((s) => s.currentProject);
   const updateProject = useProjectStore((s) => s.updateProject);
 
-  const designSystem =
-    currentProject?.designSystem ?? (DEFAULT_DESIGN_SYSTEM as any);
-  const colors: ColorPalette =
-    designSystem?.colors ?? DEFAULT_DESIGN_SYSTEM.colors;
+  const designSystem = currentProject?.designSystem
+    ? {
+        ...DEFAULT_DESIGN_SYSTEM,
+        ...currentProject.designSystem,
+        colors: {
+          ...DEFAULT_DESIGN_SYSTEM.colors,
+          ...(currentProject.designSystem.colors ?? {}),
+        },
+        typography: {
+          ...DEFAULT_DESIGN_SYSTEM.typography,
+          ...(currentProject.designSystem.typography ?? {}),
+        },
+      }
+    : DEFAULT_DESIGN_SYSTEM;
+  const colors: ColorPalette = designSystem.colors;
 
   const updateColor = (key: keyof ColorPalette, value: string) => {
     if (!currentProject) return;
     updateProject({
       designSystem: { ...designSystem, colors: { ...colors, [key]: value } },
-    } as any);
+    });
   };
 
   const applyPalette = (p: (typeof QUICK_PALETTES)[0]) => {
     if (!currentProject) return;
     updateProject({
       designSystem: { ...designSystem, colors: p.colors },
-    } as any);
+    });
     toast.success(`Applied "${p.name}"`);
   };
 
@@ -187,10 +198,7 @@ export default function DesignSystemPanel() {
             </p>
             <select
               className="w-full rounded-lg border border-white/[0.07] bg-[#1A1A1E] px-2.5 py-1.5 text-[11px] text-white/60 outline-none appearance-none transition focus:border-violet-500/40"
-              value={
-                (designSystem as any)?.typography?.fontFamily ||
-                DEFAULT_DESIGN_SYSTEM.typography.fontFamily
-              }
+              value={designSystem.typography.fontFamily}
               onChange={(e) =>
                 updateProject({
                   designSystem: {
@@ -200,7 +208,7 @@ export default function DesignSystemPanel() {
                       fontFamily: e.target.value,
                     },
                   },
-                } as any)
+                })
               }
             >
               {[
@@ -222,9 +230,7 @@ export default function DesignSystemPanel() {
             <div
               className="mt-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-center"
               style={{
-                fontFamily:
-                  (designSystem as any)?.typography?.fontFamily ||
-                  DEFAULT_DESIGN_SYSTEM.typography.fontFamily,
+                fontFamily: designSystem.typography.fontFamily,
               }}
             >
               <p className="text-xl font-bold text-white/70">Aa Bb Cc</p>

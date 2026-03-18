@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
-import { AlignLeft, AlignCenter, Columns3, Copy, Trash2 } from "lucide-react";
+import { AlignLeft, AlignCenter, Columns3, Trash2 } from "lucide-react";
 
 export default function MultiSelectToolbar() {
   const selectedElements = useEditorStore((s) => s.selectedElements);
@@ -12,7 +11,6 @@ export default function MultiSelectToolbar() {
     (s) => s.updateComponentCSSOverride,
   );
   const removeElement = useProjectStore((s) => s.removeComponent);
-  const [copied, setCopied] = useState(false);
 
   if (selectedElements.length < 2) return null;
 

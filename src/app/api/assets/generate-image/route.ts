@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { getNimApiKeyForModel } from "@/config/nimModels";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -15,7 +16,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
-    const apiKey = process.env.NVIDIA_IMAGE_API_KEY;
+    const apiKey =
+      getNimApiKeyForModel("flux.2-klein-4b") ||
+      process.env.NVIDIA_IMAGE_API_KEY;
     if (!apiKey) {
       throw new Error("NVIDIA Image API key not configured");
     }

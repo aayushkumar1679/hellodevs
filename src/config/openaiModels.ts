@@ -1,3 +1,5 @@
+import { NIM_MODEL_OPTIONS } from "./nimModels";
+
 export interface OpenAIModelOption {
   id: string;
   label: string;
@@ -7,35 +9,23 @@ export interface OpenAIModelOption {
 
 export const OPENAI_MODEL_OPTIONS: OpenAIModelOption[] = [
   {
-    id: "claude-3-5-sonnet-20241022",
-    label: "Claude 3.5 Sonnet (Best Layouts)",
-    description: "Anthropic's flagship model. Unmatched logic and design aesthetics.",
-    provider: "anthropic",
-  },
-  {
     id: "gpt-4o",
-    label: "GPT-4o (Premium)",
-    description: "Most capable model for complex designs and high-end aesthetics.",
+    label: "GPT-4o (Senior Designer)",
+    description: "High-end creative output with deep design reasoning.",
     provider: "openai",
   },
   {
     id: "gpt-4o-mini",
-    label: "GPT-4o mini (Fast)",
-    description: "Speed-optimized model for quick landing page skeletons.",
+    label: "GPT-4o Mini (Fast Layout)",
+    description: "Extremely fast generation for basic structures.",
     provider: "openai",
   },
   {
-    id: "microsoft/phi-3.5-mini-instruct",
-    label: "NVIDIA Phi-3.5 Mini",
-    description: "NVIDIA's edge-optimized model for rapid logic and layout generation.",
-    provider: "nvidia",
-  },
-  {
-    id: "tiiuae/falcon3-7b-instruct",
-    label: "NVIDIA Falcon 3",
-    description: "NVIDIA's creative engine for high-fidelity layouts.",
-    provider: "nvidia",
+    id: "o1-preview",
+    label: "o1 Preview (Architecture God)",
+    description: "Intense reasoning for complex multi-page apps.",
+    provider: "openai",
   },
 ];
 
-export const DEFAULT_OPENAI_MODEL = OPENAI_MODEL_OPTIONS[0].id;
+export const DEFAULT_OPENAI_MODEL = "gpt-4o";

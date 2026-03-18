@@ -1,5 +1,4 @@
 "use client";
-// AssetsPanel.tsx
 import React, { useState } from "react";
 import NextImage from "next/image";
 import {
@@ -10,7 +9,6 @@ import {
   Upload,
   Wand2,
   Loader2,
-  X,
   Check,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,6 +23,7 @@ export default function AssetsPanel() {
   const [tab, setTab] = useState<"library" | "ai">("library");
   const [imagePrompt, setImagePrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { currentProject, addAsset, updateComponent } = useProjectStore();
@@ -61,27 +60,50 @@ export default function AssetsPanel() {
         date: new Date().toISOString(),
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed");
+      setError(e instanceof Error ? e.message : "Failed to generate image");
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    addAsset({
-      id: `img-${Date.now()}`,
-      name: file.name,
-      url: URL.createObjectURL(file),
-      type: "image",
-      date: new Date().toISOString(),
-    });
+
+    setIsUploading(true);
+    setError(null);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/assets/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const data = await res.json();
+      addAsset({
+        id: `img-${Date.now()}`,
+        name: file.name,
+        url: data.url,
+        type: "image",
+        date: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error("Upload error:", err);
+      setError("Failed to upload image.");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const handleInsert = (url: string) => {
-    if (selectedElements.length === 1)
+    if (selectedElements.length === 1) {
       updateComponent(selectedElements[0], { props: { src: url } });
+    }
   };
 
   return (
@@ -93,9 +115,10 @@ export default function AssetsPanel() {
           </p>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex h-6 w-6 items-center justify-center rounded-md border border-white/[0.07] text-white/30 transition hover:border-white/15 hover:text-white/60"
+            disabled={isUploading}
+            className="flex h-6 w-6 items-center justify-center rounded-md border border-white/[0.07] text-white/30 transition hover:border-white/15 hover:text-white/60 disabled:opacity-50"
           >
-            <Upload className="h-3 w-3" />
+            {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
           </button>
           <input
             type="file"
@@ -178,11 +201,12 @@ export default function AssetsPanel() {
                 ))}
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex aspect-square flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/[0.07] text-white/20 transition hover:border-white/15 hover:text-white/40"
+                  disabled={isUploading}
+                  className="flex aspect-square flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/[0.07] text-white/20 transition hover:border-white/15 hover:text-white/40 disabled:opacity-50"
                 >
                   <Plus className="h-5 w-5" />
                   <p className="mt-1 text-[8px] uppercase tracking-widest">
-                    Import
+                    {isUploading ? "Uploading..." : "Import"}
                   </p>
                 </button>
               </div>

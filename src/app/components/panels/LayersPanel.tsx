@@ -1,287 +1,207 @@
 "use client";
 
-import React from "react";
-import { useProjectStore } from "@/state/useProjectStore";
+import React, { useState } from "react";
+import { useProjectStore, type PolyglotComponent } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
-import {
-  ChevronRight,
-  Layers,
-  Lock,
+import { 
+  ChevronDown, 
+  ChevronRight, 
+  Layers, 
+  Eye, 
+  EyeOff, 
+  Lock, 
   Unlock,
-  Eye,
-  EyeOff,
-  Box,
+  GripVertical,
+  Trash2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-type LayerMeta = { locked?: boolean; hidden?: boolean };
-
 export default function LayersPanel() {
-  const { currentProject, moveComponent, updateComponent } = useProjectStore();
-  const { selectElement, selectedElements, deselectAll } = useEditorStore();
+  const { currentProject } = useProjectStore();
+  const { selectedElements, selectElement } = useEditorStore();
 
-  const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
-  const [draggedId, setDraggedId] = React.useState<string | null>(null);
-  const [dropTargetId, setDropTargetId] = React.useState<string | null>(null);
-  const [editingId, setEditingId] = React.useState<string | null>(null);
-  const [editValue, setEditValue] = React.useState("");
+  if (!currentProject) return null;
 
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setEditingId(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  if (!currentProject || Object.keys(currentProject.components).length === 0) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-        <Layers className="mb-3 h-8 w-8 text-white/10" />
-        <p className="text-[10px] font-semibold text-white/25">No layers yet</p>
-        <p className="mt-1 text-[9px] text-white/15">
-          Add components from the library
-        </p>
-      </div>
-    );
-  }
-
-  const getMeta = (props: Record<string, unknown>): LayerMeta => {
-    const meta = props.meta;
-    return meta && typeof meta === "object" ? (meta as LayerMeta) : {};
-  };
-
-  const toggle = (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setExpandedIds((prev) => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
-  };
-
-  const getRoots = () => {
-    const comps = currentProject.components;
-    const childIds = new Set<string>();
-    Object.values(comps).forEach((c) =>
-      c.children.forEach((id: string) => childIds.add(id)),
-    );
-    return Object.keys(comps).filter((id) => !childIds.has(id));
-  };
-
-  const isDescendant = (parentId: string, childId: string) => {
-    const stack = [parentId];
-    while (stack.length) {
-      const cur = stack.pop()!;
-      if (cur === childId) return true;
-      stack.push(...(currentProject.components[cur]?.children ?? []));
-    }
-    return false;
-  };
-
-  const toggleLock = (id: string) => {
-    const c = currentProject.components[id];
-    const props = c.props ?? {};
-    const meta = getMeta(props);
-    const newMeta = { ...meta, locked: !meta.locked };
-    updateComponent(id, { props: { ...props, meta: newMeta } });
-    if (newMeta.locked && selectedElements.includes(id)) deselectAll();
-  };
-
-  const toggleHidden = (id: string) => {
-    const c = currentProject.components[id];
-    const props = c.props ?? {};
-    const meta = getMeta(props);
-    updateComponent(id, {
-      props: { ...props, meta: { ...meta, hidden: !meta.hidden } },
-    });
-  };
-
-  const commitRename = (id: string) => {
-    const c = currentProject.components[id];
-    updateComponent(id, { props: { ...c.props, label: editValue } });
-    setEditingId(null);
-  };
-
-  const renderLayer = (
-    c: (typeof currentProject.components)[string],
-    level = 0,
-  ): React.ReactNode => {
-    const isExpanded = expandedIds.has(c.id);
-    const isSelected = selectedElements.includes(c.id);
-    const isDrop = dropTargetId === c.id;
-    const props = c.props ?? {};
-    const meta = getMeta(props);
-    const locked = !!meta.locked;
-    const hidden = !!meta.hidden;
-    const labelSrc = props.label ?? props.text;
-    const label = typeof labelSrc === "string" ? labelSrc : c.type;
-
-    return (
-      <div key={c.id}>
-        <motion.div
-          layout
-          initial={{ opacity: 0, x: -6 }}
-          animate={{ opacity: 1, x: 0 }}
-          draggable={!locked}
-          onDragStart={(e: any) => {
-            if (locked) {
-              e.preventDefault();
-              return;
-            }
-            setDraggedId(c.id);
-          }}
-          onDragOver={(e: any) => {
-            e.preventDefault();
-            if (
-              !draggedId ||
-              draggedId === c.id ||
-              isDescendant(draggedId, c.id)
-            )
-              return;
-            setDropTargetId(c.id);
-          }}
-          onDrop={() => {
-            if (
-              draggedId &&
-              draggedId !== c.id &&
-              !isDescendant(draggedId, c.id)
-            )
-              moveComponent(draggedId, c.id);
-            setDraggedId(null);
-            setDropTargetId(null);
-          }}
-          onClick={() => !locked && selectElement(c.id)}
-          className={`group flex h-7 cursor-pointer items-center gap-1.5 border-b border-white/[0.03] transition-all ${
-            isSelected ? "bg-violet-600/15" : "hover:bg-white/[0.03]"
-          } ${isDrop ? "ring-1 ring-inset ring-violet-500/40" : ""}`}
-          style={{ paddingLeft: 8 + level * 14 }}
-        >
-          {/* Expand chevron */}
-          <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center">
-            {c.children.length > 0 ? (
-              <button
-                onClick={(e) => toggle(c.id, e)}
-                className="text-white/20 hover:text-white/50 transition-colors"
-              >
-                <ChevronRight
-                  className={`h-3 w-3 transition-transform duration-150 ${isExpanded ? "rotate-90" : ""}`}
-                />
-              </button>
-            ) : (
-              <div className="h-1 w-1 rounded-full bg-white/10" />
-            )}
-          </div>
-
-          {/* Type icon */}
-          <div
-            className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded transition-colors ${isSelected ? "text-violet-400" : "text-white/20"}`}
-          >
-            <Box className="h-2.5 w-2.5" />
-          </div>
-
-          {/* Label / rename */}
-          <div className="min-w-0 flex-1 overflow-hidden">
-            {editingId === c.id ? (
-              <input
-                autoFocus
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={() => commitRename(c.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") commitRename(c.id);
-                }}
-                className="w-full rounded bg-violet-500/15 px-1 text-[10px] text-white/80 outline-none"
-              />
-            ) : (
-              <div
-                className="flex items-baseline gap-1"
-                onDoubleClick={() => {
-                  setEditingId(c.id);
-                  setEditValue(label);
-                }}
-              >
-                <span
-                  className={`truncate text-[10px] font-medium ${isSelected ? "text-white/80" : "text-white/45"} ${hidden ? "opacity-30 line-through" : ""}`}
-                >
-                  {label}
-                </span>
-                <span className="flex-shrink-0 text-[8px] text-white/15">
-                  {c.type}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Actions (visible on hover) */}
-          <div className="flex flex-shrink-0 items-center gap-0.5 pr-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleHidden(c.id);
-              }}
-              className={`rounded p-0.5 transition ${hidden ? "text-white/20" : "text-white/30 hover:text-white/60"}`}
-            >
-              {hidden ? (
-                <EyeOff className="h-2.5 w-2.5" />
-              ) : (
-                <Eye className="h-2.5 w-2.5" />
-              )}
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleLock(c.id);
-              }}
-              className={`rounded p-0.5 transition ${locked ? "text-amber-400" : "text-white/30 hover:text-white/60"}`}
-            >
-              {locked ? (
-                <Lock className="h-2.5 w-2.5" />
-              ) : (
-                <Unlock className="h-2.5 w-2.5" />
-              )}
-            </button>
-          </div>
-        </motion.div>
-
-        <AnimatePresence>
-          {isExpanded && c.children.length > 0 && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-l border-white/[0.04] ml-4"
-            >
-              {c.children.map((cid: string) => {
-                const child = currentProject.components[cid];
-                return child ? renderLayer(child, level + 1) : null;
-              })}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-  };
+  const rootIds = currentProject.rootOrder;
 
   return (
-    <div className="flex h-full flex-col bg-[#111114] text-white">
-      <div className="flex-shrink-0 border-b border-white/[0.06] px-3 py-2">
-        <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/25">
-          Layers
-        </p>
+    <div className="flex h-full flex-col bg-[#05060b] text-white">
+      <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Layers className="h-4 w-4 text-violet-400" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-white/80">Layers</h2>
+        </div>
+        <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-white/40">
+          {Object.keys(currentProject.components).length}
+        </span>
       </div>
-      <div
-        className="flex-1 overflow-y-auto"
-        style={{
-          scrollbarWidth: "thin",
-          scrollbarColor: "#2a2a30 transparent",
-        }}
-      >
-        {getRoots().map((id) => {
-          const c = currentProject.components[id];
-          return c ? renderLayer(c) : null;
-        })}
+
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 custom-scrollbar">
+        <div className="space-y-1">
+          {rootIds.map((id) => (
+            <LayerItem
+              key={id}
+              itemId={id}
+              depth={0}
+              components={currentProject.components}
+              selectedIds={selectedElements}
+              onSelect={selectElement}
+              onDelete={(targetId) => useProjectStore.getState().removeComponent(targetId)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
 }
+
+interface LayerItemProps {
+  itemId: string;
+  depth: number;
+  components: Record<string, PolyglotComponent>;
+  selectedIds: string[];
+  onSelect: (id: string, multi?: boolean) => void;
+  onDelete: (id: string) => void;
+}
+
+const LayerItem: React.FC<LayerItemProps> = ({
+  itemId,
+  depth,
+  components,
+  selectedIds,
+  onSelect,
+  onDelete,
+}) => {
+  const [expanded, setExpanded] = useState(true);
+  const [locked, setLocked] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  
+  const draggedId = useEditorStore((s) => s.draggedId);
+  const setDraggedId = useEditorStore((s) => s.setDraggedId);
+
+  const c = components[itemId];
+  if (!c) return null;
+
+  const isSelected = selectedIds.includes(itemId);
+  const hasChildren = c.children && c.children.length > 0;
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (draggedId && draggedId !== itemId) {
+      useProjectStore.getState().moveComponent(draggedId, itemId);
+      setDraggedId(null);
+    }
+  };
+
+  return (
+    <div>
+      <motion.div
+        layout
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        className={`group relative flex items-center gap-2 rounded-lg px-2 py-1.5 transition-all ${
+          isSelected
+            ? "bg-violet-600/20 text-violet-100 shadow-[inset_0_0_0_1px_rgba(139,92,246,0.3)]"
+            : "text-white/40 hover:bg-white/[0.04] hover:text-white/70"
+        }`}
+        style={{ paddingLeft: `${depth * 12 + 8}px` }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(itemId, e.shiftKey || e.metaKey);
+        }}
+        draggable
+        onDragStart={(e) => {
+          if (locked) {
+            e.preventDefault();
+            return;
+          }
+          setDraggedId(itemId);
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        }}
+        onDrop={handleDrop}
+      >
+        <div className="flex h-4 w-4 shrink-0 items-center justify-center">
+          {hasChildren ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(!expanded);
+              }}
+              className="text-white/20 hover:text-white/60"
+            >
+              {expanded ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+            </button>
+          ) : (
+            <div className="h-1 w-1 rounded-full bg-white/10" />
+          )}
+        </div>
+
+        <GripVertical className="h-3 w-3 shrink-0 text-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+        
+        <span className="flex-1 truncate text-[11px] font-medium">
+          {c.props?.text ? String(c.props.text).slice(0, 20) : c.type}
+        </span>
+
+        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(itemId);
+            }}
+            className="p-1 text-rose-400/40 hover:text-rose-400"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setLocked(!locked);
+            }}
+            className={`p-1 hover:text-white ${locked ? "text-violet-400" : "text-white/20"}`}
+          >
+            {locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setHidden(!hidden);
+            }}
+            className={`p-1 hover:text-white ${hidden ? "text-violet-400" : "text-white/20"}`}
+          >
+            {hidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+          </button>
+        </div>
+      </motion.div>
+
+      <AnimatePresence>
+        {expanded && hasChildren && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            {c.children.map((childId) => (
+              <LayerItem
+                key={childId}
+                itemId={childId}
+                depth={depth + 1}
+                components={components}
+                selectedIds={selectedIds}
+                onSelect={onSelect}
+                onDelete={onDelete}
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};

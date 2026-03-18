@@ -20,6 +20,8 @@ import {
   BadgeCheck,
   AlertTriangle,
   LayoutTemplate,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import {
   COMPONENT_LIBRARY,
@@ -67,14 +69,53 @@ export default function ComponentLibrary() {
   const [activeCategory, setActiveCategory] = useState<
     ComponentCategory | "all"
   >("all");
+  const [isGenerating, setIsGenerating] = useState<string | null>(null);
+  const [variations, setVariations] = useState<any[]>([]);
+
+  const handleGenerate = async (type: string) => {
+    setIsGenerating(type);
+    try {
+      const resp = await fetch("/api/generate/variant", {
+        method: "POST",
+        body: JSON.stringify({ componentType: type }),
+      });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+
+      // Transform blueprint into a "synthetic" component definition
+      const newComp = {
+        type: `${type}_v${Date.now()}`,
+        baseType: type,
+        label: `${type} (Variant)`,
+        description: `AI-Generated ${type} variation.`,
+        category: "other" as ComponentCategory,
+        blueprint: data.blueprint,
+        isSynthetic: true,
+      };
+
+      setVariations((prev) => [newComp, ...prev]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsGenerating(null);
+    }
+  };
+
+  const allComponents = useMemo(() => {
+    const synthetic = variations.map(v => ({
+      ...v,
+      category: COMPONENT_LIBRARY.find(c => c.type === v.baseType)?.category || "other"
+    }));
+    return [...synthetic, ...COMPONENT_LIBRARY];
+  }, [variations]);
 
   const availableCategories = useMemo(
-    () => Array.from(new Set(COMPONENT_LIBRARY.map((c) => c.category))).sort(),
-    [],
+    () => Array.from(new Set(allComponents.map((c) => c.category))).sort(),
+    [allComponents],
   );
 
   const filtered = useMemo(() => {
-    return COMPONENT_LIBRARY.filter((c) => {
+    return allComponents.filter((c) => {
       if (activeCategory !== "all" && c.category !== activeCategory)
         return false;
       if (!search.trim()) return true;
@@ -83,7 +124,7 @@ export default function ComponentLibrary() {
         c.label.toLowerCase().includes(q) || c.type.toLowerCase().includes(q)
       );
     });
-  }, [activeCategory, search]);
+  }, [activeCategory, search, allComponents]);
 
   /* Group by category when "all" is selected */
   const groups = useMemo(() => {
@@ -174,24 +215,30 @@ export default function ComponentLibrary() {
                   <motion.button
                     key={comp.type}
                     layout
-                    onClick={() => addComponent(comp.type)}
+                    onClick={() => addComponent(comp.type, undefined, undefined, comp.blueprint)}
                     whileTap={{ scale: 0.97 }}
                     className="group flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 text-left transition-all hover:border-white/[0.07] hover:bg-white/[0.04]"
                     draggable
-                    onDragStart={(e) => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    onDragStart={(e: any) => {
                       e.dataTransfer.setData("polyglot/type", comp.type);
                     }}
                   >
                     <span
                       className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border border-white/[0.06] bg-white/[0.03] transition-all group-hover:border-violet-500/30 group-hover:bg-violet-500/10 ${CAT_COLORS[comp.category] ?? "text-white/30"}`}
                     >
-                      {ICONS[comp.type] ?? FALLBACK}
+                      {ICONS[comp.type] || ICONS[comp.baseType] || FALLBACK}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1">
                         <span className="truncate text-[10px] font-semibold text-white/60 group-hover:text-white/80">
                           {comp.label}
                         </span>
+                        {comp.isSynthetic && (
+                          <span className="flex-shrink-0 rounded bg-amber-500/10 px-1 py-0.5 text-[7px] font-black uppercase tracking-wider text-amber-400">
+                            AI
+                          </span>
+                        )}
                         {comp.isLayout && (
                           <span className="flex-shrink-0 rounded bg-sky-500/10 px-1 py-0.5 text-[7px] font-black uppercase tracking-wider text-sky-400">
                             Layout
@@ -202,6 +249,24 @@ export default function ComponentLibrary() {
                         {comp.description}
                       </p>
                     </div>
+                    
+                    {!comp.isSynthetic && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGenerate(comp.type);
+                        }}
+                        disabled={!!isGenerating}
+                        className="group/sparkle flex h-6 w-6 items-center justify-center rounded-md border border-white/[0.06] bg-white/[0.04] text-white/25 transition hover:border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-400 disabled:opacity-50"
+                      >
+                        {isGenerating === comp.type ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3 w-3" />
+                        )}
+                      </button>
+                    )}
+                    
                     <Plus className="h-3 w-3 flex-shrink-0 text-white/15 opacity-0 transition-opacity group-hover:opacity-100 group-hover:text-violet-400" />
                   </motion.button>
                 ))}

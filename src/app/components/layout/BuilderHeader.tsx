@@ -18,6 +18,7 @@ import {
   Save,
   PanelRight,
   LogOut,
+  Rocket,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSession, signOut } from "next-auth/react";
@@ -26,6 +27,7 @@ import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import type { TechStack } from "@/utils/exportGenerators";
 import { motion, AnimatePresence } from "framer-motion";
+import { generateNextJsProject } from "@/utils/exporter";
 
 interface BuilderHeaderProps {
   rightOpen?: boolean;
@@ -56,6 +58,8 @@ export default function BuilderHeader({
   const [isExporting, setIsExporting] = useState(false);
   const [didExport, setDidExport] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deployUrl, setDeployUrl] = useState<string | null>(null);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -94,18 +98,55 @@ export default function BuilderHeader({
     }
   };
 
+  const handleDeploy = async () => {
+    if (!currentProject || isDeploying) return;
+    setIsDeploying(true);
+    setShowExport(false);
+    try {
+      const files = generateNextJsProject(currentProject);
+      const res = await fetch("/api/deploy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files, projectName: currentProject.name }),
+      });
+
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Deployment failed");
+      }
+
+      const data = await res.json();
+      setDeployUrl(data.deploymentUrl);
+      toast.success("Deployment started!", {
+        description: "Your site is being built on Vercel.",
+        action: {
+          label: "View",
+          onClick: () => window.open(data.deploymentUrl, "_blank"),
+        },
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Deployment failed");
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
   /* ── Shared button base ─────────────────────────────────── */
   const iconBtn =
     "flex h-6 w-6 items-center justify-center rounded-md text-white/40 transition-all hover:bg-white/8 hover:text-white/80 active:scale-90";
 
   return (
-    <header className="relative z-50 flex h-9 flex-shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#0A0A0D] px-2 select-none">
+    <header className="relative z-50 flex h-10 flex-shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#0A0A0D] px-2 select-none">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_left,rgba(124,58,237,0.25),transparent_45%),radial-gradient(circle_at_right,rgba(56,189,248,0.22),transparent_50%)] opacity-70" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      
       {/* ─── LEFT: brand + project name ─────────────────────── */}
       <div className="flex min-w-0 items-center gap-2">
         <Link
           href="/"
-          className="group flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 shadow-[0_0_12px_rgba(124,110,248,0.4)] transition-transform hover:scale-105"
+          className="group relative flex h-7 w-7 items-center justify-center rounded-[10px] bg-gradient-to-br from-violet-500 via-indigo-500 to-sky-500 shadow-[0_0_16px_rgba(124,110,248,0.45)] transition-transform hover:scale-105"
         >
+          <span className="absolute inset-0 rounded-[10px] bg-white/10 opacity-0 transition group-hover:opacity-100" />
           <Sparkles className="h-3 w-3 text-white" />
         </Link>
 
@@ -118,9 +159,8 @@ export default function BuilderHeader({
           </span>
         </div>
 
-        {/* Saved dot indicator */}
         <div
-          className="h-1 w-1 rounded-full bg-emerald-500/60"
+          className="h-1.5 w-1.5 rounded-full bg-emerald-400/70 animate-pulse-dot"
           title="Auto-saved"
         />
       </div>
@@ -149,7 +189,6 @@ export default function BuilderHeader({
 
       {/* ─── RIGHT: actions ──────────────────────────────────── */}
       <div className="flex items-center gap-1">
-        {/* Undo / Redo */}
         <div className="flex items-center rounded-md border border-white/[0.07] bg-white/[0.03]">
           <button
             onClick={undo}
@@ -168,7 +207,6 @@ export default function BuilderHeader({
           </button>
         </div>
 
-        {/* Preview toggle */}
         <button
           onClick={togglePreview}
           title={previewEnabled ? "Exit preview" : "Preview mode"}
@@ -178,39 +216,27 @@ export default function BuilderHeader({
               : "border-white/[0.07] bg-white/[0.03] text-white/40 hover:text-white/70"
           }`}
         >
-          {previewEnabled ? (
-            <Eye className="h-3 w-3" />
-          ) : (
-            <EyeOff className="h-3 w-3" />
-          )}
-          <span className="hidden sm:inline">
-            {previewEnabled ? "Live" : "Preview"}
-          </span>
+          {previewEnabled ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+          <span className="hidden sm:inline">{previewEnabled ? "Live" : "Preview"}</span>
         </button>
 
-        {/* Save */}
         <button
           onClick={handleSave}
           className="flex h-6 items-center gap-1 rounded-md border border-white/[0.07] bg-white/[0.03] px-2 text-[10px] font-semibold text-white/40 transition-all hover:bg-white/6 hover:text-white/70"
         >
-          {isSaving ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <Save className="h-3 w-3" />
-          )}
+          {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
           <span className="hidden sm:inline">Save</span>
         </button>
 
-        {/* Export dropdown */}
         <div className="relative">
           <motion.button
             onClick={() => setShowExport((v) => !v)}
-            disabled={isExporting}
+            disabled={isExporting || isDeploying}
             whileTap={{ scale: 0.95 }}
             className="flex h-6 items-center gap-1 rounded-md bg-violet-600/90 px-2.5 text-[10px] font-bold text-white shadow-[0_2px_8px_rgba(124,110,248,0.3)] transition-all hover:bg-violet-500 disabled:opacity-40"
           >
             <AnimatePresence mode="wait">
-              {isExporting ? (
+              {isExporting || isDeploying ? (
                 <motion.span
                   key="spin"
                   initial={{ opacity: 0 }}
@@ -239,7 +265,7 @@ export default function BuilderHeader({
                 </motion.span>
               )}
             </AnimatePresence>
-            {isExporting ? "Building…" : didExport ? "Done!" : "Export"}
+            {isExporting ? "Building…" : isDeploying ? "Deploying…" : didExport ? "Done!" : "Export"}
           </motion.button>
 
           <AnimatePresence>
@@ -277,12 +303,36 @@ export default function BuilderHeader({
                     <span className="text-[10px] text-white/30">{hint}</span>
                   </button>
                 ))}
+
+                <div className="my-1 h-px bg-white/[0.06]" />
+
+                <button
+                  onClick={handleDeploy}
+                  disabled={isDeploying}
+                  className="group flex w-full flex-col rounded-lg px-2.5 py-2 text-left transition hover:bg-violet-500/10"
+                >
+                  <div className="flex items-center gap-2">
+                    <Rocket className="h-3 w-3 text-violet-400" />
+                    <span className="text-[11px] font-bold text-violet-100 group-hover:text-white">
+                      Deploy to Vercel
+                    </span>
+                  </div>
+                  <span className="mt-0.5 text-[9px] text-white/30">Live production URL</span>
+                </button>
+
+                {deployUrl && (
+                  <button
+                    onClick={() => window.open(deployUrl, "_blank")}
+                    className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-500/10 py-1.5 text-[10px] font-bold text-emerald-400 transition hover:bg-emerald-500/20"
+                  >
+                    <Eye className="h-3 w-3" /> View Deployment
+                  </button>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Right panel toggle */}
         <button
           onClick={onToggleRight}
           title="Toggle inspector"
@@ -291,20 +341,13 @@ export default function BuilderHeader({
           <PanelRight className="h-3.5 w-3.5" />
         </button>
 
-        {/* User avatar */}
         <div className="relative ml-0.5">
           <button
             onClick={() => setShowUser((v) => !v)}
             className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-lg border border-white/[0.10] transition hover:border-white/20"
           >
             {session?.user?.image ? (
-              <Image
-                src={session.user.image}
-                alt="User"
-                width={24}
-                height={24}
-                className="h-full w-full object-cover"
-              />
+              <Image src={session.user.image} alt="User" width={24} height={24} className="h-full w-full object-cover" />
             ) : (
               <UserIcon className="h-3 w-3 text-white/40" />
             )}
@@ -320,15 +363,9 @@ export default function BuilderHeader({
                 className="absolute right-0 top-full z-[100] mt-1.5 w-48 overflow-hidden rounded-xl border border-white/[0.08] bg-[#1A1A1E] p-1 shadow-[0_16px_40px_rgba(0,0,0,0.6)]"
               >
                 <div className="px-2.5 py-2">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/30">
-                    Account
-                  </p>
-                  <p className="mt-0.5 truncate text-[11px] font-semibold text-white/80">
-                    {session?.user?.name ?? "Member"}
-                  </p>
-                  <p className="truncate text-[10px] text-white/30">
-                    {session?.user?.email}
-                  </p>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/30">Account</p>
+                  <p className="mt-0.5 truncate text-[11px] font-semibold text-white/80">{session?.user?.name ?? "Member"}</p>
+                  <p className="truncate text-[10px] text-white/30">{session?.user?.email}</p>
                 </div>
                 <div className="mx-1 h-px bg-white/[0.06]" />
                 <button

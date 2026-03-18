@@ -2,8 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { X, Download, Copy, Check, Sparkles, Loader2 } from "lucide-react";
-import {  useCanvasStore  } from "@/state/useProjectStore";
-import { useDesignStore } from "../../../state/useDesignStore";
+import { useProjectStore } from "@/state/useProjectStore";
 import { generateNextJsProject } from "../../../utils/exporter";
 import type { TechStack } from "../../../utils/exportGenerators";
 import { toast } from "sonner";
@@ -15,20 +14,19 @@ type ExportDialogProps = {
 
 export default function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
   const currentProject = useProjectStore((state) => state.currentProject);
-  const elements = useProjectStore((state) => state.elements);
   const [format, setFormat] = useState<TechStack>("react-tailwind");
   const [copied, setCopied] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   const result = useMemo(() => {
     if (!currentProject) return null;
-    const files = generateNextJsProject(currentProject, elements);
+    const files = generateNextJsProject(currentProject);
     const mainPage = files.find(f => f.name === "src/app/page.tsx") || files[0];
     return {
       fileName: mainPage.name,
       code: mainPage.content
     };
-  }, [currentProject, elements]);
+  }, [currentProject]);
 
   if (!isOpen || !currentProject || !result) return null;
 

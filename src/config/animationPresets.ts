@@ -1,3 +1,5 @@
+import type { Variants } from "framer-motion";
+
 export type AnimationTrigger = "load" | "scroll" | "hover" | "tap";
 
 export interface AnimationConfig {
@@ -13,7 +15,7 @@ export type AnimationPreset = {
   id: string;
   name: string;
   description: string;
-  variants: any; // Framer Motion variants
+  variants: Variants;
 };
 
 export const ANIMATION_PRESETS: Record<string, AnimationPreset> = {

@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, Wand2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowRight, PanelRightOpen, Sparkles, Wand2, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import BuilderHeader from "@/app/components/layout/BuilderHeader";
-import LeftSidebar from "@/app/components/layout/LeftSidebar";
+import LeftSidebar, { LeftPanelId } from "@/app/components/layout/LeftSidebar";
 import RightPanel from "@/app/components/layout/RightPanel";
 import Canvas from "@/app/components/canvas/Canvas";
 import ComponentLibrary from "@/app/components/panels/ComponentLibrary";
@@ -19,62 +19,46 @@ import { useParams } from "next/navigation";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-
-// ─── Panel widths ──────────────────────────────────────────────
-const LEFT_STRIP_W = 40; // px — icon-only strip
-const LEFT_PANEL_W = 240; // px — expanded content panel
-const RIGHT_PANEL_W = 256; // px — right inspector
-
-type LeftPanelId =
-  | "ai"
-  | "components"
-  | "custom"
-  | "layers"
-  | "assets"
-  | "history"
-  | null;
+import {
+  Panel,
+  Group as PanelGroup,
+  Separator as PanelResizeHandle,
+} from "react-resizable-panels";
 
 export default function BuilderPage() {
   const { id: projectId } = useParams();
   const { currentProject, currentProjectId, isLoading } = useProjectStore();
+  const [activeLeftPanel, setActiveLeftPanel] = useState<LeftPanelId>("components");
+
+  // Selection state
   const { selectedElements } = useEditorStore();
 
-  const [activeLeftPanel, setActiveLeftPanel] =
-    useState<LeftPanelId>("components");
-  const [rightOpen, setRightOpen] = useState(true);
-
-  // Auto-open right panel when something is selected
+  // Handle mobile / responsive widths if needed
   useEffect(() => {
-    if (selectedElements.length > 0) setRightOpen(true);
-  }, [selectedElements]);
+    // Initial setup logic
+  }, []);
 
-  // ── Not found state ──────────────────────────────────────────
+  // Error / Not Found
   if (!isLoading && currentProjectId !== projectId) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0C0C0F]">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-sm rounded-2xl border border-white/8 bg-white/4 p-8 text-center shadow-2xl backdrop-blur"
+          className="max-w-md rounded-3xl border border-white/80 bg-white p-8 text-center shadow-[0_30px_80px_-20px_rgba(15,23,42,0.2)]"
         >
-          <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/15 text-violet-400">
-            <Wand2 className="h-4 w-4" />
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 mb-4">
+            <Wand2 className="h-5 w-5" />
           </div>
-          <p className="text-sm font-semibold text-white">Project not found</p>
-          <p className="mt-1 text-xs leading-5 text-white/40">
-            This project may have been removed or you lost access.
+          <p className="text-base font-bold text-slate-950">Project not found</p>
+          <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+            This project may have been removed or you no longer have access.
           </p>
           <div className="mt-5 flex items-center justify-center gap-2">
-            <Link
-              href="/"
-              className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:border-white/20 hover:text-white"
-            >
-              Dashboard
+            <Link href="/" className="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 hover:border-slate-300 transition">
+              Back to workspace
             </Link>
-            <Link
-              href="/builder/new"
-              className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-violet-500"
-            >
+            <Link href="/builder/new" className="inline-flex items-center gap-1.5 rounded-full bg-slate-950 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800 transition">
               New project <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -83,96 +67,78 @@ export default function BuilderPage() {
     );
   }
 
-  const leftPanelOpen = activeLeftPanel !== null;
-
   return (
-    /*
-     * ROOT: full-screen dark container
-     * Uses pure flex column — NO fixed positioning anywhere.
-     * Header is shrink-0, workspace is flex-1.
-     * Workspace is flex row: [icon-strip][left-panel?][canvas][right-panel?]
-     * Everything is in-flow — sidebars can NEVER go behind the canvas.
-     */
-    <div className="flex h-screen flex-col overflow-hidden bg-[#0C0C0F] text-white">
-      {/* ── Top header ─────────────────────────────────────────── */}
-      <BuilderHeader
-        rightOpen={rightOpen}
-        onToggleRight={() => setRightOpen((v) => !v)}
-      />
+    <div
+      className="flex h-screen w-screen max-w-none flex-col text-slate-950 overflow-hidden"
+      style={{ background: "var(--background)", width: '100vw !important', maxWidth: 'none !important' }}
+    >
+      <BuilderHeader />
 
-      {/* ── Workspace row ──────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* ── Left icon strip (always visible, never fixed) ─────── */}
-        <LeftSidebar
-          activeLeftPanel={activeLeftPanel}
-          setActiveLeftPanel={setActiveLeftPanel}
-          width={LEFT_STRIP_W}
-        />
+      <div className="flex-1 overflow-hidden relative" style={{ display: 'flex', width: '100% !important', maxWidth: 'none !important' }}>
+        {/* Permanent Left Tab Strip */}
+        <LeftSidebar activeLeftPanel={activeLeftPanel} setActiveLeftPanel={setActiveLeftPanel} />
 
-        {/* ── Left panel (conditionally visible) ────────────────── */}
-        {leftPanelOpen && (
-          <motion.div
-            key={activeLeftPanel}
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: LEFT_PANEL_W, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-            className="flex-shrink-0 overflow-hidden border-r border-white/[0.06] bg-[#111114]"
-            style={{ width: LEFT_PANEL_W }}
-          >
-            <div
-              className="h-full overflow-y-auto overflow-x-hidden"
-              style={{
-                scrollbarWidth: "thin",
-                scrollbarColor: "#2a2a30 transparent",
-              }}
+        <PanelGroup orientation="horizontal" className="flex-1 w-full" id="polyglot-builder-v11">
+          {/* Left Panel Area */}
+          {activeLeftPanel && (
+            <Panel
+              id="left-sidebar-v11"
+              defaultSize={25}
+              minSize={15}
+              maxSize={40}
+              className="z-[30] bg-white border-r border-slate-200 overflow-hidden relative"
+              style={{ minWidth: '350px' }}
             >
-              <ErrorBoundary componentName="LeftPanel">
-                {activeLeftPanel === "ai" && <AIPromptPanel />}
-                {activeLeftPanel === "components" && <ComponentLibrary />}
-                {activeLeftPanel === "custom" && <CustomComponentPanel />}
-                {activeLeftPanel === "layers" && <LayersPanel />}
-                {activeLeftPanel === "assets" && <AssetsPanel />}
-                {activeLeftPanel === "history" && <HistoryPanel />}
-              </ErrorBoundary>
-            </div>
-          </motion.div>
-        )}
+              <div className="h-full overflow-y-auto custom-scrollbar">
+                <ErrorBoundary componentName="LeftPanel">
+                  {activeLeftPanel === "ai" && <AIPromptPanel />}
+                  {activeLeftPanel === "components" && <ComponentLibrary />}
+                  {activeLeftPanel === "custom" && <CustomComponentPanel />}
+                  {activeLeftPanel === "layers" && <LayersPanel />}
+                  {activeLeftPanel === "assets" && <AssetsPanel />}
+                  {activeLeftPanel === "history" && <HistoryPanel />}
+                </ErrorBoundary>
+              </div>
+            </Panel>
+          )}
+          {activeLeftPanel && (
+            <PanelResizeHandle className="w-1.5 bg-transparent hover:bg-sky-500/30 transition-colors cursor-col-resize z-50 flex items-center justify-center group">
+              <div className="w-[1px] h-8 bg-slate-300 group-hover:bg-sky-500 transition-colors" />
+            </PanelResizeHandle>
+          )}
 
-        {/* ── Resize handle between left panel and canvas ────────── */}
-        {leftPanelOpen && (
-          <div className="group w-[1px] flex-shrink-0 cursor-col-resize bg-white/[0.06] transition-colors hover:bg-violet-500/60" />
-        )}
-
-        {/* ── Canvas (takes all remaining space) ────────────────── */}
-        <main className="relative flex flex-1 flex-col overflow-hidden">
-          <ErrorBoundary componentName="Canvas">
-            <Canvas />
-          </ErrorBoundary>
-        </main>
-
-        {/* ── Resize handle between canvas and right panel ────────── */}
-        {rightOpen && (
-          <div className="group w-[1px] flex-shrink-0 cursor-col-resize bg-white/[0.06] transition-colors hover:bg-violet-500/60" />
-        )}
-
-        {/* ── Right inspector panel ─────────────────────────────── */}
-        {rightOpen && (
-          <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: RIGHT_PANEL_W, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-            className="flex-shrink-0 overflow-hidden border-l border-white/[0.06] bg-[#111114]"
-            style={{ width: RIGHT_PANEL_W }}
+          {/* Canvas Center Area */}
+          <Panel 
+            id="canvas-v11" 
+            defaultSize={50} 
+            minSize={30} 
+            className="relative z-[10] flex flex-col bg-slate-50/50 overflow-hidden"
           >
-            <RightPanel onClose={() => setRightOpen(false)} />
-          </motion.div>
-        )}
-      </div>
+            <main className="flex-1 overflow-hidden relative">
+              <Canvas />
+            </main>
+          </Panel>
 
-      {/* ── Floating AI chat ──────────────────────────────────── */}
-      <AIChatWidget />
+          <PanelResizeHandle className="w-1.5 bg-transparent hover:bg-sky-500/30 transition-colors cursor-col-resize z-50 flex items-center justify-center group">
+            <div className="w-[1px] h-8 bg-slate-300 group-hover:bg-sky-500 transition-colors" />
+          </PanelResizeHandle>
+
+          {/* Right Panel Area */}
+          <Panel
+            id="right-sidebar-v11"
+            defaultSize={25}
+            minSize={15}
+            maxSize={45}
+            className="z-[30] bg-white border-l border-slate-200 shadow-2xl overflow-hidden relative"
+            style={{ minWidth: '350px' }}
+          >
+            <RightPanel />
+          </Panel>
+        </PanelGroup>
+
+        {/* Floating AI Chat Widget */}
+        <AIChatWidget />
+      </div>
     </div>
   );
 }

@@ -18,7 +18,6 @@ interface ComponentWrapperProps {
 export default function ComponentWrapper({ component }: ComponentWrapperProps) {
   const { updateComponent, removeComponent } = useProjectStore();
   const comp = useProjectStore((s) => s.currentProject?.components[component.id]);
-  const inlineStyles = (comp?.cssOverrides?.base ?? {}) as React.CSSProperties;
 
   const [isEditing, setIsEditing] = useState(false);
   const [draftText, setDraftText] = useState(String(component.props?.text ?? ""));
@@ -61,6 +60,7 @@ export default function ComponentWrapper({ component }: ComponentWrapperProps) {
 
   // Build motion props based on component animations
   const motionProps = useMemo(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const props: any = {};
     if (comp?.animations && Array.isArray(comp.animations) && comp.animations.length > 0) {
       comp.animations.forEach((anim) => {
@@ -68,25 +68,26 @@ export default function ComponentWrapper({ component }: ComponentWrapperProps) {
         if (!preset) return;
 
         if (anim.trigger === "load" || anim.trigger === "scroll") {
-          props.initial = { ...props.initial, ...preset.variants.hidden };
-          const target = { ...preset.variants.visible };
+          props.initial = { ...(props.initial || {}), ...preset.variants.hidden };
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const target: any = { ...preset.variants.visible };
           
           if (anim.delay || anim.duration) {
-            target.transition = { ...target.transition };
+            target.transition = { ...(target.transition || {}) };
             if (anim.delay) target.transition.delay = anim.delay;
             if (anim.duration) target.transition.duration = anim.duration;
           }
 
           if (anim.trigger === "scroll") {
-            props.whileInView = { ...props.whileInView, ...target };
+            props.whileInView = { ...(props.whileInView || {}), ...target };
             props.viewport = { once: !anim.repeat, margin: "-50px" };
           } else {
-            props.animate = { ...props.animate, ...target };
+            props.animate = { ...(props.animate || {}), ...target };
           }
         } else if (anim.trigger === "hover" && preset.variants.hover) {
-          props.whileHover = { ...props.whileHover, ...preset.variants.hover };
+          props.whileHover = { ...(props.whileHover || {}), ...preset.variants.hover };
         } else if (anim.trigger === "tap" && preset.variants.tap) {
-          props.whileTap = { ...props.whileTap, ...preset.variants.tap };
+          props.whileTap = { ...(props.whileTap || {}), ...preset.variants.tap };
         }
       });
     }

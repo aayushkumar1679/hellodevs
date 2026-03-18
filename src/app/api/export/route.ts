@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateNextJsProject } from "@/utils/exporter";
 import { generateExport, type TechStack } from "@/utils/exportGenerators";
-import { normalizeProject } from "@/utils/projectModel";
+import { normalizeProjectData } from "@/utils/projectModel";
 import JSZip from "jszip";
 import type { PolyglotProject } from "@/state/useProjectStore";
 
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Project not found or unauthorized" }, { status: 404 });
     }
 
-    const canvasProject = normalizeProject({
+    const canvasProject = normalizeProjectData({
       id: project.id,
       name: project.name,
       components: (project.components ?? {}) as unknown as PolyglotProject["components"],
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       rootComponent: project.rootComponent || null,
       createdAt: project.createdAt.toISOString(),
       updatedAt: project.updatedAt.toISOString(),
-    } as PolyglotProject);
+    });
 
     const files =
       format === "react-tailwind"

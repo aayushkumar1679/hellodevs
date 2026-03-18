@@ -50,7 +50,8 @@ export default function RightPanel({ onClose }: RightPanelProps) {
   }, [selectedElements, currentProject]);
 
   return (
-    <aside className="flex h-full w-full flex-col bg-[#111114]">
+    <aside className="relative flex h-full w-full flex-col bg-[#0f1016]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.16),transparent_45%),radial-gradient(circle_at_bottom,rgba(56,189,248,0.12),transparent_55%)] opacity-80" />
       {/* ── Tab bar ──────────────────────────────────────── */}
       <div className="flex h-8 flex-shrink-0 items-center border-b border-white/[0.06] px-1.5 gap-0.5">
         {TABS.map(({ id, icon: Icon, label }) => {
