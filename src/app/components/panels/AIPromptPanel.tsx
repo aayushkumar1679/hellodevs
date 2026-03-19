@@ -170,7 +170,7 @@ export default function AIPromptPanel() {
           const materialized = { components: useProjectStore.getState().currentProject?.components || {} };
           // Auto-image generation
           const tasks: Promise<void>[] = [];
-          Object.values(materialized.components).forEach((comp) => {
+          Object.values(materialized.components).forEach((comp: { id?: string, type?: string, props?: { imagePrompt?: string } }) => {
             if (comp.type === "image" && comp.props?.imagePrompt) {
               setManifestingImages(true);
               const imgP = comp.props.imagePrompt as string;

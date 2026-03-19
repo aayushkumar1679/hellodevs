@@ -1,0 +1,290 @@
+src/app/api/export/route.ts(9,15): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotProject'.
+src/app/builder/[id]/preview/page.tsx(13,5): error TS2339: Property 'projects' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/builder/[id]/preview/page.tsx(15,5): error TS2339: Property 'currentProjectId' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/builder/[id]/preview/page.tsx(16,5): error TS2339: Property 'setCurrentProject' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/builder/[id]/preview/page.tsx(17,5): error TS2339: Property 'fetchProject' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/builder/new/page.tsx(63,50): error TS2551: Property 'createProject' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'. Did you mean 'currentProject'?
+src/app/builder/new/page.tsx(130,11): error TS2698: Spread types may only be created from object types.
+src/app/builder/new/page.tsx(142,32): error TS2339: Property 'projects' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/AIChatWidget.tsx(6,15): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotComponent'.
+src/app/components/AIChatWidget.tsx(6,34): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotProject'.
+src/app/components/AIChatWidget.tsx(72,41): error TS2339: Property 'name' does not exist on type 'never'.
+src/app/components/AIChatWidget.tsx(73,56): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/AIChatWidget.tsx(76,32): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/AIChatWidget.tsx(78,43): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/AIChatWidget.tsx(79,44): error TS2339: Property 'rootOrder' does not exist on type 'never'.
+src/app/components/AIChatWidget.tsx(80,16): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/app/components/AIChatWidget.tsx(80,38): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/AIChatWidget.tsx(95,51): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/AIChatWidget.tsx(96,48): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/AIChatWidget.tsx(97,25): error TS18046: 'c' is of type 'unknown'.
+src/app/components/AIChatWidget.tsx(98,27): error TS18046: 'c' is of type 'unknown'.
+src/app/components/AIChatWidget.tsx(99,28): error TS18046: 'c' is of type 'unknown'.
+src/app/components/AIChatWidget.tsx(168,29): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/AIChatWidget.tsx(189,33): error TS2554: Expected 0 arguments, but got 2.
+src/app/components/AIChatWidget.tsx(199,28): error TS2554: Expected 0 arguments, but got 2.
+src/app/components/canvas/Canvas.tsx(48,27): error TS2339: Property 'updateComponentCSSOverride' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/canvas/Canvas.tsx(50,5): error TS2339: Property 'activeBreakpoint' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/canvas/Canvas.tsx(51,5): error TS2339: Property 'breakpoints' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/canvas/Canvas.tsx(52,5): error TS2339: Property 'previewEnabled' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/canvas/Canvas.tsx(53,5): error TS2339: Property 'threeEnabled' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/canvas/Canvas.tsx(54,5): error TS2339: Property 'threeSpeed' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/canvas/Canvas.tsx(55,5): error TS2339: Property 'threeDensity' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/canvas/Canvas.tsx(56,5): error TS2339: Property 'deselectAll' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/canvas/Canvas.tsx(57,5): error TS2339: Property 'selectElement' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/canvas/Canvas.tsx(73,23): error TS2339: Property 'updatedAt' does not exist on type 'never'.
+src/app/components/canvas/Canvas.tsx(79,36): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/canvas/Canvas.tsx(86,23): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/canvas/Canvas.tsx(336,23): error TS2339: Property 'id' does not exist on type 'never'.
+src/app/components/canvas/Canvas.tsx(366,36): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/app/components/canvas/Canvas.tsx(371,54): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/app/components/canvas/Canvas.tsx(373,37): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/app/components/canvas/Canvas.tsx(505,53): error TS2339: Property 'getResolvedCss' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/canvas/Canvas.tsx(637,38): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/app/components/canvas/Canvas.tsx(794,53): error TS2339: Property 'getResolvedCss' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/canvas/Canvas.tsx(837,39): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/canvas/Canvas.tsx(876,34): error TS7006: Parameter 'childId' implicitly has an 'any' type.
+src/app/components/canvas/Canvas.tsx(893,70): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/canvas/Canvas.tsx(1173,36): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/canvas/Canvas.tsx(1174,57): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/canvas/Canvas.tsx(1175,54): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/canvas/Canvas.tsx(1176,54): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/canvas/Canvas.tsx(1177,56): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/canvas/Canvas.tsx(1178,53): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/canvas/canvas/CanvasShell.tsx(35,11): error TS2339: Property 'activeBreakpoint' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/canvas/canvas/CanvasShell.tsx(35,29): error TS2339: Property 'previewEnabled' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/canvas/canvas/CanvasShell.tsx(100,22): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly desktop: "100%"; readonly tablet: "768px"; readonly mobile: "390px"; }'.
+src/app/components/canvas/canvas/CanvasShell.tsx(114,33): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/canvas/canvas/CanvasShell.tsx(117,40): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/canvas/canvas/CanvasShell.tsx(119,40): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/canvas/canvas/CanvasShell.tsx(121,40): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/canvas/canvas/CanvasShell.tsx(123,40): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/canvas/canvas/CanvasShell.tsx(125,40): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/canvas/CanvasElement.tsx(28,62): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/canvas/CanvasElement.tsx(29,72): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/app/components/canvas/CanvasElement.tsx(30,63): error TS2339: Property 'updateComponentCSSOverride' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/canvas/CanvasElement.tsx(31,52): error TS2339: Property 'activeBreakpoint' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/canvas/ComponentWrapper.tsx(20,57): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/canvas/ComponentWrapper.tsx(36,23): error TS2554: Expected 0 arguments, but got 2.
+src/app/components/canvas/ComponentWrapper.tsx(66,32): error TS7006: Parameter 'anim' implicitly has an 'any' type.
+src/app/components/canvas/ComponentWrapper.tsx(130,27): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/canvas/ContextMenu.tsx(38,23): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/dashboard/DashboardClient.tsx(20,8): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotProject'.
+src/app/components/dashboard/DashboardClient.tsx(70,5): error TS2339: Property 'projects' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/dashboard/DashboardClient.tsx(71,5): error TS2339: Property 'fetchProjects' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/dashboard/DashboardClient.tsx(72,5): error TS2339: Property 'deleteProject' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/dashboard/DashboardClient.tsx(87,13): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(88,15): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(89,20): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(90,20): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(92,31): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(94,27): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/ExportModal.tsx(7,15): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotProject'.
+src/app/components/editor/ElementTree.tsx(9,36): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/editor/ElementTree.tsx(10,29): error TS2339: Property 'selectElement' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/editor/ElementTree.tsx(30,50): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/app/components/editor/ElementTree.tsx(69,29): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/editor/ElementTree.tsx(79,37): error TS7006: Parameter 'childId' implicitly has an 'any' type.
+src/app/components/editor/ElementTree.tsx(88,41): error TS2339: Property 'rootOrder' does not exist on type 'never'.
+src/app/components/editor/ElementTree.tsx(88,62): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/app/components/editor/ElementTree.tsx(96,27): error TS7006: Parameter 'el' implicitly has an 'any' type.
+src/app/components/layout/BuilderHeader.tsx(61,41): error TS2339: Property 'undo' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/layout/BuilderHeader.tsx(62,41): error TS2339: Property 'redo' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/layout/BuilderHeader.tsx(63,48): error TS2339: Property 'saveProject' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/layout/BuilderHeader.tsx(66,11): error TS2339: Property 'activeBreakpoint' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/layout/BuilderHeader.tsx(66,29): error TS2339: Property 'setBreakpoint' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/layout/BuilderHeader.tsx(66,44): error TS2339: Property 'previewEnabled' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/layout/BuilderHeader.tsx(66,60): error TS2339: Property 'togglePreview' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/layout/BuilderHeader.tsx(66,75): error TS2339: Property 'viewMode' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/layout/BuilderHeader.tsx(66,85): error TS2339: Property 'setViewMode' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/layout/BuilderHeader.tsx(93,58): error TS2339: Property 'id' does not exist on type 'never'.
+src/app/components/layout/BuilderHeader.tsx(100,37): error TS2339: Property 'name' does not exist on type 'never'.
+src/app/components/layout/BuilderHeader.tsx(124,67): error TS2339: Property 'name' does not exist on type 'never'.
+src/app/components/layout/BuilderHeader.tsx(172,30): error TS2339: Property 'name' does not exist on type 'never'.
+src/app/components/layout/RightPanel.tsx(38,36): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/panels/AIPromptPanel.tsx(20,15): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotProject'.
+src/app/components/panels/AIPromptPanel.tsx(63,25): error TS2698: Spread types may only be created from object types.
+src/app/components/panels/AIPromptPanel.tsx(66,30): error TS2339: Property 'projects' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/panels/AIPromptPanel.tsx(73,21): error TS2339: Property 'generationPrompt' does not exist on type 'never'.
+src/app/components/panels/AIPromptPanel.tsx(76,21): error TS2339: Property 'generationModel' does not exist on type 'never'.
+src/app/components/panels/AIPromptPanel.tsx(80,21): error TS2339: Property 'generationSummary' does not exist on type 'never'.
+src/app/components/panels/AIPromptPanel.tsx(109,29): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/panels/AIPromptPanel.tsx(112,31): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/panels/AIPromptPanel.tsx(117,28): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/panels/AIPromptPanel.tsx(131,67): error TS2339: Property 'name' does not exist on type 'never'.
+src/app/components/panels/AIPromptPanel.tsx(157,56): error TS2339: Property 'name' does not exist on type 'never'.
+src/app/components/panels/AIPromptPanel.tsx(170,89): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/panels/AIPromptPanel.tsx(174,17): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/AIPromptPanel.tsx(174,42): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/AIPromptPanel.tsx(176,28): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/AIPromptPanel.tsx(186,66): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/AIPromptPanel.tsx(186,66): error TS2554: Expected 0 arguments, but got 2.
+src/app/components/panels/AIPromptPanel.tsx(187,37): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/AIPromptPanel.tsx(189,59): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/panels/AIPromptPanel.tsx(232,43): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/panels/AIPromptPanel.tsx(403,62): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/panels/AIPromptPanel.tsx(495,31): error TS2554: Expected 0 arguments, but got 2.
+src/app/components/panels/AIPromptPanel.tsx(541,25): error TS2698: Spread types may only be created from object types.
+src/app/components/panels/AIPromptPanel.tsx(550,46): error TS2339: Property 'projects' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/panels/AIPromptPanel.tsx(609,25): error TS2698: Spread types may only be created from object types.
+src/app/components/panels/AIPromptPanel.tsx(618,46): error TS2339: Property 'projects' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/panels/AssetsPanel.tsx(33,34): error TS2339: Property 'assets' does not exist on type 'never'.
+src/app/components/panels/AssetsPanel.tsx(34,35): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/app/components/panels/AssetsPanel.tsx(55,16): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/panels/AssetsPanel.tsx(87,16): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/panels/AssetsPanel.tsx(105,23): error TS2554: Expected 0 arguments, but got 2.
+src/app/components/panels/AssetsPanel.tsx(171,32): error TS7006: Parameter 'asset' implicitly has an 'any' type.
+src/app/components/panels/AssetsPanel.tsx(171,39): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/app/components/panels/CollaborationPanel.tsx(8,11): error TS2339: Property 'currentProjectId' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/panels/ComponentLibrary.tsx(219,49): error TS2554: Expected 0 arguments, but got 4.
+src/app/components/panels/CustomComponentPanel.tsx(12,55): error TS2551: Property 'addCustomComponent' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'. Did you mean 'addComponent'?
+src/app/components/panels/CustomComponentPanel.tsx(13,58): error TS2551: Property 'removeCustomComponent' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'. Did you mean 'removeComponent'?
+src/app/components/panels/CustomComponentPanel.tsx(30,21): error TS2339: Property 'customComponents' does not exist on type 'never'.
+src/app/components/panels/CustomComponentPanel.tsx(121,20): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/CustomComponentPanel.tsx(124,57): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/CustomComponentPanel.tsx(130,18): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/CustomComponentPanel.tsx(134,20): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/CustomComponentPanel.tsx(137,20): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/CustomComponentPanel.tsx(141,54): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/DesignSystemPanel.tsx(68,40): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/panels/DesignSystemPanel.tsx(71,27): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/panels/DesignSystemPanel.tsx(74,30): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/panels/DesignSystemPanel.tsx(78,30): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/app/components/panels/DesignSystemPanel.tsx(86,19): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/panels/DesignSystemPanel.tsx(93,19): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/panels/DesignSystemPanel.tsx(203,31): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/panels/ElementInspector.tsx(10,47): error TS2339: Property 'deselectAll' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/ElementInspector.tsx(11,52): error TS2339: Property 'activeBreakpoint' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/ElementInspector.tsx(12,44): error TS2339: Property 'updateComponentCSSOverride' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/panels/ElementInspector.tsx(24,34): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/panels/ElementInspector.tsx(35,34): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/panels/ElementInspector.tsx(62,40): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/panels/ElementInspector.tsx(88,50): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/panels/HistoryPanel.tsx(16,11): error TS2339: Property 'history' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/panels/HistoryPanel.tsx(16,36): error TS2339: Property 'undo' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/panels/InteractionsPanel.tsx(45,61): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/panels/InteractionsPanel.tsx(56,16): error TS2554: Expected 0 arguments, but got 2.
+src/app/components/panels/InteractionsPanel.tsx(73,16): error TS2554: Expected 0 arguments, but got 2.
+src/app/components/panels/InteractionsPanel.tsx(82,16): error TS2554: Expected 0 arguments, but got 2.
+src/app/components/panels/LayersPanel.tsx(4,32): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotComponent'.
+src/app/components/panels/LayersPanel.tsx(21,29): error TS2339: Property 'selectElement' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/LayersPanel.tsx(25,34): error TS2339: Property 'rootOrder' does not exist on type 'never'.
+src/app/components/panels/LayersPanel.tsx(35,39): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/panels/LayersPanel.tsx(41,25): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/app/components/panels/LayersPanel.tsx(46,42): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/panels/LayersPanel.tsx(49,82): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/panels/LayersPanel.tsx(79,45): error TS2339: Property 'draggedId' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/LayersPanel.tsx(80,48): error TS2339: Property 'setDraggedId' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/LayersPanel.tsx(91,34): error TS2551: Property 'moveComponent' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'. Did you mean 'removeComponent'?
+src/app/components/panels/LayersPanel.tsx(191,30): error TS7006: Parameter 'childId' implicitly has an 'any' type.
+src/app/components/panels/MultiSelectToolbar.tsx(9,11): error TS2339: Property 'activeBreakpoint' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/MultiSelectToolbar.tsx(11,14): error TS2339: Property 'updateComponentCSSOverride' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/panels/MultiSelectToolbar.tsx(34,62): error TS2554: Expected 0 arguments, but got 1.
+src/app/components/panels/PropertyPanel.tsx(15,24): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/panels/PropertyPanel.tsx(27,21): error TS2554: Expected 0 arguments, but got 2.
+src/app/components/panels/SettingsPanel.tsx(10,27): error TS2339: Property 'deleteProject' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/panels/SettingsPanel.tsx(12,5): error TS2339: Property 'previewEnabled' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/SettingsPanel.tsx(13,5): error TS2339: Property 'togglePreview' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/SettingsPanel.tsx(14,5): error TS2339: Property 'threeEnabled' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/SettingsPanel.tsx(15,5): error TS2339: Property 'toggleThree' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/SettingsPanel.tsx(16,5): error TS2339: Property 'threeSpeed' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/SettingsPanel.tsx(17,5): error TS2339: Property 'threeDensity' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/SettingsPanel.tsx(18,5): error TS2339: Property 'setThreeSpeed' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/SettingsPanel.tsx(19,5): error TS2339: Property 'setThreeDensity' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/SettingsPanel.tsx(38,27): error TS2339: Property 'name' does not exist on type 'never'.
+src/app/components/panels/SettingsPanel.tsx(41,27): error TS2339: Property 'id' does not exist on type 'never'.
+src/app/components/panels/SettingsPanel.tsx(130,44): error TS2339: Property 'id' does not exist on type 'never'.
+src/app/components/panels/SettingsPanel.tsx(137,42): error TS2339: Property 'id' does not exist on type 'never'.
+src/app/components/panels/SettingsPanel.tsx(152,58): error TS2339: Property 'name' does not exist on type 'never'.
+src/app/components/panels/SettingsPanel.tsx(153,44): error TS2339: Property 'id' does not exist on type 'never'.
+src/app/components/panels/StylePanel.tsx(6,15): error TS2305: Module '"@/state/useEditorStore"' has no exported member 'Breakpoint'.
+src/app/components/panels/StylePanel.tsx(7,15): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'CSSProperties'.
+src/app/components/panels/StylePanel.tsx(218,11): error TS2339: Property 'activeBreakpoint' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/StylePanel.tsx(218,29): error TS2339: Property 'setBreakpoint' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/app/components/panels/StylePanel.tsx(221,14): error TS2339: Property 'updateComponentCSSOverride' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/panels/StylePanel.tsx(223,51): error TS2339: Property 'getResolvedCss' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/app/components/panels/StylePanel.tsx(239,49): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/components/panels/StylePanel.tsx(265,33): error TS2339: Property 'components' does not exist on type 'never'.
+src/app/share/[id]/page.tsx(7,15): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotProject'.
+src/components/ide/AgentManager.tsx(33,11): error TS2339: Property 'activeFile' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/AgentManager.tsx(68,35): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{}'.
+src/components/ide/AgentManager.tsx(68,49): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{}'.
+src/components/ide/CodeEditor.tsx(90,11): error TS2339: Property 'openFiles' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/CodeEditor.tsx(90,22): error TS2339: Property 'activeFile' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/CodeEditor.tsx(98,23): error TS2554: Expected 0 arguments, but got 2.
+src/components/ide/CodeEditor.tsx(111,24): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{}'.
+src/components/ide/CodeEditor.tsx(140,52): error TS2339: Property 'activeFile' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/CodeEditor.tsx(143,24): error TS2554: Expected 0 arguments, but got 2.
+src/components/ide/CodeEditor.tsx(150,50): error TS2339: Property 'activeFile' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/CodeEditor.tsx(184,24): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{}'.
+src/components/ide/CommandPalette.tsx(60,11): error TS2339: Property 'setViewMode' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/components/ide/FileTree.tsx(24,18): error TS2339: Property 'init' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/FileTree.tsx(34,23): error TS2551: Property 'createFile' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'. Did you mean 'readFile'?
+src/components/ide/FileTreeItem.tsx(63,11): error TS2339: Property 'activeFile' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/FileTreeItem.tsx(63,23): error TS2339: Property 'openFile' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/IDEHeader.tsx(64,50): error TS2339: Property 'undo' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/components/ide/IDEHeader.tsx(65,50): error TS2339: Property 'redo' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/components/ide/IDEHeader.tsx(66,50): error TS2339: Property 'saveProject' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/components/ide/IDEHeader.tsx(69,11): error TS2339: Property 'viewMode' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/components/ide/IDEHeader.tsx(69,21): error TS2339: Property 'setViewMode' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/components/ide/IDEHeader.tsx(69,34): error TS2339: Property 'activeBreakpoint' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/components/ide/IDEHeader.tsx(69,52): error TS2339: Property 'setBreakpoint' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/components/ide/IDEHeader.tsx(96,58): error TS2339: Property 'id' does not exist on type 'never'.
+src/components/ide/IDEHeader.tsx(103,37): error TS2339: Property 'name' does not exist on type 'never'.
+src/components/ide/IDEHeader.tsx(127,67): error TS2339: Property 'name' does not exist on type 'never'.
+src/components/ide/IDEHeader.tsx(184,30): error TS2339: Property 'name' does not exist on type 'never'.
+src/components/ide/IDETabBar.tsx(52,11): error TS2339: Property 'openFiles' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/IDETabBar.tsx(52,22): error TS2339: Property 'closeFile' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/IDETabBar.tsx(52,33): error TS2339: Property 'setActiveFile' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/IDETabBar.tsx(79,28): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/components/ide/IDETabBar.tsx(88,28): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/components/ide/IDETabBar.tsx(192,11): error TS2339: Property 'activeFile' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/IDETabBar.tsx(192,23): error TS2339: Property 'setActiveFile' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/IDETabBar.tsx(192,38): error TS2339: Property 'closeFile' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/IDETabBar.tsx(360,11): error TS2339: Property 'openFiles' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/IDETabBar.tsx(399,25): error TS7006: Parameter 'path' implicitly has an 'any' type.
+src/components/ide/RightInspectorPanel.tsx(182,11): error TS2339: Property 'activeFile' does not exist on type '{ files: {}; writeFile: () => Promise<void>; readFile: () => Promise<null>; }'.
+src/components/ide/RightInspectorPanel.tsx(183,33): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{}'.
+src/components/ide/StatusBar.tsx(24,11): error TS2339: Property 'activeBreakpoint' does not exist on type '{ selectedElements: never[]; setSelectedElements: () => void; }'.
+src/components/project/ProjectSurface.tsx(4,15): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotProject'.
+src/lib/agents/designAgent.ts(8,10): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotComponent'.
+src/lib/agents/diffEngine.ts(23,36): error TS2554: Expected 0 arguments, but got 2.
+src/lib/agents/diffEngine.ts(27,35): error TS2554: Expected 0 arguments, but got 4.
+src/lib/agents/diffEngine.ts(32,38): error TS2554: Expected 0 arguments, but got 2.
+src/lib/agents/diffEngine.ts(37,38): error TS2554: Expected 0 arguments, but got 1.
+src/lib/agents/diffEngine.ts(43,58): error TS2339: Property 'designSystem' does not exist on type 'never'.
+src/lib/agents/diffEngine.ts(44,38): error TS2554: Expected 0 arguments, but got 1.
+src/lib/agents/screenshotAgent.ts(8,10): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotComponent'.
+src/lib/codeSync/canvasToCode.ts(2,27): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotProject'.
+src/lib/codeSync/canvasToCode.ts(246,11): error TS7006: Parameter 'cid' implicitly has an 'any' type.
+src/lib/codeSync/canvasToCode.ts(356,21): error TS2554: Expected 0 arguments, but got 2.
+src/lib/codeSync/canvasToCode.ts(358,19): error TS2554: Expected 0 arguments, but got 2.
+src/lib/codeSync/canvasToCode.ts(369,28): error TS2339: Property 'updatedAt' does not exist on type 'never'.
+src/lib/codeSync/canvasToCode.ts(370,31): error TS2339: Property 'updatedAt' does not exist on type 'never'.
+src/state/__tests__/store.test.ts(22,7): error TS2353: Object literal may only specify known properties, and 'currentProjectId' does not exist in type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; } | Partial<{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () ...'.
+src/state/__tests__/store.test.ts(51,11): error TS2339: Property 'updateComponentCSSOverride' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/state/__tests__/store.test.ts(54,18): error TS2339: Property 'history' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/state/__tests__/store.test.ts(55,34): error TS2339: Property 'components' does not exist on type 'never'.
+src/state/__tests__/store.test.ts(61,32): error TS2353: Object literal may only specify known properties, and 'history' does not exist in type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; } | Partial<{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () ...'.
+src/state/__tests__/store.test.ts(64,11): error TS2339: Property 'updateComponentCSSOverride' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/state/__tests__/store.test.ts(65,39): error TS2339: Property 'history' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/state/__tests__/store.test.ts(68,32): error TS2339: Property 'undo' does not exist on type '{ currentProject: null; updateProject: () => void; addComponent: () => void; updateComponent: () => void; removeComponent: () => void; addAsset: () => void; }'.
+src/state/__tests__/store.test.ts(72,34): error TS2339: Property 'components' does not exist on type 'never'.
+src/utils/designerStyles.ts(1,15): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotComponent'.
+src/utils/exporter.ts(1,15): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotProject'.
+src/utils/exporter.ts(40,11): error TS7006: Parameter 'cid' implicitly has an 'any' type.
+src/utils/exporter.ts(296,26): error TS18046: 'c' is of type 'unknown'.
+src/utils/exporter.ts(296,43): error TS18046: 'c' is of type 'unknown'.
+src/utils/exportGenerators.ts(1,15): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotProject'.
+src/utils/projectHydration.ts(1,15): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotComponent'.
+src/utils/projectModel.ts(1,15): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotProject'.
+src/utils/projectModel.ts(1,32): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotComponent'.
+src/utils/projectModel.ts(2,15): error TS2305: Module '"@/state/useEditorStore"' has no exported member 'Breakpoint'.
+src/utils/projectRenderer.tsx(2,15): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotProject'.
+src/utils/projectRenderer.tsx(2,32): error TS2305: Module '"@/state/useProjectStore"' has no exported member 'PolyglotComponent'.
+src/utils/projectRenderer.tsx(3,15): error TS2305: Module '"@/state/useEditorStore"' has no exported member 'Breakpoint'.
+src/utils/projectRenderer.tsx(78,56): error TS7006: Parameter 'childId' implicitly has an 'any' type.
+src/utils/projectRenderer.tsx(89,11): error TS7006: Parameter 'childId' implicitly has an 'any' type.
+src/utils/projectRenderer.tsx(101,11): error TS7006: Parameter 'childId' implicitly has an 'any' type.
+src/utils/projectRenderer.tsx(576,63): error TS18046: 'c' is of type 'unknown'.
+src/utils/projectRenderer.tsx(576,80): error TS18046: 'c' is of type 'unknown'.

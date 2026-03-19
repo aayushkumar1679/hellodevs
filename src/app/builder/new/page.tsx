@@ -61,6 +61,7 @@ const TEMPLATES = [
 
 export default function NewProjectPage() {
   const createProject = useProjectStore((s) => s.createProject);
+  const projects = useProjectStore((state) => state.projects);
   const router = useRouter();
 
   const [name, setName] = useState("My New Website");

@@ -116,7 +116,7 @@ export default function CustomComponentPanel() {
             </p>
           </div>
         ) : (
-          customComponents.map((comp) => (
+          customComponents.map((comp: { id: string, name: string, icon: React.ReactNode, jsx: string, category?: string }) => (
             <div
               key={comp.id}
               draggable

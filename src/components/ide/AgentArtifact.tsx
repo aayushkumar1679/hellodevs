@@ -41,7 +41,11 @@ function PlanArtifact({ artifact }: { artifact: ArchitectPlan }) {
   function toggleExpand(id: string) {
     setExpanded((prev) => {
       const newSet = new Set(prev);
-      newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
       return newSet;
     });
   }
@@ -64,6 +68,7 @@ function PlanArtifact({ artifact }: { artifact: ArchitectPlan }) {
       {/* Header */}
       <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-1)", marginBottom: "4px" }}>
         {artifact.title}
+
       </p>
       {artifact.summary && (
         <p style={{ fontSize: "11px", color: "var(--text-2)", marginBottom: "8px", lineHeight: 1.5 }}>

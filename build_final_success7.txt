@@ -1,0 +1,75 @@
+
+> my-dev-builder@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.12
+   - Environments: .env.local, .env
+   - Experiments (use with caution):
+     ✓ reactCompiler
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 21.3s
+   Linting and checking validity of types ...
+
+./src/app/api/assets/upload/route.ts
+24:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/builder/new/page.tsx
+64:9  Warning: 'projects' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/components/AIChatWidget.tsx
+16:6  Warning: 'PolyglotAction' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/components/canvas/CanvasElement.tsx
+25:3  Warning: 'getSnapTargets' is defined but never used.  @typescript-eslint/no-unused-vars
+26:3  Warning: 'onGuide' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/components/layout/BuilderHeader.tsx
+115:9  Warning: 'handleDeploy' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/components/panels/AIPromptPanel.tsx
+5:29  Warning: 'AgentCommand' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/ide/CommandPalette.tsx
+118:6  Warning: React Hook useCallback has a missing dependency: 'runCommand'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/ide/IDEHeader.tsx
+63:37  Warning: 'rightOpen' is defined but never used.  @typescript-eslint/no-unused-vars
+63:48  Warning: 'onToggleRight' is defined but never used.  @typescript-eslint/no-unused-vars
+118:9  Warning: 'handleDeploy' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/config/openaiModels.ts
+1:10  Warning: 'NIM_MODEL_OPTIONS' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/codeSync/canvasToCode.ts
+1:1  Warning: Unused eslint-disable directive (no problems were reported from '@next/next/no-img-element').
+
+./src/lib/designEngine/variationGenerator.ts
+2:10  Warning: 'DesignArchetype' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/virtualFS/fileSystemAccessAdapter.ts
+4:18  Warning: 'path' is defined but never used.  @typescript-eslint/no-unused-vars
+7:19  Warning: 'path' is defined but never used.  @typescript-eslint/no-unused-vars
+7:33  Warning: 'content' is defined but never used.  @typescript-eslint/no-unused-vars
+10:20  Warning: 'path' is defined but never used.  @typescript-eslint/no-unused-vars
+13:19  Warning: 'directory' is defined but never used.  @typescript-eslint/no-unused-vars
+16:16  Warning: 'path' is defined but never used.  @typescript-eslint/no-unused-vars
+19:25  Warning: 'path' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/virtualFS/indexedDBAdapter.ts
+97:25  Warning: 'path' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+Failed to compile.
+
+./src/app/components/panels/CustomComponentPanel.tsx:130:17
+Type error: Type 'unknown' is not assignable to type 'ReactNode'.
+
+[0m [90m 128 |[39m             [33m>[39m
+ [90m 129 |[39m               [33m<[39m[33mdiv[39m className[33m=[39m[32m"flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.03] text-base"[39m[33m>[39m
+[31m[1m>[22m[39m[90m 130 |[39m                 {comp[33m.[39micon [33m||[39m [32m"🧩"[39m}
+ [90m     |[39m                 [31m[1m^[22m[39m
+ [90m 131 |[39m               [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 132 |[39m               [33m<[39m[33mdiv[39m className[33m=[39m[32m"min-w-0 flex-1"[39m[33m>[39m
+ [90m 133 |[39m                 [33m<[39m[33mp[39m className[33m=[39m[32m"truncate text-[11px] font-semibold text-white/60"[39m[33m>[39m[0m
+Next.js build worker exited with code: 1 and signal: null

@@ -1,0 +1,25 @@
+
+> my-dev-builder@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.12
+   - Environments: .env.local, .env
+   - Experiments (use with caution):
+     ✓ reactCompiler
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 14.3s
+   Linting and checking validity of types ...
+Failed to compile.
+
+./src/app/components/AIChatWidget.tsx:97:27
+Type error: Property 'id' does not exist on type 'unknown'.
+
+[0m [90m  95 |[39m               componentInventory[33m:[39m currentProject[33m?[39m[33m.[39mcomponents
+ [90m  96 |[39m                 [33m?[39m [33mObject[39m[33m.[39mvalues(currentProject[33m.[39mcomponents)[33m.[39mmap(c [33m=>[39m ({
+[31m[1m>[22m[39m[90m  97 |[39m                     id[33m:[39m c[33m.[39mid[33m,[39m
+ [90m     |[39m                           [31m[1m^[22m[39m
+ [90m  98 |[39m                     type[33m:[39m c[33m.[39mtype[33m,[39m
+ [90m  99 |[39m                     label[33m:[39m c[33m.[39mmeta[33m.[39mlabel
+ [90m 100 |[39m                   }))[0m
+Next.js build worker exited with code: 1 and signal: null

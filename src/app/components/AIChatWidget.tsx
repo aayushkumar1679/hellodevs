@@ -93,10 +93,10 @@ export default function AIChatWidget() {
               ...projectContext,
               // Include a slimmed down component map with IDs for the AI to reference
               componentInventory: currentProject?.components
-                ? Object.values(currentProject.components).map(c => ({
-                    id: c.id,
-                    type: c.type,
-                    label: c.meta.label
+                  ? Object.values(currentProject.components).map((c: { id: string, type: string, meta: { label: string } }) => ({
+                      id: c.id,
+                      type: c.type,
+                      label: c.meta.label
                   }))
                 : []
             },

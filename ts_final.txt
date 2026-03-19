@@ -1,0 +1,57 @@
+src/app/builder/new/page.tsx(127,33): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/app/components/AIChatWidget.tsx(80,16): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/app/components/AIChatWidget.tsx(97,25): error TS18046: 'c' is of type 'unknown'.
+src/app/components/AIChatWidget.tsx(98,27): error TS18046: 'c' is of type 'unknown'.
+src/app/components/AIChatWidget.tsx(99,28): error TS18046: 'c' is of type 'unknown'.
+src/app/components/canvas/Canvas.tsx(115,13): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/app/components/canvas/Canvas.tsx(118,41): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/app/components/canvas/Canvas.tsx(119,40): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/app/components/canvas/Canvas.tsx(120,42): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/app/components/canvas/Canvas.tsx(121,43): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/app/components/canvas/Canvas.tsx(703,31): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/app/components/canvas/Canvas.tsx(876,34): error TS7006: Parameter 'childId' implicitly has an 'any' type.
+src/app/components/canvas/canvas/CanvasShell.tsx(100,22): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly desktop: "100%"; readonly tablet: "768px"; readonly mobile: "390px"; }'.
+src/app/components/canvas/ComponentWrapper.tsx(66,32): error TS7006: Parameter 'anim' implicitly has an 'any' type.
+src/app/components/dashboard/DashboardClient.tsx(87,13): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(88,15): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(89,20): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(90,20): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(92,31): error TS18046: 'p' is of type 'unknown'.
+src/app/components/dashboard/DashboardClient.tsx(94,27): error TS18046: 'p' is of type 'unknown'.
+src/app/components/editor/ElementTree.tsx(79,37): error TS7006: Parameter 'childId' implicitly has an 'any' type.
+src/app/components/editor/ElementTree.tsx(88,62): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/app/components/editor/ElementTree.tsx(96,27): error TS7006: Parameter 'el' implicitly has an 'any' type.
+src/app/components/panels/AIPromptPanel.tsx(61,31): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/app/components/panels/AIPromptPanel.tsx(174,17): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/AIPromptPanel.tsx(174,42): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/AIPromptPanel.tsx(176,28): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/AIPromptPanel.tsx(186,66): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/AIPromptPanel.tsx(187,37): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/AIPromptPanel.tsx(538,47): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/app/components/panels/AIPromptPanel.tsx(606,47): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/app/components/panels/AssetsPanel.tsx(34,35): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/app/components/panels/AssetsPanel.tsx(171,32): error TS7006: Parameter 'asset' implicitly has an 'any' type.
+src/app/components/panels/AssetsPanel.tsx(171,39): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/app/components/panels/CustomComponentPanel.tsx(121,20): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/CustomComponentPanel.tsx(124,57): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/CustomComponentPanel.tsx(130,18): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/CustomComponentPanel.tsx(134,20): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/CustomComponentPanel.tsx(137,20): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/CustomComponentPanel.tsx(141,54): error TS18046: 'comp' is of type 'unknown'.
+src/app/components/panels/ElementInspector.tsx(60,32): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/app/components/panels/LayersPanel.tsx(41,25): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/app/components/panels/LayersPanel.tsx(191,30): error TS7006: Parameter 'childId' implicitly has an 'any' type.
+src/app/components/panels/MultiSelectToolbar.tsx(18,31): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/app/components/panels/MultiSelectToolbar.tsx(34,41): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/components/ide/IDETabBar.tsx(79,28): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/components/ide/IDETabBar.tsx(88,28): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/components/ide/IDETabBar.tsx(399,25): error TS7006: Parameter 'path' implicitly has an 'any' type.
+src/lib/codeSync/canvasToCode.ts(246,11): error TS7006: Parameter 'cid' implicitly has an 'any' type.
+src/utils/exporter.ts(40,11): error TS7006: Parameter 'cid' implicitly has an 'any' type.
+src/utils/exporter.ts(296,26): error TS18046: 'c' is of type 'unknown'.
+src/utils/exporter.ts(296,43): error TS18046: 'c' is of type 'unknown'.
+src/utils/projectRenderer.tsx(78,56): error TS7006: Parameter 'childId' implicitly has an 'any' type.
+src/utils/projectRenderer.tsx(89,11): error TS7006: Parameter 'childId' implicitly has an 'any' type.
+src/utils/projectRenderer.tsx(101,11): error TS7006: Parameter 'childId' implicitly has an 'any' type.
+src/utils/projectRenderer.tsx(576,63): error TS18046: 'c' is of type 'unknown'.
+src/utils/projectRenderer.tsx(576,80): error TS18046: 'c' is of type 'unknown'.

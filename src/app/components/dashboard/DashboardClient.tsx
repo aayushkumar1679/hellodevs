@@ -81,7 +81,7 @@ export default function DashboardClient({
   }, [fetchProjects]);
 
   const displayProjects = useMemo(() => {
-    const src = isStoreLoaded ? Object.values(storeProjects) : initialProjects;
+    const src = isStoreLoaded ? (Object.values(storeProjects) as InitialProject[]) : initialProjects;
     return src
       .map((p) => ({
         id: p.id,
