@@ -14,6 +14,30 @@
   --left-sidebar-w: 56px;
   --left-panel-w: 260px;
   --right-panel-w: 260px;
+  
+  /* Polyglot IDE Colors */
+  --bg-base: #0a0a0f;
+  --bg-surface: #111118;
+  --bg-elevated: #1a1a24;
+  --bg-hover: #22222f;
+  
+  --border-subtle: #1e1e2e;
+  --border-default: #2a2a3d;
+  --border-strong: #3a3a52;
+  
+  --accent-primary: #6c63ff;
+  --accent-secondary: #00d4aa;
+  --accent-warning: #f59e0b;
+  --accent-error: #ef4444;
+  --accent-success: #10b981;
+  
+  --text-primary: #e8e8f0;
+  --text-secondary: #9898b0;
+  --text-muted: #52526a;
+  --text-accent: #8b83ff;
+  
+  --glow-primary: 0 0 20px rgba(108, 99, 255, 0.3);
+  --glow-ai: 0 0 20px rgba(0, 212, 170, 0.3);
 }
 
 @theme inline {

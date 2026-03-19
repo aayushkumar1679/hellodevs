@@ -19,6 +19,11 @@ import {
   PanelRight,
   LogOut,
   Rocket,
+  PenTool,
+  Columns,
+  Code2,
+  MonitorPlay,
+  GitCompare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSession, signOut } from "next-auth/react";
@@ -28,6 +33,7 @@ import { useEditorStore } from "@/state/useEditorStore";
 import type { TechStack } from "@/utils/exportGenerators";
 import { motion, AnimatePresence } from "framer-motion";
 import { generateNextJsProject } from "@/utils/exporter";
+import DeployDialog from "@/components/ide/DeployDialog";
 
 interface BuilderHeaderProps {
   rightOpen?: boolean;
@@ -40,6 +46,14 @@ const BREAKPOINTS = [
   { id: "mobile" as const, icon: Smartphone, label: "Mobile · 375px" },
 ];
 
+const VIEW_MODES = [
+  { id: "design" as const, icon: PenTool, label: "Design" },
+  { id: "split" as const, icon: Columns, label: "Split" },
+  { id: "code" as const, icon: Code2, label: "Code" },
+  { id: "preview" as const, icon: MonitorPlay, label: "Preview" },
+  { id: "diff" as const, icon: GitCompare, label: "Diff" },
+];
+
 export default function BuilderHeader({
   rightOpen,
   onToggleRight,
@@ -49,7 +63,7 @@ export default function BuilderHeader({
   const saveProject = useProjectStore((s) => s.saveProject);
   const currentProject = useProjectStore((s) => s.currentProject);
 
-  const { activeBreakpoint, setBreakpoint, previewEnabled, togglePreview } =
+  const { activeBreakpoint, setBreakpoint, previewEnabled, togglePreview, viewMode, setViewMode } =
     useEditorStore();
 
   const { data: session } = useSession();
@@ -165,26 +179,49 @@ export default function BuilderHeader({
         />
       </div>
 
-      {/* ─── CENTER: breakpoint switcher ────────────────────── */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-0.5 rounded-lg border border-white/[0.07] bg-white/[0.04] p-0.5">
-        {BREAKPOINTS.map(({ id, icon: Icon, label }) => {
-          const active = activeBreakpoint === id;
-          return (
-            <motion.button
-              key={id}
-              onClick={() => setBreakpoint(id)}
-              title={label}
-              whileTap={{ scale: 0.88 }}
-              className={`flex h-6 w-7 items-center justify-center rounded-md transition-all duration-150 ${
-                active
-                  ? "bg-violet-600/90 text-white shadow-[0_2px_8px_rgba(124,110,248,0.35)]"
-                  : "text-white/30 hover:text-white/60"
-              }`}
-            >
-              <Icon className="h-3 w-3" />
-            </motion.button>
-          );
-        })}
+      {/* ─── CENTER: view modes & breakpoints ──────────────── */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-4">
+        <div className="flex items-center gap-0.5 rounded-lg border border-white/[0.07] bg-white/[0.04] p-0.5">
+          {VIEW_MODES.map(({ id, icon: Icon, label }) => {
+            const active = viewMode === id;
+            return (
+              <motion.button
+                key={id}
+                onClick={() => setViewMode(id)}
+                title={label}
+                whileTap={{ scale: 0.88 }}
+                className={`flex h-6 w-7 items-center justify-center rounded-md transition-all duration-150 ${
+                  active
+                    ? "bg-violet-600/90 text-white shadow-[0_2px_8px_rgba(124,110,248,0.35)]"
+                    : "text-white/30 hover:text-white/60"
+                }`}
+              >
+                <Icon className="h-3 w-3" />
+              </motion.button>
+            );
+          })}
+        </div>
+        
+        <div className="flex items-center gap-0.5 rounded-lg border border-white/[0.07] bg-white/[0.04] p-0.5">
+          {BREAKPOINTS.map(({ id, icon: Icon, label }) => {
+            const active = activeBreakpoint === id;
+            return (
+              <motion.button
+                key={id}
+                onClick={() => setBreakpoint(id)}
+                title={label}
+                whileTap={{ scale: 0.88 }}
+                className={`flex h-6 w-7 items-center justify-center rounded-md transition-all duration-150 ${
+                  active
+                    ? "bg-white/10 text-white shadow-[0_2px_8px_rgba(255,255,255,0.05)]"
+                    : "text-white/30 hover:text-white/60"
+                }`}
+              >
+                <Icon className="h-3 w-3" />
+              </motion.button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ─── RIGHT: actions ──────────────────────────────────── */}
@@ -306,19 +343,20 @@ export default function BuilderHeader({
 
                 <div className="my-1 h-px bg-white/[0.06]" />
 
-                <button
-                  onClick={handleDeploy}
-                  disabled={isDeploying}
-                  className="group flex w-full flex-col rounded-lg px-2.5 py-2 text-left transition hover:bg-violet-500/10"
-                >
-                  <div className="flex items-center gap-2">
-                    <Rocket className="h-3 w-3 text-violet-400" />
-                    <span className="text-[11px] font-bold text-violet-100 group-hover:text-white">
-                      Deploy to Vercel
-                    </span>
-                  </div>
-                  <span className="mt-0.5 text-[9px] text-white/30">Live production URL</span>
-                </button>
+                <DeployDialog>
+                  <button
+                    disabled={isDeploying}
+                    className="group flex w-full flex-col rounded-lg px-2.5 py-2 text-left transition hover:bg-violet-500/10"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Rocket className="h-3 w-3 text-violet-400" />
+                      <span className="text-[11px] font-bold text-violet-100 group-hover:text-white">
+                        Deploy to Vercel
+                      </span>
+                    </div>
+                    <span className="mt-0.5 text-[9px] text-white/30">Live production URL</span>
+                  </button>
+                </DeployDialog>
 
                 {deployUrl && (
                   <button

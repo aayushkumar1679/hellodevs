@@ -1,24 +1,27 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, PanelRightOpen, Sparkles, Wand2, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import BuilderHeader from "@/app/components/layout/BuilderHeader";
-import LeftSidebar, { LeftPanelId } from "@/app/components/layout/LeftSidebar";
-import RightPanel from "@/app/components/layout/RightPanel";
+import { ArrowRight, Wand2 } from "lucide-react";
+import { motion } from "framer-motion";
+
+import IDEShell from "@/components/ide/IDEShell";
+import FileTree from "@/components/ide/FileTree";
+import CodeEditor from "@/components/ide/CodeEditor";
+import Terminal from "@/components/ide/Terminal";
 import Canvas from "@/app/components/canvas/Canvas";
+import RightPanel from "@/app/components/layout/RightPanel";
+import LivePreview from "@/components/ide/LivePreview";
+
 import ComponentLibrary from "@/app/components/panels/ComponentLibrary";
-import LayersPanel from "@/app/components/panels/LayersPanel";
 import AIPromptPanel from "@/app/components/panels/AIPromptPanel";
-import HistoryPanel from "@/app/components/panels/HistoryPanel";
 import AssetsPanel from "@/app/components/panels/AssetsPanel";
-import CustomComponentPanel from "@/app/components/panels/CustomComponentPanel";
-import AIChatWidget from "@/app/components/AIChatWidget";
+import LayersPanel from "@/app/components/panels/LayersPanel";
+
 import { useParams } from "next/navigation";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { initCanvasToCodeSync } from "@/lib/codeSync/canvasToCode";
 import {
   Panel,
   Group as PanelGroup,
@@ -28,17 +31,13 @@ import {
 export default function BuilderPage() {
   const { id: projectId } = useParams();
   const { currentProject, currentProjectId, isLoading } = useProjectStore();
-  const [activeLeftPanel, setActiveLeftPanel] = useState<LeftPanelId>("components");
+  const { selectedElements, viewMode } = useEditorStore();
 
-  // Selection state
-  const { selectedElements } = useEditorStore();
-
-  // Handle mobile / responsive widths if needed
   useEffect(() => {
     // Initial setup logic
+    initCanvasToCodeSync();
   }, []);
 
-  // Error / Not Found
   if (!isLoading && currentProjectId !== projectId) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
@@ -67,78 +66,51 @@ export default function BuilderPage() {
     );
   }
 
+  let mainContent = null;
+  
+  if (viewMode === "design") {
+    mainContent = <Canvas />;
+  } else if (viewMode === "code") {
+    mainContent = <CodeEditor />;
+  } else if (viewMode === "split" || viewMode === "diff") {
+    mainContent = (
+      <PanelGroup orientation="horizontal" className="h-full w-full">
+        <Panel defaultSize={viewMode === "split" ? 50 : 60} minSize={20} className="relative flex flex-col h-full bg-[var(--bg-base)] overflow-hidden">
+          <Canvas />
+        </Panel>
+        
+        <PanelResizeHandle className="w-1.5 bg-transparent hover:bg-[var(--accent-primary)]/30 transition-colors cursor-col-resize z-50 flex items-center justify-center group">
+          <div className="w-[1px] h-8 bg-[var(--border-strong)] group-hover:bg-[var(--accent-primary)] transition-colors" />
+        </PanelResizeHandle>
+        
+        <Panel defaultSize={viewMode === "split" ? 50 : 40} minSize={20} className="relative flex flex-col h-full bg-[var(--bg-base)] border-l border-[var(--border-subtle)] overflow-hidden">
+          {viewMode === "diff" ? (
+            <div className="flex items-center justify-center w-full h-full text-[var(--text-muted)] font-mono text-xs">
+              Visual Diff View (Coming Soon)
+            </div>
+          ) : (
+            <CodeEditor />
+          )}
+        </Panel>
+      </PanelGroup>
+    );
+  } else if (viewMode === "preview") {
+    mainContent = <LivePreview />;
+  }
+
   return (
-    <div
-      className="flex h-screen w-screen max-w-none flex-col text-slate-950 overflow-hidden"
-      style={{ background: "var(--background)", width: '100vw !important', maxWidth: 'none !important' }}
+    <IDEShell
+      leftPanels={{
+        explorer: <FileTree />,
+        search: <div className="p-4 text-xs text-[var(--text-muted)]">Search (Coming soon)</div>,
+        components: <ComponentLibrary />,
+        agent: <AIPromptPanel />,
+        assets: <AssetsPanel />
+      }}
+      rightPanel={<RightPanel />}
+      bottomPanel={<Terminal />}
     >
-      <BuilderHeader />
-
-      <div className="flex-1 overflow-hidden relative" style={{ display: 'flex', width: '100% !important', maxWidth: 'none !important' }}>
-        {/* Permanent Left Tab Strip */}
-        <LeftSidebar activeLeftPanel={activeLeftPanel} setActiveLeftPanel={setActiveLeftPanel} />
-
-        <PanelGroup orientation="horizontal" className="flex-1 w-full" id="polyglot-builder-v11">
-          {/* Left Panel Area */}
-          {activeLeftPanel && (
-            <Panel
-              id="left-sidebar-v11"
-              defaultSize={25}
-              minSize={15}
-              maxSize={40}
-              className="z-[30] bg-white border-r border-slate-200 overflow-hidden relative"
-              style={{ minWidth: '350px' }}
-            >
-              <div className="h-full overflow-y-auto custom-scrollbar">
-                <ErrorBoundary componentName="LeftPanel">
-                  {activeLeftPanel === "ai" && <AIPromptPanel />}
-                  {activeLeftPanel === "components" && <ComponentLibrary />}
-                  {activeLeftPanel === "custom" && <CustomComponentPanel />}
-                  {activeLeftPanel === "layers" && <LayersPanel />}
-                  {activeLeftPanel === "assets" && <AssetsPanel />}
-                  {activeLeftPanel === "history" && <HistoryPanel />}
-                </ErrorBoundary>
-              </div>
-            </Panel>
-          )}
-          {activeLeftPanel && (
-            <PanelResizeHandle className="w-1.5 bg-transparent hover:bg-sky-500/30 transition-colors cursor-col-resize z-50 flex items-center justify-center group">
-              <div className="w-[1px] h-8 bg-slate-300 group-hover:bg-sky-500 transition-colors" />
-            </PanelResizeHandle>
-          )}
-
-          {/* Canvas Center Area */}
-          <Panel 
-            id="canvas-v11" 
-            defaultSize={50} 
-            minSize={30} 
-            className="relative z-[10] flex flex-col bg-slate-50/50 overflow-hidden"
-          >
-            <main className="flex-1 overflow-hidden relative">
-              <Canvas />
-            </main>
-          </Panel>
-
-          <PanelResizeHandle className="w-1.5 bg-transparent hover:bg-sky-500/30 transition-colors cursor-col-resize z-50 flex items-center justify-center group">
-            <div className="w-[1px] h-8 bg-slate-300 group-hover:bg-sky-500 transition-colors" />
-          </PanelResizeHandle>
-
-          {/* Right Panel Area */}
-          <Panel
-            id="right-sidebar-v11"
-            defaultSize={25}
-            minSize={15}
-            maxSize={45}
-            className="z-[30] bg-white border-l border-slate-200 shadow-2xl overflow-hidden relative"
-            style={{ minWidth: '350px' }}
-          >
-            <RightPanel />
-          </Panel>
-        </PanelGroup>
-
-        {/* Floating AI Chat Widget */}
-        <AIChatWidget />
-      </div>
-    </div>
+      {mainContent}
+    </IDEShell>
   );
 }

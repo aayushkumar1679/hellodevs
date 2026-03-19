@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useTransition, useRef, useEffect } from "react";
+import { buildAgentContext } from "@/lib/agents/contextBuilder";
+import { applyAgentCommand, AgentCommand } from "@/lib/agents/diffEngine";
 import {
   Sparkles,
   Wand2,
@@ -124,81 +126,47 @@ export default function AIPromptPanel() {
     startTransition(() => {
       void (async () => {
         try {
-          const body: {
-            prompt: string;
-            projectName: string;
-            model: string;
-            mode?: "iterate";
-            currentLayout?: string;
-          } = { prompt, projectName: currentProject.name, model };
-          if (mode === "update") {
-            body.mode = "iterate";
-            const slim: Record<
-              string,
-              {
-                type: string;
-                props: Record<string, unknown>;
-                css?: Record<string, unknown>;
-                children: string[];
-              }
-            > = {};
-            Object.entries(currentProject.components).forEach(([id, c]) => {
-              slim[id] = {
-                type: c.type,
-                props: c.props,
-                css: c.cssOverrides?.base,
-                children: c.children,
-              };
-            });
-            body.currentLayout = JSON.stringify({
-              components: slim,
-              rootOrder: currentProject.rootOrder,
-              designSystem: currentProject.designSystem,
-            });
-          }
+          const agentContext = buildAgentContext();
+          const body: any = { prompt, projectName: currentProject.name, model };
+          body.agentContext = agentContext;
 
-          const res = await fetch("/api/generate", {
+          const res = await fetch("/api/generate/agent", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
           });
+
           if (!res.ok) {
-            const d = await res.json();
-            throw new Error(d.error || "Generation failed");
+            const d = await res.json().catch(() => ({}));
+            throw new Error(d.error || "Missing response from API");
           }
 
-          const reader = res.body?.getReader();
-          if (!reader) throw new Error("No reader");
-
-          let full = "";
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = new TextDecoder().decode(value);
-            full += chunk;
-            setStreamLog((p) => p + chunk);
+          const data = await res.json();
+          if (data.commands && Array.isArray(data.commands)) {
+            let log = "Received commands:\\n";
+            for (const cmd of data.commands) {
+              log += `=> ${cmd.action}\n`;
+              setStreamLog(log);
+              await applyAgentCommand(cmd);
+            }
+            setSummary("Agent executed commands successfully!");
+          } else {
+            const m = materializeGeneratedProject(data);
+            bulkHydrate({
+              name: data.projectName || currentProject.name,
+              components: m.components,
+              rootOrder: m.rootOrder,
+              rootComponent: m.rootOrder[0] || null,
+              generationPrompt: prompt,
+              generationModel: model,
+              generationSummary: data.summary,
+              designSystem: resolveDesignSystem(data.designSystem),
+            });
+            setSummary(data.summary || "Layout generated.");
           }
           setIsStreaming(false);
 
-          let jsonStr = full;
-          const m =
-            full.match(/```json\n([\s\S]*?)\n```/) || full.match(/\{[\s\S]*\}/);
-          if (m) jsonStr = m[1] || m[0];
-
-          const data: GeneratedProjectPayload = JSON.parse(jsonStr);
-          const materialized = materializeGeneratedProject(data);
-          bulkHydrate({
-            name: data.projectName || currentProject.name,
-            components: materialized.components,
-            rootOrder: materialized.rootOrder,
-            rootComponent: materialized.rootOrder[0] || null,
-            generationPrompt: prompt,
-            generationModel: model,
-            generationSummary: data.summary,
-            designSystem: resolveDesignSystem(data.designSystem),
-          });
-          setSummary(data.summary || "Layout generated.");
-
+          const materialized = { components: useProjectStore.getState().currentProject?.components || {} };
           // Auto-image generation
           const tasks: Promise<void>[] = [];
           Object.values(materialized.components).forEach((comp) => {

@@ -3,6 +3,7 @@ import { create } from "zustand";
 /* ---------------- Types ---------------- */
 
 export type Breakpoint = "mobile" | "tablet" | "desktop";
+export type ViewMode = "design" | "code" | "split" | "preview" | "diff";
 
 interface BreakpointConfig {
   width: number;
@@ -10,6 +11,10 @@ interface BreakpointConfig {
 }
 
 interface EditorState {
+  /* Active view mode */
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
+
   /* Active breakpoint */
   activeBreakpoint: Breakpoint;
 
@@ -43,6 +48,7 @@ interface EditorState {
 
 export const useEditorStore = create<EditorState>((set) => ({
   /* Default state */
+  viewMode: "split",
   activeBreakpoint: "desktop",
   previewEnabled: true,
   threeEnabled: true,
@@ -67,6 +73,8 @@ export const useEditorStore = create<EditorState>((set) => ({
   },
 
   /* Actions */
+  setViewMode: (mode) => set({ viewMode: mode }),
+
   setBreakpoint: (bp) =>
     set(() => ({
       activeBreakpoint: bp,
