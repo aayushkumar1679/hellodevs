@@ -1,96 +1,137 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;500;600;700;800&display=swap');
+
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════
+   POLYGLOT IDE — Design System Tokens
+   Single source of truth for all chrome components.
+   NEVER hardcode colors — always use these vars.
+═══════════════════════════════════════════════════ */
+
 :root {
-  --background: #f0f2f5;
-  --foreground: #0f172a;
-  --panel: rgba(255, 255, 255, 0.92);
-  --panel-border: rgba(148, 163, 184, 0.2);
-  --ring: rgba(14, 165, 233, 0.35);
-  --sidebar-bg: #111113;
-  --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-icon: rgba(255, 255, 255, 0.45);
-  --sidebar-icon-active: #ffffff;
-  --header-h: 48px;
-  --left-sidebar-w: 56px;
-  --left-panel-w: 260px;
-  --right-panel-w: 260px;
-  
-  /* Polyglot IDE Colors */
-  --bg-base: #0a0a0f;
-  --bg-surface: #111118;
-  --bg-elevated: #1a1a24;
-  --bg-hover: #22222f;
-  
-  --border-subtle: #1e1e2e;
-  --border-default: #2a2a3d;
-  --border-strong: #3a3a52;
-  
-  --accent-primary: #6c63ff;
-  --accent-secondary: #00d4aa;
-  --accent-warning: #f59e0b;
-  --accent-error: #ef4444;
-  --accent-success: #10b981;
-  
-  --text-primary: #e8e8f0;
-  --text-secondary: #9898b0;
-  --text-muted: #52526a;
-  --text-accent: #8b83ff;
-  
-  --glow-primary: 0 0 20px rgba(108, 99, 255, 0.3);
-  --glow-ai: 0 0 20px rgba(0, 212, 170, 0.3);
+  /* ── Surfaces ─────────────────────────────────── */
+  --bg-void:    #060609;   /* title bar, activity bar          */
+  --bg-base:    #0a0a10;   /* main app background               */
+  --bg-surface: #0f0f18;   /* panels, sidebars                  */
+  --bg-elevated:#16161f;   /* cards, dropdowns, modals          */
+  --bg-overlay: #1c1c28;   /* hover states                      */
+  --bg-input:   #12121a;   /* text inputs                       */
+
+  /* ── Borders ──────────────────────────────────── */
+  --border-dim:  rgba(255,255,255,0.05);  /* subtle dividers  */
+  --border-soft: rgba(255,255,255,0.09);  /* default borders  */
+  --border-mid:  rgba(255,255,255,0.14);  /* active / focus   */
+
+  /* ── Accent Palette ───────────────────────────── */
+  --accent:       #7c6fff;                   /* primary violet  */
+  --accent-dim:   rgba(124,111,255,0.15);
+  --accent-2:     #00e5b0;                   /* AI teal         */
+  --accent-2-dim: rgba(0,229,176,0.12);
+  --accent-3:     #ff6b6b;                   /* error           */
+  --accent-4:     #ffa94d;                   /* warning / dirty */
+  --accent-5:     #69db7c;                   /* success         */
+
+  /* ── Text ─────────────────────────────────────── */
+  --text-1:      #f0f0f8;   /* primary          */
+  --text-2:      #9898b8;   /* secondary        */
+  --text-3:      #4a4a68;   /* muted / disabled */
+  --text-accent: #a09aff;
+
+  /* ── Typography ───────────────────────────────── */
+  --font-ui:   'DM Sans', system-ui, sans-serif;
+  --font-head: 'Syne', system-ui, sans-serif;
+  --font-mono: 'DM Mono', 'Fira Code', monospace;
+
+  /* ── Chrome Sizing ────────────────────────────── */
+  --header-h:       36px;
+  --activity-bar-w: 44px;
+  --sidebar-w:      240px;
+  --inspector-w:    256px;
+  --tab-bar-h:      34px;
+  --status-bar-h:   24px;
+
+  /* ── Legacy aliases (for components not yet migrated) ── */
+  --bg-surface-old:   var(--bg-surface);
+  --bg-elevated-old:  var(--bg-elevated);
+  --border-subtle:    var(--border-dim);
+  --border-default:   var(--border-soft);
+  --border-strong:    var(--border-mid);
+  --accent-primary:   var(--accent);
+  --accent-secondary: var(--accent-2);
+  --accent-warning:   var(--accent-4);
+  --accent-error:     var(--accent-3);
+  --accent-success:   var(--accent-5);
+  --text-primary:     var(--text-1);
+  --text-secondary:   var(--text-2);
+  --text-muted:       var(--text-3);
+  --bg-hover:         var(--bg-overlay);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-manrope);
-  --font-display: var(--font-space-grotesk);
-  --font-inter: var(--font-inter);
-  --font-plus-jakarta-sans: var(--font-plus-jakarta-sans);
-  --font-outfit: var(--font-outfit);
-  --font-dm-sans: var(--font-dm-sans);
-  --font-sora: var(--font-sora);
+  --color-background: var(--bg-base);
+  --color-foreground: var(--text-1);
+  --font-ui:   var(--font-ui);
+  --font-head: var(--font-head);
+  --font-mono: var(--font-mono);
+  /* Legacy font tokens for components using next/font */
+  --font-sans:              var(--font-ui);
+  --font-display:           var(--font-head);
+  --font-dm-sans:           var(--font-ui);
+  --font-inter:             var(--font-ui);
+  --font-plus-jakarta-sans: var(--font-ui);
+  --font-outfit:            var(--font-ui);
+  --font-sora:              var(--font-ui);
+  --font-manrope:           var(--font-ui);
+  --font-space-grotesk:     var(--font-head);
 }
+
+/* ═══════════════════════════════════════════════════
+   BASE RESET
+═══════════════════════════════════════════════════ */
 
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html {
   scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  margin: 0;
   min-height: 100vh;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-manrope), sans-serif;
+  background: var(--bg-base);
+  color: var(--text-1);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
   text-rendering: optimizeLegibility;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: var(--font-space-grotesk), sans-serif;
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-head);
 }
 
-button,
-input,
-textarea,
-select {
+button, input, textarea, select {
   font: inherit;
 }
 
+/* ═══════════════════════════════════════════════════
+   SELECTION
+═══════════════════════════════════════════════════ */
+
 ::selection {
-  background: rgba(56, 189, 248, 0.24);
-  color: #0f172a;
+  background: var(--accent-dim);
+  color: var(--text-1);
 }
 
-/* ─── Premium Scrollbar ─── */
+/* ═══════════════════════════════════════════════════
+   SCROLLBARS
+═══════════════════════════════════════════════════ */
+
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -102,69 +143,102 @@ select {
 
 ::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.35);
+  background: var(--border-soft);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.55);
+  background: var(--border-mid);
 }
 
-/* ─── No Scrollbar Utility ─── */
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-soft) transparent;
+}
+
+/* ── No Scrollbar ───────────────────────────────── */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* ─── Custom Scrollbar ─── */
+/* ── Custom Scrollbar (legacy) ──────────────────── */
 .custom-scrollbar::-webkit-scrollbar { width: 3px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.3);
+  background: var(--border-soft);
 }
 
-/* ─── Animations ─── */
+/* ═══════════════════════════════════════════════════
+   IDE ACTIVE STATE — shared across components
+   (Selected file, active ActivityBar icon, active tab)
+═══════════════════════════════════════════════════ */
+
+.ide-active-item {
+  background: var(--accent-dim);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 4px 4px 0;
+  color: var(--text-1);
+}
+
+/* ═══════════════════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════════════════ */
+
+/* AI / agent dot pulse — 1.4s per design spec */
+@keyframes ai-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.75); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 @keyframes polyglot-float {
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+  50%       { transform: translateY(-10px); }
 }
 
 @keyframes polyglot-pulse-soft {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(1.015); }
+  50%       { opacity: 0.85; transform: scale(1.015); }
 }
 
 @keyframes polyglot-rise-in {
-  0% { opacity: 0; transform: translateY(20px) scale(0.98); }
+  0%   { opacity: 0; transform: translateY(20px) scale(0.98); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes polyglot-orbit {
   0%, 100% { transform: perspective(1400px) rotateX(12deg) rotateY(-10deg); }
-  50% { transform: perspective(1400px) rotateX(16deg) rotateY(12deg); }
+  50%       { transform: perspective(1400px) rotateX(16deg) rotateY(12deg); }
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
+/* ── Animation Utility Classes ──────────────────── */
 
-@keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulseDot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.75); }
-}
-
-@keyframes spinSlow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-8px); }
-  to { opacity: 1; transform: translateX(0); }
+.animate-ai-pulse {
+  animation: ai-pulse 1.4s ease-in-out infinite;
 }
 
 .animate-shimmer {

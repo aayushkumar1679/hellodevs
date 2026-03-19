@@ -1,157 +1,223 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
-import Editor, { useMonaco } from "@monaco-editor/react";
+import React, { useEffect, useRef, useCallback } from "react";
+import Editor, { type OnMount, type Monaco } from "@monaco-editor/react";
+import type * as MonacoNS from "monaco-editor";
+import debounce from "lodash.debounce";
+import { FileCode } from "lucide-react";
 import { useFileSystemStore } from "@/state/useFileSystemStore";
-import { syncCodeToCanvas } from "@/lib/codeSync/codeToCanvas";
-import { X, FileCode, Hash, FileJson, FileText, CheckCircle2 } from "lucide-react";
+import { codeToCanvas } from "@/lib/codeSync/codeToCanvas";
 
-const getFileIcon = (name: string) => {
-  if (name.endsWith(".tsx") || name.endsWith(".ts")) return <FileCode className="h-3 w-3 text-blue-400" />;
-  if (name.endsWith(".css")) return <Hash className="h-3 w-3 text-cyan-400" />;
-  if (name.endsWith(".json")) return <FileJson className="h-3 w-3 text-yellow-400" />;
-  return <FileText className="h-3 w-3 text-[var(--text-muted)]" />;
-};
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function detectLanguage(path: string): string {
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "tsx" || ext === "ts") return "typescript";
+  if (ext === "jsx" || ext === "js") return "javascript";
+  if (ext === "css" || ext === "scss") return "css";
+  if (ext === "html") return "html";
+  if (ext === "json") return "json";
+  if (ext === "md") return "markdown";
+  return "plaintext";
+}
+
+function registerPolyglotTheme(monaco: Monaco) {
+  monaco.editor.defineTheme("polyglot-dark", {
+    base: "vs-dark",
+    inherit: true,
+    rules: [
+      { token: "comment",        foreground: "4a4a68", fontStyle: "italic" },
+      { token: "keyword",        foreground: "7c6fff" },
+      { token: "string",         foreground: "69db7c" },
+      { token: "number",         foreground: "ffa94d" },
+      { token: "type",           foreground: "00e5b0" },
+      { token: "class",          foreground: "00e5b0" },
+      { token: "function",       foreground: "a09aff" },
+      { token: "variable",       foreground: "f0f0f8" },
+      { token: "constant",       foreground: "ff6b6b" },
+      { token: "delimiter",      foreground: "9898b8" },
+      { token: "operator",       foreground: "9898b8" },
+      { token: "tag",            foreground: "7c6fff" },
+      { token: "attribute.name", foreground: "00e5b0" },
+      { token: "attribute.value",foreground: "69db7c" },
+    ],
+    colors: {
+      // surfaces
+      "editor.background":                   "#0a0a10",
+      "editor.foreground":                   "#f0f0f8",
+      "editor.lineHighlightBackground":      "#12121c",
+      "editor.lineHighlightBorder":          "#00000000",
+      "editor.selectionBackground":          "rgba(124,111,255,0.25)",
+      "editor.inactiveSelectionBackground":  "rgba(124,111,255,0.12)",
+      "editor.selectionHighlightBackground": "rgba(124,111,255,0.10)",
+      "editor.findMatchBackground":          "rgba(255,169,77,0.35)",
+      "editor.findMatchHighlightBackground": "rgba(255,169,77,0.15)",
+      // gutter
+      "editorLineNumber.foreground":         "#3a3a5a",
+      "editorLineNumber.activeForeground":   "#7c6fff",
+      "editorGutter.background":             "#0a0a10",
+      // cursor
+      "editorCursor.foreground":             "#7c6fff",
+      // indent guides
+      "editorIndentGuide.background1":        "#1c1c28",
+      "editorIndentGuide.activeBackground1":  "#3a3a5a",
+      // brackets
+      "editorBracketMatch.background":       "rgba(124,111,255,0.15)",
+      "editorBracketMatch.border":           "#7c6fff",
+      // widgets
+      "editorWidget.background":             "#0f0f18",
+      "editorWidget.border":                 "rgba(255,255,255,0.09)",
+      "editorHoverWidget.background":        "#16161f",
+      "editorHoverWidget.border":            "rgba(255,255,255,0.09)",
+      "editorSuggestWidget.background":      "#16161f",
+      "editorSuggestWidget.border":          "rgba(255,255,255,0.09)",
+      "editorSuggestWidget.selectedBackground": "rgba(124,111,255,0.20)",
+      // scrollbar
+      "scrollbarSlider.background":          "rgba(255,255,255,0.06)",
+      "scrollbarSlider.hoverBackground":     "rgba(255,255,255,0.10)",
+      "scrollbarSlider.activeBackground":    "rgba(124,111,255,0.30)",
+      // misc
+      "editorError.foreground":              "#ff6b6b",
+      "editorWarning.foreground":            "#ffa94d",
+      "editorInfo.foreground":               "#00e5b0",
+    },
+  });
+}
+
+// ── Component ──────────────────────────────────────────────────────────────
 
 export default function CodeEditor() {
-  const { openFiles, activeFile, files, closeFile, setActiveFile, writeFile } = useFileSystemStore();
-  const monaco = useMonaco();
-  
-  const [localContent, setLocalContent] = useState<string>("");
-  const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
-  const savingRef = useRef(false);
+  const { openFiles, activeFile, files, writeFile } = useFileSystemStore();
+  const editorRef = useRef<MonacoNS.editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<Monaco | null>(null);
 
+  // Debounced VFS write (500ms) ─ stable across renders
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const debouncedWrite = useCallback(
+    debounce(async (path: string, content: string) => {
+      await writeFile(path, content);
+      // codeToCanvas is side-effect free; result is used by callers that need it
+      codeToCanvas(content);
+    }, 500),
+    [writeFile],
+  );
+
+  // Sync editor model when activeFile changes
   useEffect(() => {
-    if (activeFile && files[activeFile]) {
-      setLocalContent(files[activeFile].content);
-      setSyncStatus("idle");
-    } else {
-      setLocalContent("");
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+    if (!editor || !monaco || !activeFile) return;
+
+    const newContent = files[activeFile]?.content ?? "";
+    const model = editor.getModel();
+
+    // Only push if value actually differs (avoid cursor reset)
+    if (model && model.getValue() !== newContent) {
+      model.pushEditOperations(
+        [],
+        [{ range: model.getFullModelRange(), text: newContent }],
+        () => null,
+      );
     }
   }, [activeFile, files]);
 
-  // Debounced save to Virtual File System
-  useEffect(() => {
-    if (!activeFile || localContent === files[activeFile]?.content) return;
-    
-    const timer = setTimeout(() => {
-      savingRef.current = true;
-      setSyncStatus("syncing");
-      
-      writeFile(activeFile, localContent).then(() => {
-        // Run bidirectional AST sync
-        const success = syncCodeToCanvas(activeFile, localContent);
-        setSyncStatus(success ? "synced" : "error");
-        
-        // Reset the "synced" status after a moment
-        setTimeout(() => setSyncStatus("idle"), 2000);
-      }).catch(() => {
-        setSyncStatus("error");
-      }).finally(() => {
-        savingRef.current = false;
-      });
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [localContent, activeFile, writeFile, files]);
+  const handleMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
 
-  // Configure custom Monaco theme when monaco instance is ready
-  useEffect(() => {
-    if (monaco) {
-      monaco.editor.defineTheme('polyglot-dark', {
-        base: 'vs-dark',
-        inherit: true,
-        rules: [],
-        colors: {
-          'editor.background': '#0a0a0f', // var(--bg-base)
-          'editor.lineHighlightBackground': '#111118',
-        }
-      });
-      monaco.editor.setTheme('polyglot-dark');
-    }
-  }, [monaco]);
+    // Register and apply the polyglot-dark theme
+    registerPolyglotTheme(monaco);
+    monaco.editor.setTheme("polyglot-dark");
 
-  if (openFiles.length === 0) {
+    // Cmd+S / Ctrl+S → immediate VFS write
+    editor.addAction({
+      id: "polyglot.save",
+      label: "Save File",
+      keybindings: [
+        monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
+      ],
+      run: () => {
+        const path = useFileSystemStore.getState().activeFile;
+        if (!path) return;
+        const content = editor.getValue();
+        void writeFile(path, content);
+        codeToCanvas(content);
+      },
+    });
+
+    // Debounced auto-save on every keystroke
+    editor.onDidChangeModelContent(() => {
+      const path = useFileSystemStore.getState().activeFile;
+      if (!path) return;
+      debouncedWrite(path, editor.getValue());
+    });
+  };
+
+  // Empty state
+  if (openFiles.length === 0 || !activeFile) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center bg-[var(--bg-base)] text-[var(--text-muted)]">
-        <div className="text-4xl mb-4 opacity-10"><FileCode className="h-12 w-12" /></div>
-        <p className="text-sm font-semibold text-[var(--text-secondary)]">No file is open</p>
-        <p className="text-[10px] mt-1 uppercase tracking-widest">Select a file from the Explorer to start editing</p>
+      <div
+        className="flex h-full w-full flex-col items-center justify-center"
+        style={{ background: "var(--bg-base)", color: "var(--text-3)" }}
+      >
+        <FileCode
+          className="mb-3 opacity-20"
+          style={{ width: 40, height: 40, color: "var(--accent)" }}
+        />
+        <p style={{ fontSize: 13, color: "var(--text-2)" }}>No file open</p>
+        <p
+          style={{
+            fontSize: 10,
+            color: "var(--text-3)",
+            marginTop: 4,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+          }}
+        >
+          Select a file from the Explorer
+        </p>
       </div>
     );
   }
 
-  const activeLanguage = activeFile ? files[activeFile]?.language : "typescript";
-  const monacoLanguage = (activeLanguage === "tsx" || activeLanguage === "ts") ? "typescript" : 
-                         activeLanguage === "json" ? "json" :
-                         activeLanguage === "css" ? "css" :
-                         activeLanguage === "html" ? "html" : "javascript";
+  const language = detectLanguage(activeFile);
+  const initialValue = files[activeFile]?.content ?? "";
 
   return (
-    <div className="flex h-full w-full flex-col bg-[var(--bg-base)] overflow-hidden">
-      {/* Editor Tabs */}
-      <div className="flex h-[36px] w-full flex-shrink-0 items-center overflow-x-auto no-scrollbar bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] select-none">
-        {openFiles.map(path => {
-          const isActive = activeFile === path;
-          const fileName = path.split('/').pop() || path;
-          const isDirty = isActive && localContent !== files[path]?.content;
-
-          return (
-            <div
-              key={path}
-              onClick={() => setActiveFile(path)}
-              className={`group flex h-full min-w-[120px] max-w-[200px] cursor-pointer items-center justify-between gap-3 border-r border-[var(--border-subtle)] px-3 text-[11px] transition-colors ${
-                isActive 
-                  ? "bg-[var(--bg-base)] text-[var(--text-primary)] border-t-[2px] border-t-[var(--accent-primary)]" 
-                  : "bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] border-t-[2px] border-t-transparent"
-              }`}
-            >
-              <div className="flex items-center gap-2 truncate">
-                {getFileIcon(fileName)}
-                <span className="truncate pt-0.5">{fileName}</span>
-              </div>
-              
-              <div className="flex items-center justify-center w-5 h-5 flex-shrink-0">
-                {isDirty ? (
-                  <div className="h-1.5 w-1.5 rounded-full bg-[var(--text-primary)] group-hover:hidden" />
-                ) : null}
-                <button 
-                  onClick={(e) => { e.stopPropagation(); closeFile(path); }}
-                  className={`flex h-5 w-5 items-center justify-center rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-rose-400 transition-colors ${isDirty ? "hidden group-hover:flex" : ""}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Monaco Instance */}
-      <div className="flex-1 w-full h-full relative">
-        {activeFile ? (
-          <Editor
-            height="100%"
-            language={monacoLanguage}
-            theme="polyglot-dark"
-            value={localContent}
-            onChange={(value: string | undefined) => setLocalContent(value || "")}
-            options={{
-              minimap: { enabled: true, scale: 0.75 },
-              fontSize: 13,
-              fontFamily: "'Geist Mono', 'DM Mono', monospace",
-              wordWrap: "on",
-              padding: { top: 16 },
-              bracketPairColorization: { enabled: true },
-              autoClosingBrackets: "always",
-              formatOnType: true,
-              scrollBeyondLastLine: false,
-              smoothScrolling: true,
-              cursorBlinking: "smooth",
-              cursorSmoothCaretAnimation: "on",
-            }}
-          />
-        ) : null}
-      </div>
+    <div
+      className="flex h-full w-full flex-col overflow-hidden"
+      style={{ background: "var(--bg-base)" }}
+    >
+      <Editor
+        key={activeFile}          /* remount when file changes to get new model */
+        height="100%"
+        language={language}
+        theme="polyglot-dark"
+        defaultValue={initialValue}
+        onMount={handleMount}
+        options={{
+          fontSize: 13,
+          fontFamily: "'DM Mono', 'Fira Code', monospace",
+          fontLigatures: true,
+          lineHeight: 22,
+          minimap: { enabled: false },
+          padding: { top: 16, bottom: 16 },
+          wordWrap: "on",
+          bracketPairColorization: { enabled: true },
+          autoClosingBrackets: "always",
+          formatOnType: true,
+          scrollBeyondLastLine: false,
+          smoothScrolling: true,
+          cursorBlinking: "smooth",
+          cursorSmoothCaretAnimation: "on",
+          renderWhitespace: "selection",
+          tabSize: 2,
+          scrollbar: {
+            verticalScrollbarSize: 4,
+            horizontalScrollbarSize: 4,
+          },
+        }}
+      />
     </div>
   );
 }

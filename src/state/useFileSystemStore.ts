@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { VirtualFileSystem, VirtualFile } from "@/lib/virtualFS";
 import { IndexedDBAdapter } from "@/lib/virtualFS/indexedDBAdapter";
+import { fileWatcher } from "@/lib/virtualFS/fileWatcher";
 
 // Singleton VFS
 export const vfs = new VirtualFileSystem(new IndexedDBAdapter());
@@ -69,6 +70,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
 
   writeFile: async (path, content) => {
     await vfs.writeFile(path, content);
+    fileWatcher.emit(path, content);
   },
 
   deleteFile: async (path) => {

@@ -127,6 +127,7 @@ export default function AIPromptPanel() {
       void (async () => {
         try {
           const agentContext = buildAgentContext();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const body: any = { prompt, projectName: currentProject.name, model };
           body.agentContext = agentContext;
 

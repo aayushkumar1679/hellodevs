@@ -1,113 +1,204 @@
 "use client";
 
 import React, { useState } from "react";
-import BuilderHeader from "@/app/components/layout/BuilderHeader";
 import ActivityBar, { ActivityPanelId } from "./ActivityBar";
 import StatusBar from "./StatusBar";
-import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from "react-resizable-panels";
+import IDEHeader from "@/components/ide/IDEHeader";
+import IDETabBar from "@/components/ide/IDETabBar";
+import RightInspectorPanel from "@/components/ide/RightInspectorPanel";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import AIChatWidget from "@/app/components/AIChatWidget";
 import CommandPalette from "@/components/ide/CommandPalette";
 
-export default function IDEShell({
-  children,
-  leftPanels,
-  rightPanel,
-  bottomPanel,
-}: {
-  children: React.ReactNode;
-  leftPanels: Record<string, React.ReactNode>;
-  rightPanel: React.ReactNode;
+/* ── Size constants (match the design-system spec) ──────────────── */
+const ACTBAR_W = 44;
+const SIDEBAR_W = 240;
+const INSPECTOR_W = 256;
+
+interface IDEShellProps {
+  /** The project ID — passed through for context/future use */
+  projectId: string;
+  /** Content for each activity-bar panel id */
+  leftPanels?: Record<string, React.ReactNode>;
+  /** Content for the right inspector panel */
+  rightPanel?: React.ReactNode;
+  /** Content for the main editor/canvas area */
+  children?: React.ReactNode;
+  /** Optional bottom panel (terminal, etc.) */
   bottomPanel?: React.ReactNode;
-}) {
-  const [activePanel, setActivePanel] = useState<ActivityPanelId>("components");
+}
+
+export default function IDEShell({
+  projectId: _projectId,
+  leftPanels = {},
+  rightPanel = <RightInspectorPanel />,
+  children,
+  bottomPanel,
+}: IDEShellProps) {
+  const [activePanel, setActivePanel] = useState<ActivityPanelId>("explorer");
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  const sidebarVisible = !!(activePanel && leftPanels[activePanel]);
+  const inspectorVisible = !!rightPanel;
+
+  /*
+   * CSS Grid layout
+   *
+   *  ┌──────────────────────────────────────────────────────────┐
+   *  │ titlebar (full width, col 1..5)                          │
+   *  ├──────────────────────────────────────────────────────────┤
+   *  │ tabbar   (col 2..5, row 2)                               │
+   *  ├────────┬──────────────┬──────────────────┬───────────────┤
+   *  │ actbar │ sidebar      │ main             │ inspector     │
+   *  │ col1   │ col2         │ col3 (1fr)       │ col4          │
+   *  ├────────┴──────────────┴──────────────────┴───────────────┤
+   *  │ status (full width, col 1..5)                            │
+   *  └──────────────────────────────────────────────────────────┘
+   *
+   * Sidebar / inspector columns collapse to 0px when not visible.
+   */
+  const gridCols = [
+    `${ACTBAR_W}px`,
+    sidebarVisible ? `${SIDEBAR_W}px` : "0px",
+    "1fr",
+    inspectorVisible ? `${INSPECTOR_W}px` : "0px",
+  ].join(" ");
 
   return (
     <div
-      className="flex h-screen w-screen max-w-none flex-col text-[var(--text-primary)] overflow-hidden"
-      style={{ background: "var(--bg-base)", width: "100vw", maxWidth: "none" }}
+      className="ide-shell"
+      style={{
+        display: "grid",
+        gridTemplateColumns: gridCols,
+        gridTemplateRows: "36px 34px 1fr 24px",
+        gridTemplateAreas: `
+          "titlebar titlebar titlebar titlebar"
+          "actbar   tabbar  tabbar  tabbar"
+          "actbar   sidebar main    inspector"
+          "status   status  status  status"
+        `,
+        width: "100vw",
+        height: "100vh",
+        overflow: "hidden",
+        background: "var(--bg-base)",
+        color: "var(--text-1)",
+        transition: "grid-template-columns 120ms cubic-bezier(0.16,1,0.3,1)",
+      }}
     >
-      <BuilderHeader />
-      
-      <div className="flex flex-1 overflow-hidden relative" style={{ width: "100%" }}>
-        <ActivityBar activePanel={activePanel} setActivePanel={setActivePanel} />
-        
-        <PanelGroup orientation="horizontal" className="flex-1 w-full relative" id="polyglot-ide-shell">
-          {/* Side Panel Area */}
-          {activePanel && leftPanels[activePanel] && (
-            <Panel
-              id="side-panel"
-              defaultSize={20}
-              minSize={15}
-              maxSize={40}
-              className="z-[30] bg-[var(--bg-surface)] border-r border-[var(--border-subtle)] overflow-hidden relative"
-              style={{ minWidth: "260px" }}
-            >
-              <div className="h-full overflow-y-auto custom-scrollbar">
-                <ErrorBoundary componentName="SidePanel">
-                  {leftPanels[activePanel]}
-                </ErrorBoundary>
-              </div>
-            </Panel>
-          )}
-
-          {activePanel && leftPanels[activePanel] && (
-            <PanelResizeHandle className="w-1.5 bg-transparent hover:bg-[var(--accent-primary)]/30 transition-colors cursor-col-resize z-50 flex items-center justify-center group">
-              <div className="w-[1px] h-8 bg-[var(--border-strong)] group-hover:bg-[var(--accent-primary)] transition-colors" />
-            </PanelResizeHandle>
-          )}
-
-          {/* Main Panel Area (Canvas + Editor Split) */}
-          <Panel
-            id="main-panel"
-            defaultSize={activePanel ? 55 : 75}
-            minSize={30}
-            className="relative z-[10] flex flex-col bg-[var(--bg-base)] overflow-hidden"
-          >
-            {bottomPanel ? (
-              <PanelGroup orientation="vertical" className="h-full w-full">
-                <Panel defaultSize={75} minSize={20} className="relative overflow-hidden flex flex-col">
-                  {children}
-                </Panel>
-                <PanelResizeHandle className="h-1.5 bg-transparent hover:bg-[var(--accent-primary)]/30 transition-colors cursor-row-resize z-50 flex items-center justify-center group">
-                  <div className="h-[1px] w-8 bg-[var(--border-strong)] group-hover:bg-[var(--accent-primary)] transition-colors" />
-                </PanelResizeHandle>
-                <Panel defaultSize={25} minSize={10} className="relative overflow-hidden flex flex-col bg-[#0a0a0c]">
-                  {bottomPanel}
-                </Panel>
-              </PanelGroup>
-            ) : (
-              <main className="flex-1 overflow-hidden relative">
-                {children}
-              </main>
-            )}
-          </Panel>
-
-          <PanelResizeHandle className="w-1.5 bg-transparent hover:bg-[var(--accent-primary)]/30 transition-colors cursor-col-resize z-50 flex items-center justify-center group">
-            <div className="w-[1px] h-8 bg-[var(--border-strong)] group-hover:bg-[var(--accent-primary)] transition-colors" />
-          </PanelResizeHandle>
-
-          {/* Inspector Panel Area */}
-          <Panel
-            id="inspector-panel"
-            defaultSize={25}
-            minSize={15}
-            maxSize={45}
-            className="z-[30] bg-[var(--bg-surface)] border-l border-[var(--border-subtle)] shadow-2xl overflow-hidden relative"
-            style={{ minWidth: "300px" }}
-          >
-            <ErrorBoundary componentName="InspectorPanel">
-              {rightPanel}
-            </ErrorBoundary>
-          </Panel>
-        </PanelGroup>
-
-        <AIChatWidget />
-        <CommandPalette open={commandPaletteOpen} setOpen={setCommandPaletteOpen} />
+      {/* ── TITLE BAR ─────────────────────────────────────── */}
+      <div style={{ gridArea: "titlebar" }}>
+        <IDEHeader />
       </div>
 
-      <StatusBar />
+      {/* ── ACTIVITY BAR ──────────────────────────────────── */}
+      <div
+        style={{
+          gridArea: "actbar",
+          background: "var(--bg-void)",
+          borderRight: "1px solid var(--border-dim)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <ActivityBar activePanel={activePanel} setActivePanel={setActivePanel} />
+      </div>
+
+      {/* ── TAB BAR ────────────────────────────────────────── */}
+      <div
+        style={{
+          gridArea: "tabbar",
+          overflow: "hidden",
+        }}
+      >
+        <IDETabBar />
+      </div>
+
+      {/* ── SIDEBAR ───────────────────────────────────────── */}
+      <div
+        style={{
+          gridArea: "sidebar",
+          background: "var(--bg-surface)",
+          borderRight: "1px solid var(--border-soft)",
+          overflowY: "auto",
+          overflowX: "hidden",
+          opacity: sidebarVisible ? 1 : 0,
+          pointerEvents: sidebarVisible ? "auto" : "none",
+          transition: "opacity 120ms cubic-bezier(0.16,1,0.3,1)",
+        }}
+        className="custom-scrollbar"
+      >
+        {activePanel && leftPanels[activePanel] && (
+          <ErrorBoundary componentName="Sidebar">
+            {leftPanels[activePanel]}
+          </ErrorBoundary>
+        )}
+      </div>
+
+      {/* ── MAIN AREA ─────────────────────────────────────── */}
+      <div
+        style={{
+          gridArea: "main",
+          background: "var(--bg-base)",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          position: "relative",
+        }}
+      >
+        {bottomPanel ? (
+          <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            <div style={{ flex: "1 1 0", overflow: "hidden", position: "relative" }}>
+              <ErrorBoundary componentName="MainArea">{children}</ErrorBoundary>
+            </div>
+            <div
+              style={{
+                height: 1,
+                background: "var(--border-soft)",
+                flexShrink: 0,
+                cursor: "row-resize",
+              }}
+            />
+            <div
+              style={{
+                height: 240,
+                flexShrink: 0,
+                background: "#0a0a0c",
+                overflow: "hidden",
+              }}
+            >
+              <ErrorBoundary componentName="BottomPanel">{bottomPanel}</ErrorBoundary>
+            </div>
+          </div>
+        ) : (
+          <ErrorBoundary componentName="MainArea">{children}</ErrorBoundary>
+        )}
+      </div>
+
+      {/* ── INSPECTOR ─────────────────────────────────────── */}
+      <div
+        style={{
+          gridArea: "inspector",
+          background: "var(--bg-surface)",
+          borderLeft: "1px solid var(--border-soft)",
+          overflowY: "auto",
+          overflowX: "hidden",
+          opacity: inspectorVisible ? 1 : 0,
+          pointerEvents: inspectorVisible ? "auto" : "none",
+          transition: "opacity 120ms cubic-bezier(0.16,1,0.3,1)",
+        }}
+        className="custom-scrollbar"
+      >
+        {rightPanel && (
+          <ErrorBoundary componentName="Inspector">{rightPanel}</ErrorBoundary>
+        )}
+      </div>
+
+      {/* ── STATUS BAR ────────────────────────────────────── */}
+      <div style={{ gridArea: "status" }}>
+        <StatusBar />
+      </div>
+
+      {/* ── FLOATING OVERLAYS ─────────────────────────────── */}
+      <CommandPalette open={commandPaletteOpen} setOpen={setCommandPaletteOpen} />
     </div>
   );
 }

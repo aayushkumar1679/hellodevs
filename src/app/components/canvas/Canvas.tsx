@@ -7,8 +7,10 @@ import CanvasElement, { CanvasElementProps } from "./CanvasElement";
 import ComponentWrapper from "./ComponentWrapper";
 import ContextMenu from "./ContextMenu";
 import ThreeBackdrop from "./ThreeBackdrop";
+import { MousePointer2, Frame, Hand, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 
 import { getProjectRootIds } from "@/utils/projectModel";
+import { syncCanvasToVFS } from "@/lib/codeSync/canvasToCode";
 
 /* ----------------------------------------
  Types
@@ -56,6 +58,20 @@ export default function Canvas() {
     selectedElements,
   } = useEditorStore();
 
+  /* -----------------------------------------------------------------------
+   Canvas → Code sync
+   Whenever the project tree changes (updatedAt bumped), write fresh TSX to VFS.
+   Debounced 300ms to avoid flooding on rapid CSS override tweaks.
+  ----------------------------------------------------------------------- */
+  useEffect(() => {
+    if (!currentProject) return;
+    const timer = setTimeout(() => {
+      syncCanvasToVFS(currentProject).catch(console.error);
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProject?.updatedAt]);
+
   const viewportWidth = breakpoints[activeBreakpoint].width;
 
   const threePalette = useMemo(() => {
@@ -76,6 +92,15 @@ export default function Canvas() {
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const startPoint = useRef<{ x: number; y: number } | null>(null);
   const elementRects = useRef<Record<string, DOMRect>>({}); // client coords
+
+  // Canvas toolbar state
+  type CanvasTool = 'select' | 'frame' | 'hand';
+  const [activeTool, setActiveTool] = useState<CanvasTool>('select');
+  const [zoom, setZoom] = useState(100);
+  const ZOOM_STEP = 10;
+  const ZOOM_MIN = 25;
+  const ZOOM_MAX = 400;
+  const clampZoom = (z: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
 
   const [selectionBox, setSelectionBox] = useState<Rect | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -863,10 +888,131 @@ export default function Canvas() {
     return () => window.removeEventListener("mouseup", onMouseUp);
   }, []);
 
+  // Resolve single-selected element component type for the floating label
+  const singleSelectedId = selectedElements.length === 1 ? selectedElements[0] : null;
+  const singleSelectedComponent = singleSelectedId ? currentProject?.components[singleSelectedId] : null;
+  const singleSelectedRect = singleSelectedId ? elementRects.current[singleSelectedId] : null;
+  const canvasClientRect = canvasRef.current?.getBoundingClientRect();
+
+  const tools: { id: CanvasTool; icon: React.ElementType; label: string; key: string }[] = [
+    { id: 'select', icon: MousePointer2, label: 'Select',  key: 'V' },
+    { id: 'frame',  icon: Frame,         label: 'Frame',   key: 'F' },
+    { id: 'hand',   icon: Hand,          label: 'Hand',    key: 'H' },
+  ];
+
   return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', background: '#0b0d13' }}>
+
+      {/* ── Canvas Toolbar ── */}
+      <div style={{
+        height: 36,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 8px',
+        background: 'var(--bg-surface, #0f0f18)',
+        borderBottom: '1px solid var(--border-dim, rgba(255,255,255,0.05))',
+        flexShrink: 0,
+        gap: 8,
+        zIndex: 80,
+      }}>
+        {/* Left: size display */}
+        <span style={{
+          fontSize: 11,
+          fontFamily: 'var(--font-mono, "DM Mono", monospace)',
+          color: 'var(--text-3, #4a4a68)',
+          minWidth: 80,
+        }}>
+          {viewportWidth} × ∞
+        </span>
+
+        {/* Center: tool group */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {tools.map(({ id, icon: Icon, label, key }) => {
+            const active = activeTool === id;
+            return (
+              <button
+                key={id}
+                title={`${label} (${key})`}
+                onClick={() => setActiveTool(id)}
+                style={{
+                  width: 28, height: 28,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: active ? 'var(--accent-dim, rgba(124,111,255,0.15))' : 'transparent',
+                  color: active ? 'var(--text-accent, #a09aff)' : 'var(--text-3, #4a4a68)',
+                  cursor: 'pointer',
+                  transition: 'all 120ms cubic-bezier(0.16,1,0.3,1)',
+                }}
+              >
+                <Icon size={14} />
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right: zoom controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <button
+            onClick={() => setZoom((z) => clampZoom(z - ZOOM_STEP))}
+            title="Zoom out"
+            style={{
+              width: 22, height: 22,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 4, border: 'none', background: 'transparent',
+              cursor: 'pointer', color: 'var(--text-3, #4a4a68)',
+            }}
+          >
+            <ZoomOut size={13} />
+          </button>
+          <button
+            onClick={() => setZoom(100)}
+            title="Reset zoom"
+            style={{
+              minWidth: 44, height: 22, padding: '0 4px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 4, border: '1px solid rgba(255,255,255,0.07)',
+              background: 'var(--bg-elevated, #16161f)',
+              cursor: 'pointer',
+              fontSize: 11,
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--text-2, #9898b8)',
+            }}
+          >
+            {zoom}%
+          </button>
+          <button
+            onClick={() => setZoom((z) => clampZoom(z + ZOOM_STEP))}
+            title="Zoom in"
+            style={{
+              width: 22, height: 22,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 4, border: 'none', background: 'transparent',
+              cursor: 'pointer', color: 'var(--text-3, #4a4a68)',
+            }}
+          >
+            <ZoomIn size={13} />
+          </button>
+          <button
+            onClick={() => setZoom(100)}
+            title="Fit to screen"
+            style={{
+              width: 22, height: 22,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 4, border: 'none', background: 'transparent',
+              cursor: 'pointer', color: 'var(--text-3, #4a4a68)',
+            }}
+          >
+            <Maximize2 size={13} />
+          </button>
+        </div>
+      </div>
+
     <div
       ref={canvasRef}
-      className="relative h-full w-full overflow-auto select-none bg-[#0b0d13]"
+      className="relative flex-1 w-full overflow-auto select-none"
+      style={{ background: '#0b0d13' }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -894,13 +1040,23 @@ export default function Canvas() {
         />
       )}
 
-      <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(rgba(255,255,255,0.32)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.32)_1px,transparent_1px)] bg-[size:32px_32px] opacity-35" />
+      {/* Dot grid gutter — Component 9 spec */}
+      <div
+        className="pointer-events-none absolute inset-0 z-10"
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.35) 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
+          opacity: 0.08,
+        }}
+      />
 
       {/* Marquee */}
       {selectionBox && canvasRectForRender && (
         <div
-          className="absolute z-50 border border-blue-400 bg-blue-400/10 pointer-events-none rounded"
+          className="absolute z-50 pointer-events-none rounded"
           style={{
+            border: '1px solid var(--accent, #7c6fff)',
+            background: 'var(--accent-dim, rgba(124,111,255,0.12))',
             left: selectionBox.x - canvasRectForRender.left,
             top: selectionBox.y - canvasRectForRender.top,
             width: selectionBox.w,
@@ -909,43 +1065,82 @@ export default function Canvas() {
         />
       )}
 
-      {/* Guides */}
+      {/* Guides — accent violet */}
       {guides.map((g, i) => (
         <React.Fragment key={i}>
           {g.x !== undefined && (
             <div
-              className="absolute z-60 bg-blue-400/70 pointer-events-none transition-all"
+              className="absolute z-60 pointer-events-none"
               style={{
                 left: g.x,
                 top: 0,
                 bottom: 0,
                 width: 1,
+                background: 'var(--accent, #7c6fff)',
+                opacity: 0.7,
               }}
             />
           )}
           {g.y !== undefined && (
             <div
-              className="absolute z-60 bg-blue-400/70 pointer-events-none transition-all"
+              className="absolute z-60 pointer-events-none"
               style={{
                 top: g.y,
                 left: 0,
                 right: 0,
                 height: 1,
+                background: 'var(--accent, #7c6fff)',
+                opacity: 0.7,
               }}
             />
           )}
         </React.Fragment>
       ))}
+
+      {/* Floating element label for single selection */}
+      {singleSelectedComponent && singleSelectedRect && canvasClientRect && (
+        <div
+          className="absolute z-[70] pointer-events-none"
+          style={{
+            left: singleSelectedRect.left - canvasClientRect.left,
+            top: Math.max(0, singleSelectedRect.top - canvasClientRect.top - 22),
+          }}
+        >
+          <span style={{
+            display: 'inline-block',
+            background: 'var(--accent, #7c6fff)',
+            color: '#fff',
+            fontSize: 10,
+            fontFamily: 'var(--font-ui, "DM Sans", system-ui)',
+            fontWeight: 600,
+            borderRadius: 4,
+            padding: '1px 6px',
+            whiteSpace: 'nowrap',
+            letterSpacing: '0.02em',
+          }}>
+            {singleSelectedComponent.type}
+          </span>
+        </div>
+      )}
       {/* Distance Labels */}
       {distanceLabels.map((d, i) => (
         <div
           key={i}
-          className="absolute z-60 text-[10px] font-medium text-white bg-pink-600/90 px-1 rounded pointer-events-none shadow"
           style={{
+            position: 'absolute',
+            fontSize: 10,
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 500,
+            color: '#fff',
+            background: 'var(--accent, #7c6fff)',
+            padding: '1px 4px',
+            borderRadius: 3,
+            pointerEvents: 'none',
             left: d.x,
             top: d.y,
-            transform: "translate(-50%, -50%)",
+            transform: 'translate(-50%, -50%)',
           }}
+          className="z-60"
         >
           {d.value}px
         </div>
@@ -1046,6 +1241,7 @@ export default function Canvas() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

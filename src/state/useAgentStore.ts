@@ -6,7 +6,7 @@ interface AgentState {
   isOpen: boolean;
   mode: AgentMode;
   isProcessing: boolean;
-  history: any[]; // we'll type this later
+  history: unknown[]; // we'll type this later
   setMode: (mode: AgentMode) => void;
   togglePanel: () => void;
   setProcessing: (status: boolean) => void;

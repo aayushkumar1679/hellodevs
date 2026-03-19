@@ -6,7 +6,7 @@ export interface AgentCommand {
   action: "ADD_COMPONENT" | "UPDATE_COMPONENT" | "DELETE_COMPONENT" | "UPDATE_THEME";
   targetId?: string;
   blueprint?: BlueprintNode & { code?: string, filePath?: string };
-  payload?: any;
+  payload?: unknown;
 }
 
 export async function applyAgentCommand(command: AgentCommand) {
@@ -38,15 +38,18 @@ export async function applyAgentCommand(command: AgentCommand) {
         break;
       }
       case "UPDATE_THEME": {
-        if (command.payload?.colors) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((command.payload as any)?.colors) {
           const currentDs = projectStore.currentProject?.designSystem || { colors: {} };
           projectStore.updateProject({
             designSystem: {
               ...currentDs,
               colors: {
                 ...currentDs.colors,
-                ...command.payload.colors
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ...(command.payload as any).colors
               }
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } as any
           });
         }

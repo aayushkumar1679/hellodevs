@@ -10,6 +10,7 @@ export async function getWebContainer() {
   return webcontainerInstance;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function mountProject(files: Record<string, any>) {
   const wc = await getWebContainer();
   await wc.mount(files);

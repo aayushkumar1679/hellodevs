@@ -1,7 +1,11 @@
 
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { createOpenAI } from "@ai-sdk/openai";
+import { generateText } from "ai";
 import { NIM_BASE_URL, normalizeNimModelId, getNimApiKeyForModel } from "@/config/nimModels";
 import { buildVariationPrompt, selectRandomModel } from "@/lib/designEngine/variationGenerator";
 
@@ -14,7 +18,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { componentType, archetype: requestedArchetype } = await req.json();
+    const { componentType } = await req.json();
 
     if (!componentType) {
       return NextResponse.json({ error: "Component type is required" }, { status: 400 });
@@ -64,7 +68,8 @@ export async function POST(req: Request) {
 
     if (existing) {
       return NextResponse.json({ 
-        ...existing.designData as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(existing.designData as any),
         checksum,
         isCached: true 
       });
@@ -74,6 +79,7 @@ export async function POST(req: Request) {
     const saved = await prisma.componentVariation.create({
       data: {
         baseType: componentType,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         designData: variation as any,
         checksum,
         modelUsed: normalizedModel,

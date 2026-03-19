@@ -70,7 +70,7 @@ export default function ComponentLibrary() {
     ComponentCategory | "all"
   >("all");
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
-  const [variations, setVariations] = useState<any[]>([]);
+  const [variations, setVariations] = useState<unknown[]>([]);
 
   const handleGenerate = async (type: string) => {
     setIsGenerating(type);
@@ -102,7 +102,8 @@ export default function ComponentLibrary() {
   };
 
   const allComponents = useMemo(() => {
-    const synthetic = variations.map(v => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const synthetic = variations.map((v: any) => ({
       ...v,
       category: COMPONENT_LIBRARY.find(c => c.type === v.baseType)?.category || "other"
     }));

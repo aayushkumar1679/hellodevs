@@ -1,7 +1,16 @@
 "use client";
 
 import React, { useState } from "react";
-import { Folder, FolderOpen, FileText, FileCode, FileJson, Hash, ChevronRight, ChevronDown } from "lucide-react";
+import {
+  Folder,
+  FolderOpen,
+  FileCode,
+  FileJson,
+  FileText,
+  Hash,
+  ChevronRight,
+  ChevronDown,
+} from "lucide-react";
 import { useFileSystemStore } from "@/state/useFileSystemStore";
 
 interface FileTreeItemProps {
@@ -12,21 +21,51 @@ interface FileTreeItemProps {
   level: number;
 }
 
-const getFileIcon = (name: string) => {
-  if (name.endsWith(".tsx") || name.endsWith(".ts")) return <FileCode className="h-3.5 w-3.5 text-blue-400" />;
-  if (name.endsWith(".css")) return <Hash className="h-3.5 w-3.5 text-cyan-400" />;
-  if (name.endsWith(".json")) return <FileJson className="h-3.5 w-3.5 text-yellow-400" />;
-  return <FileText className="h-3.5 w-3.5 text-slate-400" />;
-};
+/* ── File-type icon + color mapping ──────────────
+   .tsx  → --accent   (violet)
+   .ts   → --accent-2 (teal)
+   .css  → #c678dd    (purple)
+   .json → --accent-4 (orange)
+   other → --text-3   (muted)
+─────────────────────────────────────────────────── */
+function getFileIcon(name: string): React.ReactNode {
+  if (name.endsWith(".tsx")) {
+    return <FileCode className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--accent)" }} />;
+  }
+  if (name.endsWith(".ts")) {
+    return <FileCode className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--accent-2)" }} />;
+  }
+  if (name.endsWith(".css") || name.endsWith(".scss")) {
+    return <Hash className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "#c678dd" }} />;
+  }
+  if (name.endsWith(".json")) {
+    return <FileJson className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--accent-4)" }} />;
+  }
+  return <FileText className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--text-3)" }} />;
+}
 
-export default function FileTreeItem({ name, path, isFolder, childrenItems, level }: FileTreeItemProps) {
-  const [isOpen, setIsOpen] = useState(false);
+/* ─────────────────────────────────────────────────
+   FileTreeItem
+   Row height : 22px
+   Active     : --accent-dim bg + left 2px --accent border
+                border-radius: 0 4px 4px 0
+   Hover      : --bg-overlay
+   Font       : 11px var(--font-ui) --text-2, active --text-1
+───────────────────────────────────────────────── */
+export default function FileTreeItem({
+  name,
+  path,
+  isFolder,
+  childrenItems,
+  level,
+}: FileTreeItemProps) {
+  const [isOpen, setIsOpen] = useState(level === 0); // auto-expand root level
   const { activeFile, openFile } = useFileSystemStore();
-  const isActive = activeFile === path;
+  const isActive = !isFolder && activeFile === path;
 
   const handleClick = () => {
     if (isFolder) {
-      setIsOpen(!isOpen);
+      setIsOpen((v) => !v);
     } else {
       openFile(path);
     }
@@ -34,25 +73,67 @@ export default function FileTreeItem({ name, path, isFolder, childrenItems, leve
 
   return (
     <div className="select-none">
-      <div 
+      {/* ── Row ─────────────────────────────────── */}
+      <div
         onClick={handleClick}
-        className={`flex items-center gap-1.5 px-2 py-1 cursor-pointer transition-colors ${isActive && !isFolder ? 'bg-[var(--accent-primary)]/20 text-white' : 'hover:bg-white/5 text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
-        style={{ paddingLeft: `${ level * 12 + 8}px` }}
+        className="flex items-center cursor-pointer transition-all duration-[120ms]"
+        style={{
+          height: 22,
+          paddingLeft: level * 12 + (isFolder ? 6 : 8),
+          paddingRight: 8,
+          gap: 5,
+          /* Active state */
+          background: isActive ? "var(--accent-dim)" : undefined,
+          borderLeft: isActive ? "2px solid var(--accent)" : "2px solid transparent",
+          borderRadius: isActive ? "0 4px 4px 0" : undefined,
+          color: isActive ? "var(--text-1)" : "var(--text-2)",
+          fontFamily: "var(--font-ui)",
+          fontSize: 11,
+        }}
+        onMouseEnter={(e) => {
+          if (!isActive) {
+            (e.currentTarget as HTMLDivElement).style.background = "var(--bg-overlay)";
+            (e.currentTarget as HTMLDivElement).style.color = "var(--text-1)";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isActive) {
+            (e.currentTarget as HTMLDivElement).style.background = "transparent";
+            (e.currentTarget as HTMLDivElement).style.color = "var(--text-2)";
+          }
+        }}
       >
-        <div className="flex h-4 w-4 items-center justify-center opacity-70">
-          {isFolder ? (
-            isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />
-          ) : (
-            getFileIcon(name)
-          )}
-        </div>
-        <span className="text-[12px] truncate">{name}</span>
+        {isFolder ? (
+          <>
+            <div
+              className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center"
+              style={{ color: "var(--text-3)" }}
+            >
+              {isOpen ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+            </div>
+            {isOpen ? (
+              <FolderOpen className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--accent-4)" }} />
+            ) : (
+              <Folder className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--accent-4)" }} />
+            )}
+          </>
+        ) : (
+          <>
+            {/* Invisible spacer to align with folders' chevron */}
+            <div className="h-3.5 w-3.5 flex-shrink-0" />
+            {getFileIcon(name)}
+          </>
+        )}
+        <span className="truncate">{name}</span>
       </div>
-      
+
+      {/* ── Children ────────────────────────────── */}
       {isFolder && isOpen && (
-        <div className="flex flex-col">
-          {childrenItems}
-        </div>
+        <div>{childrenItems}</div>
       )}
     </div>
   );

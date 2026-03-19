@@ -28,7 +28,7 @@ export default function DeployDialog({ children }: { children: React.ReactNode }
               Deploy to Production
             </DialogTitle>
             <DialogDescription className="text-[var(--text-muted)] text-sm">
-              Push your Polyglot workspace directly to Vercel's global edge network.
+              Push your Polyglot workspace directly to Vercel&apos;s global edge network.
             </DialogDescription>
           </DialogHeader>
 

@@ -27,7 +27,7 @@ export const STYLE_SALTS = [
 export interface VariationRequest {
   componentType: string;
   context?: string;
-  baseSpec?: any;
+  baseSpec?: unknown;
 }
 
 export function buildVariationPrompt(request: VariationRequest) {
